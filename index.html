@@ -4,24 +4,28 @@
     <meta charset="utf-8" />
     <title>Tâb Game</title>
     <link rel="stylesheet" type="text/css" media="screen" href="styles/style.css" />
-    <!-- <script src='main.js'></script> -->
+    <script src="styles/myScript.js" defer></script>
+
   </head>
   <body>
-    <div>
+    <!--Logo + Title + Authentication on the same line-->
+    <header class="header">
       <h1>Tâb Game</h1>
-      <form>
+      <form class="authForm">
         <label for="user">User: </label>
         <input type="text" id="user" name="user"><br><br>
         <label for="pass">Password: </label>
         <input type="password" id="pass" name="pass"><br><br>
         <input type="submit" value="Log in">
       </form>
-    </div>
+    </header>
+    <!--Configuration structure-->
     <div class="config">
       <h3>Game Configuration:</h3>
       <form>
         <label for="width"> Choose a width: </label>
         <select name="width" id="width" >
+          <option disabled selected value> -- select an option -- </option>
           <option value="7"> 7 </option>
           <option value="9"> 9 (mais usado)</option>
           <option value="11"> 11</option>
@@ -32,6 +36,7 @@
       <form>
         <label for="ia_lvl"> Choose a level of difficulty: </label>
         <select name="ia_lvl" id="ia_lvl" >
+          <option disabled selected value> -- select an option -- </option>
           <option value="easy"> Easy </option>
           <option value="normal"> Normal</option>
           <option value="hard"> Hard</option>
@@ -40,13 +45,39 @@
       <form>
         <label for="game_mode"> Choose a game mode: </label>
         <select name="game_mode" id="game_mode" >
+          <option disabled selected value> -- select an option -- </option>
           <option value="ia"> vs. IA </option>
           <option value="player"> vs. Player </option>
         </select>
       </form><br>
       <div>
         <input type="checkbox" id="first_to_play" name="first_to_play" checked />
-        <label for="first_to_play">First to Play</label>
+        <label for="first_to_play">First to Play</label><br>
+      </div>
+    </div>
+    <br>
+    <!--Button to get Instructions-->
+    <!-- Trigger/Open The Modal (window) -->
+    <button id="myBtnInstructions">See instructions</button>
+    <!-- The Modal -->
+    <div id="myModalInstructions" class="modal" aria-hidden="true">
+      <!-- Modal content -->
+      <div class="modal-content" role="document">
+        <button class="close" aria-label="Fechar">&times;</button>
+        <h3>Instructions</h3>
+        <p>Instructions.. (add later)</p>
+      </div>
+    </div>
+    <!--Button to get Classifications-->
+    <!-- Trigger/Open The Modal (window) -->
+    <button id="myBtnClassifications">See Classifications</button>
+    <!-- The Modal -->
+    <div id="myModalClassifications" class="modal" aria-hidden="true">
+      <!-- Modal content -->
+      <div class="modal-content" role="document">
+        <button class="close" aria-label="Fechar">&times;</button>
+        <h3>Classifications</h3>
+        <p>Table with rank, user and number of wins (IA included)</p>
       </div>
     </div>
   </body>
