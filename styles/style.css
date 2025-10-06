@@ -8,6 +8,13 @@
     box-sizing: border-box;
 }
 
+body {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    color: #222;
+    background-color: #fafafa;
+}
+
 .header {
     display: flex;
     justify-content: space-between;
@@ -19,6 +26,7 @@
 .header h1 {
     margin: 0;
     font-size: 1.75rem;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .authForm {
@@ -107,6 +115,13 @@
     cursor: pointer;
 }
 
+select{
+    font-family: 'Inter', sans-serif;
+}
 
+button{
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
 
 .myBtnClassifications {}
