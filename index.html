@@ -2,9 +2,52 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Tâb</title>
+    <title>Tâb Game</title>
     <link rel="stylesheet" type="text/css" media="screen" href="styles/style.css" />
     <!-- <script src='main.js'></script> -->
   </head>
-  <body></body>
+  <body>
+    <div>
+      <h1>Tâb Game</h1>
+      <form>
+        <label for="user">User: </label>
+        <input type="text" id="user" name="user"><br><br>
+        <label for="pass">Password: </label>
+        <input type="password" id="pass" name="pass"><br><br>
+        <input type="submit" value="Log in">
+      </form>
+    </div>
+    <div class="config">
+      <h3>Game Configuration:</h3>
+      <form>
+        <label for="width"> Choose a width: </label>
+        <select name="width" id="width" >
+          <option value="7"> 7 </option>
+          <option value="9"> 9 (mais usado)</option>
+          <option value="11"> 11</option>
+          <option value="13"> 13</option>
+          <option value="15"> 15</option>
+        </select>
+      </form><br>
+      <form>
+        <label for="ia_lvl"> Choose a level of difficulty: </label>
+        <select name="ia_lvl" id="ia_lvl" >
+          <option value="easy"> Easy </option>
+          <option value="normal"> Normal</option>
+          <option value="hard"> Hard</option>
+        </select>
+      </form><br>
+      <form>
+        <label for="game_mode"> Choose a game mode: </label>
+        <select name="game_mode" id="game_mode" >
+          <option value="ia"> vs. IA </option>
+          <option value="player"> vs. Player </option>
+        </select>
+      </form><br>
+      <div>
+        <input type="checkbox" id="first_to_play" name="first_to_play" checked />
+        <label for="first_to_play">First to Play</label>
+      </div>
+    </div>
+  </body>
 </html>
