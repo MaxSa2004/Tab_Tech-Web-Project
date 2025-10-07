@@ -31,13 +31,23 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    margin: 30px;
+    margin: 15px 30px;
 }
 
 .header h1 {
+    position: relative;
     margin: 0;
     font-size: 1.75rem;
-    font-family: 'Montserrat', sans-serif;    
+    font-family: 'Montserrat', sans-serif; 
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0,0,0,0.3);
+    transform: rotateX(0deg) rotateY(0deg);   
+}
+.header h1:hover {
+    transform: rotateX(10deg) rotateY(-8deg) scale(1.03);
+    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0,0,0,0.3);
+    
 }
 
 .authForm {
@@ -116,14 +126,45 @@ body {
     cursor: pointer;
 }
 
-.myBtnInstructions {
-    background-color: rgb(42, 51, 103);
-    border-radius: 20px;
-    color: white;
-    padding: 10px 15px;
-    text-align: center;
+#myBtnInstructions {
     display: inline-block;
+    margin-left: 50px; /* aligns with .config */
+    margin-top: 5px;
+    padding: 8px 14px;
+    border: 1px solid #999; /* darker border for definition */
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    color: #333;
     cursor: pointer;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease-in-out;
+}
+
+#myBtnInstructions:hover {
+    background-color: #ececec;
+    border-color: #777; /* darker on hover */
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+
+#myBtnClassifications {
+    display: inline-block;
+    margin-left: 25px; /* aligns with .config */
+    margin-top: 5px;
+    padding: 8px 14px;
+    border: 1px solid #999; /* darker border for definition */
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease-in-out;
+}
+
+#myBtnClassifications:hover {
+    background-color: #ececec;
+    border-color: #777; /* darker on hover */
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 select{
@@ -134,5 +175,3 @@ button{
     font-family: 'Inter', sans-serif;
     font-size: 14px;
 }
-
-.myBtnClassifications {}
