@@ -106,6 +106,8 @@ body {
     /* Could be more or less, depending on screen size */
     max-width: 600px;
     border-radius: 8px;
+    max-height: 600px;
+    overflow-y: auto;
 }
 
 /* The Close Button */
