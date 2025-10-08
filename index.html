@@ -27,153 +27,166 @@
       <input type="submit" value="Log in">
     </form>
   </header>
-  <!--Configuration structure-->
-  <div class="config">
-    <h3>Game Configuration:</h3>
-    <form>
-      <label for="width"> Choose a width: </label>
-      <select name="width" id="width">
-        <option disabled selected value> -- select an option -- </option>
-        <option value="7"> 7 </option>
-        <option value="9"> 9 (mais usado)</option>
-        <option value="11"> 11</option>
-        <option value="13"> 13</option>
-        <option value="15"> 15</option>
-      </select>
-    </form><br>
-    <form>
-      <label for="game_mode"> Choose a game mode: </label>
-      <select name="game_mode" id="game_mode">
-        <option disabled selected value> -- select an option -- </option>
-        <option value="ia"> vs. IA </option>
-        <option value="player"> vs. Player </option>
-      </select>
-    </form><br>
-    <form>
-      <label for="ia_lvl"> Choose a level of difficulty: </label>
-      <select name="ia_lvl" id="ia_lvl">
-        <option disabled selected value> -- select an option -- </option>
-        <option value="easy"> Easy </option>
-        <option value="normal"> Normal</option>
-        <option value="hard"> Hard</option>
-      </select>
-    </form><br>
-    <div>
-      <input type="checkbox" id="first_to_play" name="first_to_play" checked />
-      <label for="first_to_play">First to Play</label><br>
-    </div>
-  </div>
-  <div class="game-board">
-    <!-- Row 1 -->
-    <div class="cell"><i class="arrow down"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-
-    <!-- Row 2 -->
-    <div class="cell"><span class="arrow up down"></span></div> <!-- up & down -->
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><span class="arrow up down"></span></div> <!-- up & down -->
-
-    <!-- Row 3 -->
-    <div class="cell"><i class="arrow up"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><i class="arrow left"></i></div>
-    <div class="cell"><span class="arrow up down"></span></div>
-
-    <!-- Row 4 -->
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow right"></i></div>
-    <div class="cell"><i class="arrow up"></i></div>
-  </div>
-
-
-  <br>
-  <div class="buttons">
-    <!--Button to get Instructions-->
-    <!-- Trigger/Open The Modal (window) -->
-    <button id="myBtnInstructions">See instructions</button>
-    <!-- The Modal -->
-    <div id="myModalInstructions" class="modal" aria-hidden="true">
-      <!-- Modal content -->
-      <div class="modal-content" role="document">
-        <button class="close" aria-label="Fechar">&times;</button>
-        <h3>Instructions</h3>
-        <h3>How to play Tâb</h3>
-        <h4>Introduction</h4>
-        <p>Tâb is a two player running-fight board game played across the Middle East and North Africa.</p>
-        <p>It's played on a rectangular board of 4 rows and an odd number of columns (typically 7-15).</p>
-        <p>The two players sit opposite each other; each begins with a full outer row of pieces.</p>
-        <h4>Setup</h4>
-        <p>Choose an odd number of columns in the configuration panel.</p>
-        <p>Each player's pieces will initially be displayed on the first row (bottow row from the player's perspective).
-        </p>
-        <h4>Dice</h4>
-        <p>The game dice used is a combination of 4 wooden sticks. Each stickhas a lighter (flat) side and a darker
-          (rounded) side.</p>
-        <p>A throw is scored by counting the number of lighter sides facing up. The move value mapping used is the
-          following.</p>
-        <ul>
-          <li>0 lighter -> 6 (special)</li>
-          <li>1 lighter -> 1 (tâb/required as the first move)</li>
-          <li>2 lighter -> 2</li>
-          <li>3 lighter -> 3</li>
-          <li>4 lighter -> 4</li>
-        </ul>
-        <p>Throws of 1,4 and 6 grant the player an extra throw; 2 and 3 end the player's turn.</p>
-        <h4>Beginning of the match</h4>
-        <p>At the start of the match, neither player may move until someone throws a tâb (1). </p>
-        <h4>Movement</h4>
-        <p>After the opening, on your turn you must use each throw to move one of your pieces along the permitted track.
-        </p>
-        <p>A piece moves forward the exact number of squares shown by the throw. The board's layout indicates the
-          allowed directions</p>
-        <p>A piece can only move once to the last row, and can only do so if there are no pieces (with the same color)
-          on the first row.</p>
-        <h4>Capturing</h4>
-        <p>If a moving piece lands on one or more enemy pieces, those enemy pieces are knocked off the board and goes to
-          the oponent's side.</p>
-        <h4>Restrictions</h4>
-        <p>No piece may return to its original home once it has left it.</p>
-        <p></p>
-        <h4>End of game</h4>
-        <p>The game ends when one player has no pieces left on the board; the other player is the winner.</p>
+  <div class="main-area">
+    <!--Configuration structure-->
+    <aside class="sidebar">
+      <div class="config">
+        <h3>Game Configuration:</h3>
+        <form>
+          <label for="width"> Choose a width: </label>
+          <select name="width" id="width">
+            <option disabled selected value> -- select an option -- </option>
+            <option value="7"> 7 </option>
+            <option value="9"> 9 (mais usado)</option>
+            <option value="11"> 11</option>
+            <option value="13"> 13</option>
+            <option value="15"> 15</option>
+          </select>
+        </form><br>
+        <form>
+          <label for="game_mode"> Choose a game mode: </label>
+          <select name="game_mode" id="game_mode">
+            <option disabled selected value> -- select an option -- </option>
+            <option value="ia"> vs. IA </option>
+            <option value="player"> vs. Player </option>
+          </select>
+        </form><br>
+        <form>
+          <label for="ia_lvl"> Choose a level of difficulty: </label>
+          <select name="ia_lvl" id="ia_lvl">
+            <option disabled selected value> -- select an option -- </option>
+            <option value="easy"> Easy </option>
+            <option value="normal"> Normal</option>
+            <option value="hard"> Hard</option>
+          </select>
+        </form><br>
+        <div>
+          <input type="checkbox" id="first_to_play" name="first_to_play" checked />
+          <label for="first_to_play">First to Play</label><br>
+        </div>
       </div>
-    </div>
-    <!--Button to get Classifications-->
-    <!-- Trigger/Open The Modal (window) -->
-    <button id="myBtnClassifications">See Classifications</button>
-    <!-- The Modal -->
-    <div id="myModalClassifications" class="modal" aria-hidden="true">
-      <!-- Modal content -->
-      <div class="modal-content" role="document">
-        <button class="close" aria-label="Fechar">&times;</button>
-        <h3>Classifications</h3>
-        <p>Table with rank, user and number of wins (IA included)</p>
+
+      <div class="buttons">
+        <!--Button to get Instructions-->
+        <!-- Trigger/Open The Modal (window) -->
+        <button id="myBtnInstructions">See instructions</button>
+        <!-- The Modal -->
+        <div id="myModalInstructions" class="modal" aria-hidden="true">
+          <!-- Modal content -->
+          <div class="modal-content" role="document">
+            <button class="close" aria-label="Fechar">&times;</button>
+            <h3>Instructions</h3>
+            <h3>How to play Tâb</h3>
+            <h4>Introduction</h4>
+            <p>Tâb is a two player running-fight board game played across the Middle East and North Africa.</p>
+            <p>It's played on a rectangular board of 4 rows and an odd number of columns (typically 7-15).</p>
+            <p>The two players sit opposite each other; each begins with a full outer row of pieces.</p>
+            <h4>Setup</h4>
+            <p>Choose an odd number of columns in the configuration panel.</p>
+            <p>Each player's pieces will initially be displayed on the first row (bottow row from the player's
+              perspective).
+            </p>
+            <h4>Dice</h4>
+            <p>The game dice used is a combination of 4 wooden sticks. Each stickhas a lighter (flat) side and a darker
+              (rounded) side.</p>
+            <p>A throw is scored by counting the number of lighter sides facing up. The move value mapping used is the
+              following.</p>
+            <ul>
+              <li>0 lighter -> 6 (special)</li>
+              <li>1 lighter -> 1 (tâb/required as the first move)</li>
+              <li>2 lighter -> 2</li>
+              <li>3 lighter -> 3</li>
+              <li>4 lighter -> 4</li>
+            </ul>
+            <p>Throws of 1,4 and 6 grant the player an extra throw; 2 and 3 end the player's turn.</p>
+            <h4>Beginning of the match</h4>
+            <p>At the start of the match, neither player may move until someone throws a tâb (1). </p>
+            <h4>Movement</h4>
+            <p>After the opening, on your turn you must use each throw to move one of your pieces along the permitted
+              track.
+            </p>
+            <p>A piece moves forward the exact number of squares shown by the throw. The board's layout indicates the
+              allowed directions</p>
+            <p>A piece can only move once to the last row, and can only do so if there are no pieces (with the same
+              color)
+              on the first row.</p>
+            <h4>Capturing</h4>
+            <p>If a moving piece lands on one or more enemy pieces, those enemy pieces are knocked off the board and
+              goes
+              to
+              the oponent's side.</p>
+            <h4>Restrictions</h4>
+            <p>No piece may return to its original home once it has left it.</p>
+            <p></p>
+            <h4>End of game</h4>
+            <p>The game ends when one player has no pieces left on the board; the other player is the winner.</p>
+          </div>
+        </div>
+        <!--Button to get Classifications-->
+        <!-- Trigger/Open The Modal (window) -->
+        <button id="myBtnClassifications">See Classifications</button>
+        <!-- The Modal -->
+        <div id="myModalClassifications" class="modal" aria-hidden="true">
+          <!-- Modal content -->
+          <div class="modal-content" role="document">
+            <button class="close" aria-label="Fechar">&times;</button>
+            <h3>Classifications</h3>
+            <p>Table with rank, user and number of wins (IA included)</p>
+          </div>
+        </div>
       </div>
-    </div>
+
+    </aside>
+    <section class="board-wrapper">
+      <div class="game-board">
+        <!-- Row 1 -->
+        <div class="cell"><i class="arrow down"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+
+        <!-- Row 2 -->
+        <div class="cell"><span class="arrow up down"></span></div> <!-- up & down -->
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><span class="arrow up down"></span></div> <!-- up & down -->
+
+        <!-- Row 3 -->
+        <div class="cell"><i class="arrow up"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><i class="arrow left"></i></div>
+        <div class="cell"><span class="arrow up down"></span></div>
+
+        <!-- Row 4 -->
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow right"></i></div>
+        <div class="cell"><i class="arrow up"></i></div>
+      </div>
+    </section>
+
+
+
   </div>
 
 </body>

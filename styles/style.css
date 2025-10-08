@@ -1,11 +1,38 @@
+.main-area {
+    display: grid;
+    /* esquerda fixa, mas permite encolher minimamente; direita ocupa resto */
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    gap: 24px;
+    align-items: start;
+    height: calc(100vh - 20px);
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+}
+
 .config {
+    position: relative;
+    z-index: 2;
+    /* garante que a config fica acima se houver sobreposição */
+    width: 100%;
+    max-width: 320px;
+    /* não cresce mais que isto */
+    box-sizing: border-box;
+    margin: 0;
+    /* controla o espaçamento pela grid/gap */
     background-color: rgb(42, 51, 103);
-    display: inline-block;
-    margin: 20px;
     color: white;
     border-radius: 25px;
     padding: 10px 18px;
-    box-sizing: border-box;
+    display: block;
+    overflow: hidden;
+    /* evita que conteúdo interno empurre o tamanho */
 }
 
 body {
@@ -15,7 +42,7 @@ body {
     background-color: #fafafa;
 }
 
-.logo_img{
+.logo_img {
     width: 5%;
     width: 40px;
     height: auto;
@@ -24,7 +51,8 @@ body {
 .header div {
     display: flex;
     align-items: center;
-    gap: 10px; /* space between logo and title */
+    gap: 10px;
+    /* space between logo and title */
 }
 
 .header {
@@ -39,16 +67,17 @@ body {
     position: relative;
     margin: 0;
     font-size: 1.75rem;
-    font-family: 'Montserrat', sans-serif; 
+    font-family: 'Montserrat', sans-serif;
     letter-spacing: 1px;
     text-transform: uppercase;
-    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0,0,0,0.3);
-    transform: rotateX(0deg) rotateY(0deg);   
+    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0, 0, 0, 0.3);
+    transform: rotateX(0deg) rotateY(0deg);
 }
+
 .header h1:hover {
     transform: rotateX(10deg) rotateY(-8deg) scale(1.03);
-    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0,0,0,0.3);
-    
+    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0, 0, 0, 0.3);
+
 }
 
 .authForm {
@@ -131,10 +160,12 @@ body {
 
 #myBtnInstructions {
     display: inline-block;
-    margin-left: 50px; /* aligns with .config */
+    margin-left: 50px;
+    /* aligns with .config */
     margin-top: 5px;
     padding: 8px 14px;
-    border: 1px solid #999; /* darker border for definition */
+    border: 1px solid #999;
+    /* darker border for definition */
     border-radius: 8px;
     background-color: #f9f9f9;
     color: #333;
@@ -145,17 +176,20 @@ body {
 
 #myBtnInstructions:hover {
     background-color: #ececec;
-    border-color: #777; /* darker on hover */
+    border-color: #777;
+    /* darker on hover */
     box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 
 #myBtnClassifications {
     display: inline-block;
-    margin-left: 25px; /* aligns with .config */
+    margin-left: 25px;
+    /* aligns with .config */
     margin-top: 5px;
     padding: 8px 14px;
-    border: 1px solid #999; /* darker border for definition */
+    border: 1px solid #999;
+    /* darker border for definition */
     border-radius: 8px;
     background-color: #f9f9f9;
     color: #333;
@@ -166,101 +200,156 @@ body {
 
 #myBtnClassifications:hover {
     background-color: #ececec;
-    border-color: #777; /* darker on hover */
+    border-color: #777;
+    /* darker on hover */
     box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-select{
+select {
     font-family: 'Inter', sans-serif;
 }
 
-button{
+button {
     font-family: 'Inter', sans-serif;
     font-size: 14px;
 }
 
+.buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.board-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    /* center dentro da coluna direita */
+    box-sizing: border-box;
+    overflow: auto;
+    /* scroll se o board não couber verticalmente */
+    padding: 11px 16px;
+    /* reduz margem direita grande */
+}
+
 .game-board {
-  display: grid;
-  grid-template-columns: repeat(9, 100px);
-  grid-template-rows: repeat(4, 100px);
-  gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(9, minmax(36px, 1fr));
+    /* colunas flexíveis */
+    gap: 12px;
 
-  position: absolute;
-  top: 50%;
-  right: 13%; /* was 18%, now slightly more to the right */
-  transform: translateY(-50%);
+    position: relative;
+    /* REMOVE absolute/top/right/transform */
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 
-  background-color: rgb(42, 51, 103);
-  color: black;
-  border-radius: 25px;
-  padding: 25px;
-  box-sizing: border-box;
-  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1;
+    padding: 16px;
+    background-color: rgb(42, 51, 103);
+    color: black;
+    border-radius: 16px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1;
+    overflow: visible;
+}
+
+.game-board .cell {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
 }
 
 
-.cell {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: white;
-  border-radius: 12px;
-  width: 100px;
-  height: 100px;
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease, background-color 0.2s ease;
-}
-
-.cell:hover {
-  background-color: #f0f0f0;
-  transform: scale(1.05);
+.game-board .cell:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
 }
 
 /* Arrow styling */
 .arrow {
-  border: solid rgba(0, 0, 0, 0.5);
-  border-width: 0 5px 5px 0;
-  display: inline-block;
-  padding: 12px;
-  opacity: 0.8;
-  transition: opacity 0.2s ease-in-out;
+    border: solid rgba(0, 0, 0, 0.5);
+    border-width: 0 5px 5px 0;
+    display: inline-block;
+    padding: 12px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease-in-out;
 }
 
 .arrow:hover {
-  opacity: 1;
+    opacity: 1;
 }
 
-.right { transform: rotate(-45deg); }
-.left { transform: rotate(135deg); }
-.up { transform: rotate(-135deg); }
-.down { transform: rotate(45deg); }
+.right {
+    transform: rotate(-45deg);
+}
+
+.left {
+    transform: rotate(135deg);
+}
+
+.up {
+    transform: rotate(-135deg);
+}
+
+.down {
+    transform: rotate(45deg);
+}
 
 /* Double arrow (up + down) stacked vertically */
 .arrow.up.down {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  padding: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    padding: 0;
 }
 
 .arrow.up.down::before,
 .arrow.up.down::after {
-  content: '';
-  border: solid rgba(0, 0, 0, 0.5);
-  border-width: 0 5px 5px 0;
-  display: inline-block;
-  padding: 10px;
-  opacity: 0.8;
+    content: '';
+    border: solid rgba(0, 0, 0, 0.5);
+    border-width: 0 5px 5px 0;
+    display: inline-block;
+    padding: 10px;
+    opacity: 0.8;
 }
 
 .arrow.up.down::before {
-  transform: rotate(-135deg);
+    transform: rotate(-135deg);
 }
 
 .arrow.up.down::after {
-  transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+/* comportamento em telas estreitas: empilha e usa menos colunas no board */
+@media (max-width: 900px) {
+    .main-area {
+        grid-template-columns: 1fr;
+        /* empilha: config encima, board abaixo */
+        height: auto;
+    }
+
+    .board-wrapper {
+        padding: 12px;
+        order: 2;
+    }
+
+    .game-board {
+        grid-template-columns: repeat(6, minmax(36px, 1fr));
+        /* menos colunas para caber */
+        padding: 12px;
+    }
 }

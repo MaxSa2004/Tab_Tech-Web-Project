@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Exemplo: Config à esquerda, Board à direita</title>
+  <style>
+    /* Reset simples */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: #f4f6fb;
+      color: #111;
+    }
+
+    /* layout principal: left fixed column, right fluid column */
+    .main-area {
+      display: grid;
+      grid-template-columns: 320px 1fr; /* esquerda fixa, direita flexível */
+      gap: 24px;
+      padding: 16px;
+      height: 100vh;
+      align-items: start;
+    }
+
+    /* sidebar empilha config + controls */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .config {
+      background: #2a3367;
+      color: white;
+      padding: 14px;
+      border-radius: 12px;
+    }
+
+    .config h2 { font-size: 18px; margin-bottom: 8px; }
+    .config p { font-size: 13px; line-height: 1.2; }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .controls button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* wrapper do board: centraliza e permite overflow se necessário */
+    .board-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;        /* centra verticalmente se board menor */
+      justify-content: center;    /* centra horizontalmente */
+      padding: 8px;
+      overflow: auto;             /* scroll se necessário */
+    }
+
+    /* tabuleiro responsivo (sem position:absolute nem transform) */
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr); /* 9 colunas iguais */
+      gap: 12px;
+      width: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(20,30,60,0.08);
+    }
+
+    /* células quadradas que escalam com o espaço disponível */
+    .game-board .cell {
+      aspect-ratio: 1 / 1;  /* garante quadrado */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg,#e6eefc,#ffffff);
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.06);
+      font-weight: 600;
+      color: #2a3367;
+      user-select: none;
+    }
+
+    /* responsivo: empilha em ecrãs mais estreitos */
+    @media (max-width: 900px) {
+      .main-area {
+        grid-template-columns: 1fr; /* empilha tudo verticalmente */
+        height: auto;
+      }
+      .board-wrapper { padding-top: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-area">
+    <!-- Coluna esquerda: config (em cima) e botões (embaixo) -->
+    <aside class="sidebar">
+      <div class="config">
+        <h2>Configurações</h2>
+        <p>Escolhe modo, dificuldade e outras opções aqui.</p>
+        <!-- exemplo de inputs -->
+        <div style="margin-top:8px; display:flex; gap:8px; flex-direction:column;">
+          <label style="font-size:13px; color:#dfe6ff;">
+            <input type="radio" name="mode" checked> Modo A
+          </label>
+          <label style="font-size:13px; color:#dfe6ff;">
+            <input type="radio" name="mode"> Modo B
+          </label>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn">Start</button>
+        <button id="resetBtn">Reset</button>
+        <button id="hintBtn">Dica</button>
+      </div>
+    </aside>
+
+    <!-- Coluna direita: board que ocupa o resto do espaço -->
+    <section class="board-wrapper">
+      <div class="game-board" id="gameBoard">
+        <!-- Exemplo de 9x4 = 36 células; em app real populam-se dinamicamente -->
+        <!-- apenas para testar o layout -->
+        <!-- cria 36 células -->
+        <script>
+          // criar as células dinamicamente para o exemplo (9x4)
+          const cols = 9, rows = 4;
+          const board = document.currentScript.parentElement.querySelector('.game-board') || document.getElementById('gameBoard');
+          if (board) {
+            for (let r = 0; r < rows; r++) {
+              for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = ''; // podes colocar coordenadas: `${r},${c}`
+                board.appendChild(cell);
+              }
+            }
+          }
+        </script>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
