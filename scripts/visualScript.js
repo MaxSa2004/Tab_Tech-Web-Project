@@ -2,8 +2,10 @@
   // pegar referências
   var modalInstructions = document.getElementById("myModalInstructions");
   var modalClassifications = document.getElementById("myModalClassifications");
+  var btnExtra = document.getElementById("myBtnExtra");
   var btnInstructions = document.getElementById("myBtnInstructions");
   var btnClassifications = document.getElementById("myBtnClassifications");
+  var modalExtra = document.getElementById("myModalExtra");
 
   function openModal(modal, opener) {
     if (!modal) return;
@@ -24,6 +26,7 @@
   // abrir
   if (btnInstructions) btnInstructions.addEventListener('click', function () { openModal(modalInstructions, btnInstructions); });
   if (btnClassifications) btnClassifications.addEventListener('click', function () { openModal(modalClassifications, btnClassifications); });
+  if (btnExtra) btnExtra.addEventListener('click', function () { openModal(modalExtra, btnExtra); });
 
   // fechar: todos os botões .close
   document.querySelectorAll('.modal .close').forEach(function (closeBtn) {
@@ -52,7 +55,9 @@
   // avisos para debug
   if (!btnInstructions) console.warn('btnInstructions not found');
   if (!btnClassifications) console.warn('btnClassifications not found');
+  if (!modalExtra) console.warn('modalExtra not found');
   if (!modalInstructions) console.warn('modalInstructions not found');
   if (!modalClassifications) console.warn('modalClassifications not found');
+  if (!btnExtra) console.warn('btnExtra not found');
 
 })();
