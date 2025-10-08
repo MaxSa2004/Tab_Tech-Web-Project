@@ -1,0 +1,39 @@
+<!--Button to get the game's history-->
+      <!-- Trigger/Open The Modal (window) -->
+      <button id="myBtnExtra">Learn More about Tâb</button>
+      <!-- The Modal -->
+      <div id="myModalExtra" class="modal" aria-hidden="true">
+        <!-- Modal content -->
+        <div class="modal-content" role="document">
+          <button class="close" aria-label="Fechar">&times;</button>
+          <h3>Tâb's History</h3>
+          <p>bla bla bla</p>
+        </div>
+      </div>
+
+#myBtnExtra {
+    display: inline-block;
+    margin-left: 25px; /* aligns with .config */
+    margin-top: 5px;
+    padding: 8px 14px;
+    border: 1px solid #999; /* darker border for definition */
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease-in-out;
+}
+
+#myBtnExtra:hover {
+    background-color: #ececec;
+    border-color: #777; /* darker on hover */
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+  var btnExtra = document.getElementById("myBtnExtra");
+    var modalExtra = document.getElementById("myModalExtra");
+  if (!modalExtra) console.warn('modalExtra not found');
+    if (!btnExtra) console.warn('btnExtra not found');
+      if (btnExtra) btnExtra.addEventListener('click', function () { openModal(modalExtra, btnExtra); });
+
