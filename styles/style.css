@@ -242,7 +242,7 @@ button {
 }
 
 .board-wrapper {
-    max-height: 500px;
+    max-height: 450px;
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -262,7 +262,7 @@ button {
 
     position: relative;
     transform-origin: top center;
-    scale: calc(min(1, 300px / 400px));
+    scale: calc(min(1, 300px / 375px));
     width: 100%;
     max-width: 950px;
     box-sizing: border-box;
