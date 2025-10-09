@@ -35,9 +35,8 @@
         <form>
           <label for="width"> Choose a width: </label>
           <select name="width" id="width">
-            <option disabled selected value> -- select an option -- </option>
             <option value="7"> 7 </option>
-            <option value="9"> 9 (mais usado)</option>
+            <option selected value="9"> 9 (mais usado)</option>
             <option value="11"> 11</option>
             <option value="13"> 13</option>
             <option value="15"> 15</option>
@@ -176,54 +175,9 @@
 
     </aside>
     <section class="board-wrapper">
-      <div class="game-board">
-        <!-- Row 1 -->
-        <div class="cell"><i class="arrow down"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-
-        <!-- Row 2 -->
-        <div class="cell"><span class="arrow up down"></span></div> <!-- up & down -->
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><span class="arrow up down"></span></div> <!-- up & down -->
-
-        <!-- Row 3 -->
-        <div class="cell"><i class="arrow up"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><i class="arrow left"></i></div>
-        <div class="cell"><span class="arrow up down"></span></div>
-
-        <!-- Row 4 -->
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow right"></i></div>
-        <div class="cell"><i class="arrow up"></i></div>
+      <div class="game-board" id="gameBoard">
       </div>
     </section>
-
-
 
   </div>
 

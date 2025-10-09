@@ -61,3 +61,46 @@
   if (!btnExtra) console.warn('btnExtra not found');
 
 })();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const widthSelect = document.getElementById("width");
+  const board = document.getElementById("gameBoard");
+
+  // Default size
+  let boardWidth = 9;
+  createBoard(boardWidth);
+
+  // Update board when user selects new width
+  widthSelect.addEventListener("change", (e) => {
+    boardWidth = parseInt(e.target.value, 10);
+    createBoard(boardWidth);
+  });
+
+  // Function to generate the board
+  function createBoard(cols) {
+  const rows = 4;
+  board.innerHTML = "";
+  board.style.gridTemplateColumns = `repeat(${cols}, minmax(36px, 1fr))`;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+
+      const arrow = document.createElement("i");
+
+      // Pattern logic
+      if (r === 0) arrow.className = "arrow " + (c === 0 ? "down" : "left");
+      else if (r === 1)
+        arrow.className = "arrow " + (c === 0 || c === cols - 1 ? "up down" : "right");
+      else if (r === 2)
+        arrow.className = "arrow " + (c === cols - 1 ? "up down" : "left");
+      else if (r === 3)
+        arrow.className = "arrow " + (c === cols - 1 ? "up" : "right");
+
+      cell.appendChild(arrow);
+      board.appendChild(cell);
+    }
+  }
+}
+});
