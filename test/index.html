@@ -1,0 +1,186 @@
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Tâb Game</title>
+  <link rel="stylesheet" type="text/css" media="screen" href="styles/style.css" />
+  <script type="text/javascript" src="scripts/visualScript.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+  <!--Montserrat-->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap"
+    rel="stylesheet"> <!--Inter-->
+
+</head>
+
+<body>
+  <!--Logo + Title + Authentication on the same line-->
+  <header class="header">
+    <div class="logo">
+      <img class="logo_img" src="images/logo.png" alt="logo_img">
+      <h1>Tâb Game</h1>
+    </div>
+    <form class="authForm">
+      <label for="user">User: </label>
+      <input type="text" id="user" name="user"><br><br>
+      <label for="pass">Password: </label>
+      <input type="password" id="pass" name="pass"><br><br>
+      <input type="submit" value="Log in">
+    </form>
+  </header>
+  <div class="main-area">
+    <!--Configuration structure-->
+    <aside class="sidebar">
+      <div class="config">
+        <h3>Game Configuration:</h3>
+        <form>
+          <label for="width"> Choose a width: </label>
+          <select name="width" id="width">
+            <option value="7"> 7 </option>
+            <option selected value="9"> 9 (mais usado)</option>
+            <option value="11"> 11</option>
+            <option value="13"> 13</option>
+            <option value="15"> 15</option>
+          </select>
+        </form><br>
+        <form>
+          <label for="game_mode"> Choose a game mode: </label>
+          <select name="game_mode" id="game_mode">
+            <option disabled selected value> -- select an option -- </option>
+            <option value="ia"> vs. IA </option>
+            <option value="player"> vs. Player </option>
+          </select>
+        </form><br>
+        <form>
+          <label for="ia_lvl"> Choose a level of difficulty: </label>
+          <select name="ia_lvl" id="ia_lvl">
+            <option disabled selected value> -- select an option -- </option>
+            <option value="easy"> Easy </option>
+            <option value="normal"> Normal</option>
+            <option value="hard"> Hard</option>
+          </select>
+        </form><br>
+        <div>
+          <input type="checkbox" id="first_to_play" name="first_to_play" checked />
+          <label for="first_to_play">First to Play</label><br>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <!--Button to get Instructions-->
+        <!-- Trigger/Open The Modal (window) -->
+        <button id="myBtnInstructions">See instructions</button>
+        <!-- The Modal -->
+        <div id="myModalInstructions" class="modal" aria-hidden="true">
+          <!-- Modal content -->
+          <div class="modal-content" role="document">
+            <button class="close" aria-label="Fechar">&times;</button>
+            <h3>Instructions</h3>
+            <h3>How to play Tâb</h3>
+            <h4>Introduction</h4>
+            <p>Tâb is a two player running-fight board game played across the Middle East and North Africa.</p>
+            <p>It's played on a rectangular board of 4 rows and an odd number of columns (typically 7-15).</p>
+            <p>The two players sit opposite each other; each begins with a full outer row of pieces.</p>
+            <hr>
+            <h4>Setup</h4>
+            <p>Choose an odd number of columns in the configuration panel.</p>
+            <p>Each player's pieces will initially be displayed on the first row (bottow row from the player's
+              perspective).
+            </p>
+            <hr>
+            <h4>Dice</h4>
+            <p>The game dice used is a combination of 4 wooden sticks. Each stickhas a lighter (flat) side and a darker
+              (rounded) side.</p>
+            <p>A throw is scored by counting the number of lighter sides facing up. The move value mapping used is the
+              following.</p>
+            <ul>
+              <li>0 lighter -> 6 (special)</li>
+              <li>1 lighter -> 1 (tâb/required as the first move)</li>
+              <li>2 lighter -> 2</li>
+              <li>3 lighter -> 3</li>
+              <li>4 lighter -> 4</li>
+            </ul>
+            <p>Throws of 1,4 and 6 grant the player an extra throw; 2 and 3 end the player's turn.</p>
+            <hr>
+            <h4>Beginning of the match</h4>
+            <p>At the start of the match, neither player may move until someone throws a tâb (1). </p>
+            <hr>
+            <h4>Movement</h4>
+            <p>To move a piece, not just the first one, if it wasn't moved before, the player needs to throw a tâb. After that, that piece is "converted" and can move with every throw.</p>
+            <p>A piece moves forward the exact number of squares shown by the throw. The board's layout indicates the
+              allowed directions</p>
+            <p>A piece can only move once to the last row, and can only do so if there are no pieces (with the same
+              color)
+              on the first row.</p>
+            <hr>
+            <h4>Capturing</h4>
+            <p>If a moving piece lands on one or more enemy pieces, those enemy pieces are knocked off the board and
+              goes
+              to
+              the oponent's side.</p>
+            <hr>
+            <h4>Restrictions</h4>
+            <p>No piece may return to its original home once it has left it.</p>
+            <p></p>
+            <hr>
+            <h4>End of game</h4>
+            <p>The game ends when one player has no pieces left on the board; the other player is the winner.</p>
+          </div>
+        </div>
+        <!--Button to get Classifications-->
+        <!-- Trigger/Open The Modal (window) -->
+        <button id="myBtnClassifications">See Classifications</button>
+        <!-- The Modal -->
+        <div id="myModalClassifications" class="modal" aria-hidden="true">
+          <!-- Modal content -->
+          <div class="modal-content" role="document">
+            <button class="close" aria-label="Fechar">&times;</button>
+            <h3>Classifications</h3>
+            <p>Table with rank, user and number of wins (IA included)</p>
+          </div>
+        </div>
+        <!--Button to get the game's history-->
+        <!-- Trigger/Open The Modal (window) -->
+        <button id="myBtnExtra">Learn More about Tâb</button>
+        <!-- The Modal -->
+        <div id="myModalExtra" class="modal" aria-hidden="true">
+          <!-- Modal content -->
+          <div class="modal-content" role="document">
+            <button class="close" aria-label="Fechar">&times;</button>
+            <h3>Tâb's History</h3>
+            <h4>Origins and Geographic Spread</h4>
+            <p>Tâb is an ancient running-fight board game that originated in the Middle East and was once played widely across the Islamic world. Historical sources describe its spread from West Africa to Iran in the east, and from Turkey in the north to the island of Anjouan in the south.</p>
+            <p>Across this vast area, numerous local variants developed: in North Africa the game was known as sîg, while in Somalia a related form called deleb was played. All these versions shared similar mechanics, involving racing and capturing pieces along intersecting paths.</p>
+            <p><img src="images/board.gif" alt="tâb board" style="display: block; margin: 0 auto;"></p>
+            <hr>
+            <h4>Earliest Mentions and Linguistic Clues</h4>
+            <p>The earliest known reference to Tâb appears in a poem from 1310, which mentions al-tâb wa-l-dukk, likely referring to an early version of the game. The exact origins are uncertain, but linguistic evidence suggests Eastern influences.</p>
+            <p>The Arabic word tâb refers to the throwing sticks used to determine movement, while seega (another related term) denotes the board itself. As trade routes connected Africa, Arabia, and Asia, the game traveled with merchants and pilgrims, reaching as far east as India and as far west as Tripoli.</p>
+            <hr>
+            <h4>Social Context and Historical Accounts</h4>
+            <p>Tâb was especially popular among the poorer classes of Egypt, where it continued to be played well into the 19th century. The English traveler Edward William Lane recorded detailed descriptions of its rules and play in the 1820s, making his work one of the most complete surviving accounts of the game.</p>
+            <p>Following Lane’s writings, scholars such as Murray, Bell, and Parlett helped to revive interest in Tâb during the 20th century. Archaeological evidence from the eastern Mediterranean also confirmed the game’s widespread use among people of all social classes, from commoners to merchants and travelers.</p>
+            <hr>
+            <h4>Gameplay and Symbolism</h4>
+            <p>Tâb is a war game, typically played on a board of three or four rows. It belongs to a broader family of “running fight” games—similar to the Indian Tablan and Scandinavian Daldøs—in which each player’s pieces race around the board in opposite directions, capturing enemy pieces when paths intersect.</p>
+            <p>A distinctive feature of Tâb is its conversion mechanic. When a player throws a special result known as a tâb (often equivalent to a “1” in modern dice), one of their pieces is converted from a Christian (unconverted) to a Muslim (converted). Only the converted pieces can move freely and participate in captures.
+              This rule likely reflects the game’s cultural and religious symbolism, merging strategic gameplay with metaphors drawn from the medieval Islamic world.</p>
+            <hr>
+            <h4>Decline and Rediscovery</h4>
+            <p>By the late medieval period, Tâb had spread across much of the Islamic world, becoming one of the most recognizable traditional games of the region. It gradually declined during the 19th century, though travelers and ethnographers continued to document it.</p>
+            <p>In the 20th century, archaeologists rediscovered boards and references to Tâb throughout the eastern Mediterranean, confirming its deep historical roots. Its endurance for centuries across continents makes it a rare example of a traditional board game whose rules, terminology, and symbolic meaning have survived largely intact through both oral tradition and written record.</p>
+
+          </div>
+        </div>
+      </div>
+
+    </aside>
+    <section class="board-wrapper">
+      <div class="game-board" id="gameBoard">
+      </div>
+    </section>
+
+  </div>
+
+</body>
+
+</html>
