@@ -53,7 +53,50 @@ body {
     color: #05202b;
     font-family: 'Montserrat', sans-serif;
 }
-
+/* aparência base para todos */
+button {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+  }
+  
+  /* PRIMARY — destaque (usar para Iniciar) */
+  .btn-primary, .playButton {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    box-shadow: 0 6px 18px rgba(11,121,247,0.12);
+  }
+  
+  /* SECONDARY — caixa clara com borda (para os 3 botões) */
+  .btn-secondary, #myBtnInstructions, #myBtnClassifications, #myBtnExtra {
+    background: var(--panel-bg);
+    color: var(--muted);
+    border: 1px solid #e3e7ee;
+    box-shadow: 0 2px 8px rgba(16,24,40,0.04);
+  }
+  
+  /* LINK / ghost — sem caixa, com sublinhado (útil se preferires pareçam hyperlinks) */
+  .btn-link, .link-button {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    text-decoration: underline;
+    padding: 6px 8px;
+  }
+  
+  /* estados simples */
+  button:hover { opacity: 0.95; transform: translateY(-1px); }
+  button:active { transform: translateY(0); opacity: 0.92; }
+  button:focus { outline: 3px solid rgba(11,121,247,0.12); outline-offset: 2px; }
+  
+  /* disabled */
+  button[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  
 /* auth form (compact) */
 .authForm {
     display: flex;
