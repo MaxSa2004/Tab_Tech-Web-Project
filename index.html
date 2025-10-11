@@ -30,7 +30,6 @@
           <!-- Modal content -->
           <div class="modal-content" role="document">
             <button class="close" aria-label="Fechar">&times;</button>
-            <h3>Instructions</h3>
             <h3>How to play Tâb</h3>
             <h4>Introduction</h4>
             <p>Tâb is a two player running-fight board game played across the Middle East and North Africa.</p>
@@ -155,13 +154,14 @@
 
                     <label for="game_mode">Modo:</label>
                     <select id="game_mode">
+                        <option disabled selected value> select an option </option>
                         <option value="player">vs Player</option>
                         <option value="ia">vs IA</option>
                     </select>
 
                     <label for="ia_lvl"> Choose a level of difficulty: </label>
                     <select name="ia_lvl" id="ia_lvl">
-                        <option disabled selected value> -- select an option -- </option>
+                        <option disabled selected value> select an option </option>
                         <option value="easy"> Easy </option>
                         <option value="normal"> Normal</option>
                         <option value="hard"> Hard</option>
@@ -203,8 +203,7 @@
             <div id="messages" class="messages" role="log" aria-live="polite" aria-atomic="false"></div>
 
             <div class="input-area">
-                <button id="simDice" class="link-button" disabled title="Ainda não implementado">Lançar dado
-                    (des)</button>
+                <button id="simDice" class="link-button" disabled title="Ainda não implementado">Lançar dado</button>
                 <div class="current-player">Jogador atual: <strong id="currentPlayer">1</strong></div>
                 <button id="nextTurn" class="link-button">Mudar turno</button>
             </div>

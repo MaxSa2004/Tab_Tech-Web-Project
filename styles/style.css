@@ -227,14 +227,13 @@ button[disabled] {
 .config {
     display: flex;
     flex-direction: column;
-    gap: 10px
 }
 
 .controls-row {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    align-items: center
+    align-items: center;
 }
 
 .controls-row select,
@@ -247,12 +246,13 @@ button[disabled] {
 }
 
 .playButton {
-    padding: 8px 12px;
+    padding: 8px 8px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
+    background: linear-gradient(180deg, #0b79f7, #066ed6);
     border: 1px solid rgba(255, 255, 255, 0.04);
-    cursor: pointer
+    cursor: pointer;
 }
+
 
 .game-board {
     display: grid;
@@ -349,6 +349,7 @@ button[disabled] {
 }
 
 .messages {
+    max-height: 415px;
     flex: 1;
     overflow: auto;
     padding-right: 6px;
@@ -432,14 +433,15 @@ button[disabled] {
 .input-area {
     display: flex;
     gap: 8px;
-    align-items: center
+    align-items: center;
+    margin-left: 5px;
 }
 
 .link-button {
     background: rgba(7, 32, 43, 0.9);
     /* same as chat outline/header */
     border: 1px solid rgba(7, 32, 43, 1);
-    padding: 8px 10px;
+    padding: 8px 7px;
     border-radius: 8px;
     color: #ffffff;
     /* white text for contrast */
@@ -505,8 +507,9 @@ button[disabled] {
     position: relative;
     z-index: 1201;
     /* fica acima do overlay */
-    background: var(--card);
-    color: var(--text);
+    background: #fafafa;
+    border-color: var(--card);
+    color: var(--card);
     padding: 20px;
     border-radius: 10px;
     width: 920px;
@@ -525,7 +528,7 @@ button[disabled] {
     top: 10px;
     background: none;
     border: none;
-    color: #ffffff;
+    color: #05202b;
     /* white */
     font-size: 24px;
     cursor: pointer;
