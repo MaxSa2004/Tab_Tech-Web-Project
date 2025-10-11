@@ -1,70 +1,26 @@
-<html>
+<!doctype html>
+<html lang="pt-PT">
 
 <head>
-  <meta charset="utf-8" />
-  <title>Tâb Game</title>
-  <link rel="stylesheet" type="text/css" media="screen" href="styles/style.css" />
-  <script type="text/javascript" src="scripts/visualScript.js" defer></script>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tâb Game</title>
+    <link rel="stylesheet" href="styles/style.css">
+    <script src="scripts/visualScript.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
   <!--Montserrat-->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap"
     rel="stylesheet"> <!--Inter-->
-
 </head>
 
 <body>
-  <!--Logo + Title + Authentication on the same line-->
-  <header class="header">
-    <div class="logo">
-      <img class="logo_img" src="images/logo.png" alt="logo_img">
-      <h1>Tâb Game</h1>
-    </div>
-    <form class="authForm">
-      <label for="user">User: </label>
-      <input type="text" id="user" name="user"><br><br>
-      <label for="pass">Password: </label>
-      <input type="password" id="pass" name="pass"><br><br>
-      <input type="submit" value="Log in">
-    </form>
-  </header>
-  <div class="main-area">
-    <!--Configuration structure-->
-    <aside class="sidebar">
-      <div class="config">
-        <h3>Game Configuration:</h3>
-        <form>
-          <label for="width"> Choose a width: </label>
-          <select name="width" id="width">
-            <option value="7"> 7 </option>
-            <option selected value="9"> 9 (mais usado)</option>
-            <option value="11"> 11</option>
-            <option value="13"> 13</option>
-            <option value="15"> 15</option>
-          </select>
-        </form><br>
-        <form>
-          <label for="game_mode"> Choose a game mode: </label>
-          <select name="game_mode" id="game_mode">
-            <option disabled selected value> -- select an option -- </option>
-            <option value="ia"> vs. IA </option>
-            <option value="player"> vs. Player </option>
-          </select>
-        </form><br>
-        <form>
-          <label for="ia_lvl"> Choose a level of difficulty: </label>
-          <select name="ia_lvl" id="ia_lvl">
-            <option disabled selected value> -- select an option -- </option>
-            <option value="easy"> Easy </option>
-            <option value="normal"> Normal</option>
-            <option value="hard"> Hard</option>
-          </select>
-        </form><br>
-        <div>
-          <input type="checkbox" id="first_to_play" name="first_to_play" checked />
-          <label for="first_to_play">First to Play</label><br>
+    <header class="header" role="banner">
+        <div class="header-left">
+            <img src="images/logo.png" alt="Tâb logo" class="logo_img">
+            <h1>Tâb Game</h1>
         </div>
-      </div>
 
+        
       <div class="buttons">
         <!--Button to get Instructions-->
         <!-- Trigger/Open The Modal (window) -->
@@ -173,13 +129,88 @@
         </div>
       </div>
 
-    </aside>
-    <section class="board-wrapper">
-      <div class="game-board" id="gameBoard">
-      </div>
-    </section>
+        <form class="authForm" aria-label="Login">
+            <label for="user" class="sr-only">User</label>
+            <input id="user" name="user" type="text" placeholder="User">
+            <label for="pass" class="sr-only">Password</label>
+            <input id="pass" name="pass" type="password" placeholder="Password">
+            <button type="submit" class="authBtn">Entrar</button>
+        </form>
+    </header>
 
-  </div>
+    <main class="main-area" role="application">
+        <!-- LEFT: board + config + captured pieces -->
+        <section class="board-wrapper" aria-label="Área do tabuleiro">
+            <div class="config">
+                <h3>Configuração</h3>
+                <div class="controls-row">
+                    <label for="width">Largura:</label>
+                    <select id="width" name="width">
+                        <option value="7">7</option>
+                        <option value="9" selected>9</option>
+                        <option value="11">11</option>
+                        <option value="13">13</option>
+                        <option value="15">15</option>
+                    </select>
+
+                    <label for="game_mode">Modo:</label>
+                    <select id="game_mode">
+                        <option value="player">vs Player</option>
+                        <option value="ia">vs IA</option>
+                    </select>
+
+                    <label for="ia_lvl"> Choose a level of difficulty: </label>
+                    <select name="ia_lvl" id="ia_lvl">
+                        <option disabled selected value> -- select an option -- </option>
+                        <option value="easy"> Easy </option>
+                        <option value="normal"> Normal</option>
+                        <option value="hard"> Hard</option>
+                    </select>
+
+                    <label>
+                        <input type="checkbox" id="first_to_play" checked> Primeiro a jogar
+                    </label>
+
+                    <button id="playButton" class="playButton">Iniciar Jogo</button>
+                </div>
+            </div>
+
+            <!-- board: grid responsiva, colunas definidas via JS -->
+            <div id="gameBoard" class="game-board" aria-label="Tabuleiro do jogo">
+                <!-- cells são injetadas por JS segundo largura selecionada -->
+            </div>
+
+            <!-- captured pieces area -->
+            <div class="captured">
+                <div class="captured-col">
+                    <div class="captured-title">Peças nossas</div>
+                    <div id="capturedP1" class="captured-list"></div>
+                </div>
+                <div class="captured-col">
+                    <div class="captured-title">Peças do oponente</div>
+                    <div id="capturedP2" class="captured-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT: chat-like turn prompts -->
+        <aside class="chat" aria-label="Prompts de turno">
+            <div class="chat-header">
+                <h3>Game prompts</h3>
+                <div id="toggleMute" class="toggle">Som: ligado</div>
+            </div>
+
+            <div id="messages" class="messages" role="log" aria-live="polite" aria-atomic="false"></div>
+
+            <div class="input-area">
+                <button id="simDice" class="link-button" disabled title="Ainda não implementado">Lançar dado
+                    (des)</button>
+                <div class="current-player">Jogador atual: <strong id="currentPlayer">1</strong></div>
+                <button id="nextTurn" class="link-button">Mudar turno</button>
+            </div>
+        </aside>
+    </main>
+
 
 </body>
 
