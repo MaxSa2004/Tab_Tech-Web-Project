@@ -184,3 +184,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!gameBoard) console.warn('gameBoard not found');
     if (!messagesEl) console.warn('messagesEl not found');
 });
+

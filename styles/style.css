@@ -53,6 +53,25 @@ body {
     color: #05202b;
     font-family: 'Montserrat', sans-serif;
 }
+
+.header h1 {
+    position: relative;
+    margin: 0;
+    font-size: 1.75rem;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #05202b;
+    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0, 0, 0, 0.3);
+    transform: rotateX(0deg) rotateY(0deg);
+    transition: transform 0.25s ease, text-shadow 0.25s ease;
+}
+
+.header h1:hover {
+    transform: rotateX(10deg) rotateY(-8deg) scale(1.03);
+    text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* aparência base para todos */
 button {
     font-family: 'Inter', sans-serif;
@@ -62,41 +81,62 @@ button {
     cursor: pointer;
     border: none;
     background: transparent;
-  }
-  
-  /* PRIMARY — destaque (usar para Iniciar) */
-  .btn-primary, .playButton {
+}
+
+/* PRIMARY — destaque (usar para Iniciar) */
+.btn-primary,
+.playButton {
     background: var(--accent);
     color: #fff;
     border: 0;
-    box-shadow: 0 6px 18px rgba(11,121,247,0.12);
-  }
-  
-  /* SECONDARY — caixa clara com borda (para os 3 botões) */
-  .btn-secondary, #myBtnInstructions, #myBtnClassifications, #myBtnExtra {
+    box-shadow: 0 6px 18px rgba(11, 121, 247, 0.12);
+}
+
+/* SECONDARY — caixa clara com borda (para os 3 botões) */
+.btn-secondary,
+#myBtnInstructions,
+#myBtnClassifications,
+#myBtnExtra {
     background: var(--panel-bg);
     color: var(--muted);
     border: 1px solid #e3e7ee;
-    box-shadow: 0 2px 8px rgba(16,24,40,0.04);
-  }
-  
-  /* LINK / ghost — sem caixa, com sublinhado (útil se preferires pareçam hyperlinks) */
-  .btn-link, .link-button {
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
+}
+
+/* LINK / ghost — sem caixa, com sublinhado (útil se preferires pareçam hyperlinks) */
+.btn-link,
+.link-button {
     background: transparent;
     color: var(--muted);
     border: none;
     text-decoration: underline;
     padding: 6px 8px;
-  }
-  
-  /* estados simples */
-  button:hover { opacity: 0.95; transform: translateY(-1px); }
-  button:active { transform: translateY(0); opacity: 0.92; }
-  button:focus { outline: 3px solid rgba(11,121,247,0.12); outline-offset: 2px; }
-  
-  /* disabled */
-  button[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-  
+}
+
+/* estados simples */
+button:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+    opacity: 0.92;
+}
+
+button:focus {
+    outline: 3px solid rgba(11, 121, 247, 0.12);
+    outline-offset: 2px;
+}
+
+/* disabled */
+button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 /* auth form (compact) */
 .authForm {
     display: flex;
@@ -104,7 +144,7 @@ button {
     align-items: center;
     border-radius: 8px;
     /* pequena borda externa leve para separar do header */
-    border: 1px solid rgba(16,24,40,0.04);
+    border: 1px solid rgba(16, 24, 40, 0.04);
     padding: 6px;
     background: transparent;
 }
@@ -112,18 +152,21 @@ button {
 .authForm input {
     padding: 8px 10px;
     border-radius: 6px;
-    border: 1px solid #c8ccd0;    /* borda visível */
-    background: #ffffff;          /* fundo branco */
-    color: #05202b;               /* texto escuro dentro do input */
+    border: 1px solid #c8ccd0;
+    /* borda visível */
+    background: #ffffff;
+    /* fundo branco */
+    color: #05202b;
+    /* texto escuro dentro do input */
     min-width: 120px;
     outline: none;
-    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
     transition: box-shadow .14s ease, border-color .12s ease, transform .06s ease;
 }
 
 .authForm input:focus {
     border-color: #0b79f7;
-    box-shadow: 0 6px 20px rgba(11,121,247,0.12);
+    box-shadow: 0 6px 20px rgba(11, 121, 247, 0.12);
     transform: translateY(-1px);
 }
 
@@ -131,19 +174,20 @@ button {
     padding: 8px 12px;
     border-radius: 6px;
     border: none;
-    background: linear-gradient(180deg, #0b79f7, #066ed6); /* azul agradável */
+    background: linear-gradient(180deg, #0b79f7, #066ed6);
+    /* azul agradável */
     color: #ffffff;
     cursor: pointer;
     font-weight: 600;
-    box-shadow: 0 6px 18px rgba(11,121,247,0.12);
+    box-shadow: 0 6px 18px rgba(11, 121, 247, 0.12);
     transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
-
 }
 
 .authBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(11,121,247,0.14);
+    box-shadow: 0 12px 30px rgba(11, 121, 247, 0.14);
 }
+
 .authBtn:active {
     transform: translateY(0);
     opacity: 0.95;
@@ -155,6 +199,7 @@ button {
     cursor: not-allowed;
     box-shadow: none;
 }
+
 /* main layout */
 .main-area {
     width: 1100px;
@@ -170,11 +215,11 @@ button {
 .board-wrapper {
     background: linear-gradient(180deg, #071b2a, #05202b);
     border-radius: 12px;
-    padding: 18px;
+    padding: 26px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: 420px;
+    min-height: 560px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -209,34 +254,34 @@ button {
     cursor: pointer
 }
 
-/* game-board: responsive grid */
 .game-board {
     display: grid;
-    grid-template-columns: repeat(var(--cols, 9), minmax(48px, 1fr));
-    gap: 8px;
-    align-items: center;
-    justify-items: center;
-    padding: 12px;
-    border-radius: 8px;
-    min-height: 220px;
-    max-height: 520px;
-    overflow: auto;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent);
+    gap: 4px;
+    justify-content: center;
+    align-content: center;
+    margin: 1rem auto;
+    max-width: 760px;
+    width: 90%;
+    background: #222;
+    border: 4px solid #444;
+    border-radius: 12px;
+    padding: 6px;
+    grid-template-columns: repeat(var(--cols), minmax(36px, 1fr));
 }
 
 /* each cell keeps square ratio */
 .game-board .cell {
-    width: 100%;
-    aspect-ratio: 1/1;
-    min-width: 36px;
-    max-width: 78px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.02);
+
+    background: #fff;
+    border-radius: 6px;
     display: flex;
-    align-items: center;
     justify-content: center;
-    color: var(--text);
-    font-weight: 600;
+    align-items: center;
+    aspect-ratio: 1 / 1;
+    line-height: 1;
+    overflow: hidden;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+
 }
 
 /* captured pieces area */
@@ -249,37 +294,48 @@ button {
 
 .captured-col {
     flex: 1;
-    background: rgba(255, 255, 255, 0.015);
+    background: #ffffff;
+    /* white background */
     padding: 8px;
     border-radius: 8px;
-    min-height: 42px
+    min-height: 42px;
+    border: 1px solid rgba(7, 32, 43, 0.3);
+    /* subtle border to separate from board */
 }
 
 .captured-title {
     font-size: 13px;
     color: var(--muted);
-    margin-bottom: 6px
+    margin-bottom: 6px;
 }
 
 .captured-list {
     min-height: 28px
 }
 
-/* chat column */
 .chat {
-    background: #07202b;
+    background: #ffffff;
+    /* white chat background */
+    border: 2px solid #07202b;
+    /* outline same as game board */
     border-radius: 12px;
-    padding: 12px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    min-height: 420px;
+    min-height: 560px;
+    box-shadow: 0 4px 16px rgba(7, 32, 43, 0.25);
+    /* soft matching glow */
 }
 
 .chat-header {
     display: flex;
     align-items: center;
-    justify-content: space-between
+    justify-content: space-between;
+    background: rgba(7, 32, 43, 0.9);
+    /* same tone as chat outline */
+    border-radius: 8px;
+    padding: 8px 12px;
 }
 
 .chat-header h3 {
@@ -332,9 +388,10 @@ button {
 }
 
 .msg-player1 .bubble {
-    background: linear-gradient(180deg, rgba(234, 179, 8, 0.12), rgba(234, 179, 8, 0.06));
-    color: var(--p1);
-    border: 1px solid rgba(234, 179, 8, 0.14)
+    background: rgba(7, 32, 43, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(7, 32, 43, 1);
+    box-shadow: 0 4px 12px rgba(7, 32, 43, 0.3);
 }
 
 .msg-player2 {
@@ -343,9 +400,12 @@ button {
 }
 
 .msg-player2 .bubble {
-    background: linear-gradient(180deg, rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.06));
-    color: var(--p2);
-    border: 1px solid rgba(96, 165, 250, 0.12)
+    background: rgba(230, 239, 247, 0.9);
+    /* very light blue-gray */
+    color: #05202b;
+    /* readable dark text */
+    border: 1px solid rgba(200, 220, 235, 0.8);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .msg-server {
@@ -376,17 +436,32 @@ button {
 }
 
 .link-button {
-    background: none;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    background: rgba(7, 32, 43, 0.9);
+    /* same as chat outline/header */
+    border: 1px solid rgba(7, 32, 43, 1);
     padding: 8px 10px;
     border-radius: 8px;
-    color: var(--text);
-    cursor: pointer
+    color: #ffffff;
+    /* white text for contrast */
+    cursor: pointer;
+    transition: transform .12s ease, opacity .12s ease, box-shadow .12s ease;
+    box-shadow: 0 4px 12px rgba(7, 32, 43, 0.25);
+}
+
+.link-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(7, 32, 43, 0.35);
+}
+
+.link-button:active {
+    transform: translateY(0);
+    opacity: 0.9;
 }
 
 .link-button[disabled] {
-    opacity: 0.45;
-    cursor: not-allowed
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* small helpers */
@@ -438,28 +513,39 @@ button {
     /* largura desejada, adapta se necessário */
     max-width: calc(100% - 40px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-
     /* torna o conteúdo rolável quando maior que a viewport */
     max-height: calc(100vh - 80px);
     /* deixa alguma margem top/bottom */
     overflow: auto;
 }
 
-.modal-close {
+.modal .close {
     position: absolute;
     right: 12px;
     top: 10px;
     background: none;
     border: none;
-    color: var(--muted);
+    color: #ffffff;
+    /* white */
     font-size: 24px;
     cursor: pointer;
+    transition: color 0.2s ease, text-shadow 0.2s ease, transform 0.15s ease;
 }
-body.modal-open{
+
+.modal .close:hover {
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+    transform: scale(1.1);
+}
+
+.modal .close:active {
+    transform: scale(1.0);
+    opacity: 0.85;
+}
+
+body.modal-open {
     overflow: hidden;
     touch-action: none;
 }
-
 
 /* responsive */
 @media (max-width:1000px) {
@@ -478,3 +564,48 @@ body.modal-open{
         order: 1
     }
 }
+
+/* Keep your existing arrow styles from before */
+
+.arrow {
+    font-size: clamp(0.6rem, 1vw, 0.9rem);
+    /* adapta ao tamanho da célula */
+    color: #000;
+    opacity: 1;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1;
+    user-select: none;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+}
+
+.arrow:hover {
+    opacity: 1;
+}
+
+/* Direções únicas */
+.arrow.up::before {
+    content: "↑";
+}
+
+.arrow.down::before {
+    content: "↓";
+}
+
+.arrow.left::before {
+    content: "←";
+}
+
+.arrow.right::before {
+    content: "→";
+}
+
+/* Combinações de setas (ex: up + down, left + right) */
+.arrow.up.down::before {
+    content: "↑↓";
+}
+
