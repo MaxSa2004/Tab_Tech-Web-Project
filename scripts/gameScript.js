@@ -39,8 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 // seta ícone/arrow conforme padrão — mantém o teu padrão original
                 const arrow = document.createElement('i');
                 if (r === 0) arrow.className = 'arrow ' + (c === 0 ? 'down' : 'left');
-                else if (r === 1) arrow.className = 'arrow ' + (c === 0 || c === cols - 1 ? 'up down' : 'right');
-                else if (r === 2) arrow.className = 'arrow ' + (c === cols - 1 ? 'up down' : 'left');
+                else if (r === 1) arrow.className = 'arrow ' + (c === cols - 1 ? 'up down' : 'right');
+                else if (r === 2) arrow.className = 'arrow ' + (c === 0 ? 'up' : 'left');
                 else if (r === 3) arrow.className = 'arrow ' + (c === cols - 1 ? 'up' : 'right');
 
                 // put initial pieces in rows index 0 and 3
