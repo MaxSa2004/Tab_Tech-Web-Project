@@ -9,9 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggleMuteBtn = document.getElementById('toggleMute');
     const playButton = document.getElementById('playButton');
     const authForm = document.querySelector('.authForm');
+    const rows = 4;
 
     // estado
-    let currentPlayer = 1;
+    let currentPlayer = 1; // 1 or 2
     let soundOn = true;
 
     // piece handling
@@ -19,9 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let yellowPieces = 0; // player 2
     let selectedPiece = null;
 
+    // dice handling
+    let diceValue = 0;
+
     // --- Board render (single function, responsive) ---
     function renderBoard(cols) {
-        const rows = 4;
         redPieces = cols;
         yellowPieces = cols;
         // atualiza CSS var e grid-template
@@ -56,11 +59,45 @@ document.addEventListener("DOMContentLoaded", () => {
                     piece.classList.add('red');
                     cell.appendChild(piece);
                 }
-                
+
                 cell.appendChild(arrow);
                 gameBoard.appendChild(cell);
             }
         }
+    }
+
+    function flipBoard() {
+        const cells = Array.from(gameBoard.querySelectorAll('.cell'));
+        const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
+
+        // temp map to store where each piece should move
+        const tempPositions = [];
+
+        // fill new positions array
+        cells.forEach(cell => {
+            const piece = cell.querySelector('.piece');
+
+            // if not null
+            if (piece) {
+                const r = parseInt(cell.dataset.r, 10); // base 10 integer
+                const c = parseInt(cell.dataset.c, 10);
+
+                const newR = rows - 1 - r;
+                const newC = cols - 1 - c;
+                tempPositions.push({ piece, newR, newC });
+            }
+        });
+
+        // clear all pieces on board
+        cells.forEach(cell => cell.innerHTML = cell.innerHTML.replace(/<div class="piece.*?<\/div>/g, ''));
+
+        // place pieces in new positions
+        tempPositions.forEach(({ piece, newR, newC }) => {
+            const target = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
+            if (target) {
+                target.appendChild(piece);
+            }
+        });
     }
 
     // --- Chat messages ---
@@ -101,6 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
         currentPlayer = currentPlayer === 1 ? 2 : 1;
         currentPlayerEl.textContent = currentPlayer;
         showMessage({ who: 'system', text: `Agora é o turno do Jogador ${currentPlayer}.` });
+
+        // flipBoard to show perspective of now current player's turn
+        flipBoard();
 
         const prompts = [
             'Lança os dados!',
