@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Tâb — Lançamento com botão Fechar</title>
+<title>Tâb — Lançamento (auto-fechar 3s)</title>
 <style>
   :root{
     --bg:#f7f7f7;
@@ -100,12 +100,14 @@
   .result-bubble .big{ font-size:56px; font-weight:800; }
   .result-bubble .label{ font-size:14px; opacity:0.95; margin-top:2px; }
 
-  .close-btn{
-    background:transparent; border:2px solid rgba(255,255,255,0.18);
-    color:white; padding:10px 14px; border-radius:10px; cursor:pointer;
-    font-size:15px; min-width:110px;
+  /* contador/aviso de fecho automático */
+  .countdown{
+    font-size:13px;
+    opacity:0.95;
+    background: rgba(255,255,255,0.06);
+    padding:6px 10px;
+    border-radius:8px;
   }
-  .close-btn:hover{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.28); }
 
   .log{ margin-top:8px; font-size:14px; color:#333; width:min(92vmin,780px); display:flex; justify-content:space-between; }
   .log .last{ font-weight:700; color:var(--accent); }
@@ -237,7 +239,7 @@ function dropSticks(pouch){
     s.style.transitionDelay = `${i * 80}ms`;
   });
 
-  // quando terminar animação mostramos o overlay com botão Fechar
+  // quando terminar animação mostramos o overlay com fecho automático
   const totalAnim = 700 + (sticks.length-1)*80;
   setTimeout(()=>{
     const actualUp = results.reduce((a,b)=> a + (b?1:0),0);
@@ -248,14 +250,19 @@ function dropSticks(pouch){
     lastValue = gameValue;
     history.push({value:gameValue, upCount:actualUp, timestamp: Date.now()});
     updateLog();
-    // NOTA: não removemos automaticamente o pouch; o utilizador fecha a janela e aí removemos tudo.
+    // NOTA: o pouch será removido automaticamente quando o overlay fechar após 3s
   }, totalAnim + 40);
 }
 
 function showResultOverlay(gameValue, upCount, pouchElement){
-  // remover overlay anterior se houver
+  // remover overlay anterior se houver (e limpar timers caso necessário)
   const prev = arena.querySelector('.result-overlay');
-  if(prev) prev.remove();
+  if(prev){
+    // se havia intervalos/timers associados ao overlay anterior, limpamos (guardados em dataset)
+    if(prev._countdownInterval) clearInterval(prev._countdownInterval);
+    if(prev._autoCloseTimer) clearTimeout(prev._autoCloseTimer);
+    prev.remove();
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'result-overlay';
@@ -268,27 +275,49 @@ function showResultOverlay(gameValue, upCount, pouchElement){
   const label = document.createElement('div'); label.className = 'label';
   label.innerHTML = `${names[upCount] || 'Resultado'} — paus virados para cima: ${upCount}`;
 
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'close-btn';
-  closeBtn.textContent = 'Fechar';
+  // contador visível que mostra a contagem regressiva até fechar automaticamente
+  const countdown = document.createElement('div');
+  countdown.className = 'countdown';
+  let secs = 3;
+  countdown.textContent = `Fechando em ${secs}s`;
 
-  // ao fechar: remove overlay e o pouch (paus) e reativa o botão de lançamento
-  closeBtn.addEventListener('click', ()=>{
-    const ov = arena.querySelector('.result-overlay');
-    if(ov) ov.remove();
-    const p = arena.querySelector('.pouch');
-    if(p) p.remove();
-    launchBtn.disabled = false;
-  });
-
+  // adiciona elementos ao bubble
   bubble.appendChild(big);
   bubble.appendChild(label);
-  bubble.appendChild(closeBtn);
+  bubble.appendChild(countdown);
   overlay.appendChild(bubble);
   arena.appendChild(overlay);
 
   // anima a aparição do balão
   setTimeout(()=> bubble.classList.add('show'), 20);
+
+  // iniciar contagem regressiva visual
+  const intervalId = setInterval(() => {
+    secs -= 1;
+    if (secs > 0) {
+      countdown.textContent = `Fechando em ${secs}s`;
+    } else {
+      countdown.textContent = `Fechando...`;
+      clearInterval(intervalId);
+    }
+  }, 1000);
+  // guardar para possível limpeza
+  overlay._countdownInterval = intervalId;
+
+  // fechar automaticamente após 3 segundos: limpar overlay, pouch e reactivar botão
+  const autoClose = setTimeout(() => {
+    // limpar interval caso ainda exista
+    if (overlay._countdownInterval) {
+      clearInterval(overlay._countdownInterval);
+      overlay._countdownInterval = null;
+    }
+    const ov = arena.querySelector('.result-overlay');
+    if(ov) ov.remove();
+    const p = arena.querySelector('.pouch');
+    if(p) p.remove();
+    launchBtn.disabled = false;
+  }, 3000);
+  overlay._autoCloseTimer = autoClose;
 }
 
 function updateLog(){

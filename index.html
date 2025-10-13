@@ -64,7 +64,7 @@
               allowed directions</p>
             <p>A piece can only move once to the last row, and can only do so if there are no pieces (with the same
               color)
-              on the first row.</p>
+              on the first row. If that happens, you skip your turn on the button "Skip turn".</p>
             <hr>
             <h4>Capturing</h4>
             <p>If a moving piece lands on one or more enemy pieces, those enemy pieces are knocked off the board and
@@ -142,7 +142,7 @@
             <div class="config">
                 <h3>Configuração</h3>
                 <div class="controls-row">
-                    <label for="width">Largura:</label>
+                    <label for="width">Width:</label>
                     <select id="width" name="width">
                         <option value="7">7</option>
                         <option value="9" selected>9</option>
@@ -151,7 +151,7 @@
                         <option value="15">15</option>
                     </select>
 
-                    <label for="game_mode">Modo:</label>
+                    <label for="game_mode">Mode:</label>
                     <select id="game_mode">
                         <option disabled selected value> select an option </option>
                         <option value="player">vs Player</option>
@@ -167,10 +167,10 @@
                     </select>
 
                     <label>
-                        <input type="checkbox" id="first_to_play" checked> Primeiro a jogar
+                        <input type="checkbox" id="first_to_play" checked> First to Play
                     </label>
 
-                    <button id="playButton" class="playButton">Iniciar Jogo</button>
+                    <button id="playButton" class="playButton">Start Game</button>
                 </div>
             </div>
 
@@ -182,11 +182,11 @@
             <!-- captured pieces area -->
             <div class="captured">
                 <div class="captured-col">
-                    <div class="captured-title">Peças nossas</div>
+                    <div class="captured-title">Your pieces</div>
                     <div id="capturedP1" class="captured-list"></div>
                 </div>
                 <div class="captured-col">
-                    <div class="captured-title">Peças do oponente</div>
+                    <div class="captured-title">Oponnent's pieces</div>
                     <div id="capturedP2" class="captured-list"></div>
                 </div>
             </div>
@@ -196,15 +196,15 @@
         <aside class="chat" aria-label="Prompts de turno">
             <div class="chat-header">
                 <h3>Game prompts</h3>
-                <div id="toggleMute" class="toggle">Som: ligado</div>
+                <div id="toggleMute" class="toggle">Sound: on</div>
             </div>
 
             <div id="messages" class="messages" role="log" aria-live="polite" aria-atomic="false"></div>
 
             <div class="input-area">
-                <button id="simDice" class="link-button" disabled title="Ainda não implementado">Lançar dado</button>
-                <div class="current-player">Jogador atual: <strong id="currentPlayer">1</strong></div>
-                <button id="nextTurn" class="link-button">Mudar turno</button>
+                <button id="simDice" class="link-button" disabled title="Ainda não implementado">Throw dice</button>
+                <div class="current-player">Current player: <strong id="currentPlayer">1</strong></div>
+                <button id="nextTurn" class="link-button">Skip turn</button>
             </div>
         </aside>
     </main>
