@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tâb — Lançamento com botão Fechar</title>
+<style>
+  :root{
+    --bg:#f7f7f7;
+    --accent:#27348b;
+    --accent-2:#1f63d6;
+    --light:#fff9e6;
+    --dark:#222;
+    --stick-width:20vmin;
+    --stick-height:8vmin;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);font-family:Georgia,serif}
+  .page{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:18px;}
+  button{
+    background:var(--accent); color:white; border:none; padding:10px 14px;
+    border-radius:8px; font-size:16px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,0.15);
+  }
+  button:disabled{ opacity:0.5; cursor:default; box-shadow:none; }
+  .arena{
+    position:relative;
+    width:min(80vmin,700px);
+    height:min(50vmin,500px);
+    border-radius:12px;
+    background:linear-gradient(180deg,#fff,#f0f3ff);
+    box-shadow:0 8px 28px rgba(60,60,100,0.12);
+    overflow:hidden;
+    perspective:1200px;
+  }
+
+  .pouch{
+    position:absolute;
+    left:50%;
+    top:22%;
+    transform:translate(-50%,-50%);
+    z-index:30;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+
+  .stick{
+    width:var(--stick-width);
+    height:var(--stick-height);
+    border-radius:8px;
+    box-shadow:0 8px 16px rgba(0,0,0,0.18);
+    transform-origin:center center;
+    transition: transform 700ms cubic-bezier(.18,.9,.2,1), left 700ms, top 700ms;
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform-style:preserve-3d;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+  }
+
+  .stick .face{
+    position:absolute;
+    width:100%; height:100%;
+    border-radius:8px;
+    backface-visibility:hidden;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700; font-size:1.8vmin;
+    box-sizing:border-box;
+    padding:6px;
+  }
+  .face.up{
+    background: linear-gradient(90deg,var(--light) 0%, #fffef0 100%);
+    color:var(--dark); border:3px solid rgba(0,0,0,0.06);
+  }
+  .face.down{
+    background: linear-gradient(90deg,#333 0%, #111 100%);
+    color:white;
+    transform:rotateX(180deg);
+  }
+
+  .stick.initial{ transition: none; }
+
+  .stick.fallen{ transition: transform 700ms cubic-bezier(.18,.9,.2,1), left 700ms, top 700ms; }
+
+  .result-overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:auto; z-index:70;
+  }
+  .result-bubble{
+    pointer-events:auto; font-family:Georgia,serif;
+    background:rgba(39,52,139,0.96); color:#fff; padding:22px 30px; border-radius:14px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; transform:scale(0);
+    transition:transform 240ms cubic-bezier(.2,.8,.2,1);
+    display:flex; flex-direction:column; gap:10px; align-items:center;
+  }
+  .result-bubble.show{ transform:scale(1); }
+  .result-bubble .big{ font-size:56px; font-weight:800; }
+  .result-bubble .label{ font-size:14px; opacity:0.95; margin-top:2px; }
+
+  .close-btn{
+    background:transparent; border:2px solid rgba(255,255,255,0.18);
+    color:white; padding:10px 14px; border-radius:10px; cursor:pointer;
+    font-size:15px; min-width:110px;
+  }
+  .close-btn:hover{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.28); }
+
+  .log{ margin-top:8px; font-size:14px; color:#333; width:min(92vmin,780px); display:flex; justify-content:space-between; }
+  .log .last{ font-weight:700; color:var(--accent); }
+
+  .hint{ position:absolute; bottom:10px; left:12px; font-size:13px; color:#333; opacity:0.7; }
+
+  @media (max-width:600px){
+    :root{ --stick-width:20vmin; --stick-height:6vmin; }
+    .result-bubble .big{ font-size:44px; }
+    .face{ font-size:3.5vmin; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <button id="launchBtn">Lançamento</button>
+    <div class="arena" id="arena">
+      <div class="hint">Clique em "Lançamento" para aparecerem os paus em pé e serem lançados automaticamente.</div>
+    </div>
+
+    <div class="log">
+      <div>Último resultado: <span id="lastResult" class="last">—</span></div>
+      <div>Histórico: <span id="history">[]</span></div>
+    </div>
+  </div>
+
+<script>
+/* Probabilidades para nº de paus virados para cima (0..4): 6%,25%,38%,25%,6% */
+const upCountProbs = [0.06, 0.25, 0.38, 0.25, 0.06];
+const names = {0:"Sitteh (0 → 6)",1:"Tâb",2:"Itneyn",3:"Teláteh",4:"Arba'ah"};
+
+let lastValue = null;
+const history = [];
+
+const arena = document.getElementById('arena');
+const launchBtn = document.getElementById('launchBtn');
+const lastResultEl = document.getElementById('lastResult');
+const historyEl = document.getElementById('history');
+
+function sampleFromDistribution(probs){
+  const r = Math.random();
+  let c = 0;
+  for(let i=0;i<probs.length;i++){
+    c += probs[i];
+    if(r <= c) return i;
+  }
+  return probs.length - 1;
+}
+
+function createPouch(autoDrop = false){
+  // desactivar botão enquanto estiver em curso
+  launchBtn.disabled = true;
+
+  // remove pouch anterior
+  const prev = arena.querySelector('.pouch');
+  if(prev) prev.remove();
+
+  const pouch = document.createElement('div');
+  pouch.className = 'pouch';
+  pouch.title = 'Paus (em pé)';
+
+  // criar 4 paus; todos começam EM PÉ (vertical) e empilhados no centro
+  for(let i=0;i<4;i++){
+    const s = document.createElement('div');
+    s.className = 'stick initial';
+    s.dataset.index = i;
+    s.style.left = "50%";
+    s.style.top  = "50%";
+
+    // em pé: rotateX(-90deg); pequeno rotateZ para visual não exatamente sobreposto
+    const randZ = (Math.random()*8 - 4);
+    s.style.transform = `translate(-50%,-50%) rotateX(-90deg) rotateZ(${randZ}deg)`;
+    s.style.transformOrigin = '50% 85%';
+
+    const faceUp = document.createElement('div');
+    faceUp.className = 'face up';
+    faceUp.textContent = 'CIMA';
+    const faceDown = document.createElement('div');
+    faceDown.className = 'face down';
+    faceDown.textContent = 'BAIXO';
+
+    s.appendChild(faceUp);
+    s.appendChild(faceDown);
+    pouch.appendChild(s);
+  }
+
+  arena.appendChild(pouch);
+
+  if(autoDrop){
+    // pequeno atraso para permitir render
+    setTimeout(()=> dropSticks(pouch), 120);
+  }
+}
+
+function dropSticks(pouch){
+  const sticks = Array.from(pouch.querySelectorAll('.stick'));
+
+  // escolhe quantos ficam virados para cima (com probabilidades)
+  const chosenUpCount = sampleFromDistribution(upCountProbs); // 0..4
+
+  // escolhe quais dos 4 serão "up"
+  const indices = [0,1,2,3];
+  for(let i=indices.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  const results = new Array(4).fill(false);
+  for(let k=0;k<chosenUpCount;k++) results[indices[k]] = true;
+
+  // animação final: alinhados verticalmente |  |  |  | com espaçamento igual
+  const maxWide = Math.min(window.innerWidth, 900);
+  const gapPx = Math.max(54, Math.round(maxWide * 0.08)); // espaçamento
+  sticks.forEach((s, i)=>{
+    s.classList.remove('initial');
+    void s.offsetWidth; // forçar reflow
+    s.classList.add('fallen');
+
+    const posIndex = i - 1.5;
+    const offsetX = Math.round(posIndex * gapPx);
+    const offsetY = Math.round(6 + (Math.random()*6 - 3));
+
+    const isUp = results[i];
+    const rotX = isUp ? 0 : 180;
+    const rotZ = (Math.random()*6 - 3);
+
+    s.style.left = `calc(50% + ${offsetX}px)`;
+    s.style.top  = `calc(50% + ${offsetY}px)`;
+    s.style.transform = `translate(-50%,-50%) rotateX(${rotX}deg) rotateZ(${rotZ}deg)`;
+    s.style.transitionDelay = `${i * 80}ms`;
+  });
+
+  // quando terminar animação mostramos o overlay com botão Fechar
+  const totalAnim = 700 + (sticks.length-1)*80;
+  setTimeout(()=>{
+    const actualUp = results.reduce((a,b)=> a + (b?1:0),0);
+    const gameValue = (actualUp === 0) ? 6 : actualUp;
+
+    showResultOverlay(gameValue, actualUp, pouch);
+
+    lastValue = gameValue;
+    history.push({value:gameValue, upCount:actualUp, timestamp: Date.now()});
+    updateLog();
+    // NOTA: não removemos automaticamente o pouch; o utilizador fecha a janela e aí removemos tudo.
+  }, totalAnim + 40);
+}
+
+function showResultOverlay(gameValue, upCount, pouchElement){
+  // remover overlay anterior se houver
+  const prev = arena.querySelector('.result-overlay');
+  if(prev) prev.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'result-overlay';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'result-bubble';
+
+  const big = document.createElement('div'); big.className = 'big';
+  big.textContent = String(gameValue);
+  const label = document.createElement('div'); label.className = 'label';
+  label.innerHTML = `${names[upCount] || 'Resultado'} — paus virados para cima: ${upCount}`;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'close-btn';
+  closeBtn.textContent = 'Fechar';
+
+  // ao fechar: remove overlay e o pouch (paus) e reativa o botão de lançamento
+  closeBtn.addEventListener('click', ()=>{
+    const ov = arena.querySelector('.result-overlay');
+    if(ov) ov.remove();
+    const p = arena.querySelector('.pouch');
+    if(p) p.remove();
+    launchBtn.disabled = false;
+  });
+
+  bubble.appendChild(big);
+  bubble.appendChild(label);
+  bubble.appendChild(closeBtn);
+  overlay.appendChild(bubble);
+  arena.appendChild(overlay);
+
+  // anima a aparição do balão
+  setTimeout(()=> bubble.classList.add('show'), 20);
+}
+
+function updateLog(){
+  lastResultEl.textContent = lastValue === null ? '—' : lastValue;
+  historyEl.textContent = JSON.stringify(history.map(h=>h.value));
+  console.log('Tâb guardado', lastValue, 'hist', history);
+}
+
+/* BOTÃO: cria e lança automaticamente; desativa enquanto estiver a animar */
+launchBtn.addEventListener('click', ()=>{
+  // se já estiver desativado, ignora
+  if(launchBtn.disabled) return;
+  createPouch(true);
+});
+
+/* interface pública */
+window.tabGame = {
+  getLastValue: ()=> lastValue,
+  getHistory: ()=> history,
+  spawnAndLaunch: ()=> {
+    if(!launchBtn.disabled) createPouch(true);
+  }
+};
+</script>
+</body>
+</html>
