@@ -215,7 +215,7 @@ button[disabled] {
 .board-wrapper {
     background: linear-gradient(180deg, #071b2a, #05202b);
     border-radius: 12px;
-    padding: 26px;
+    padding: 0 26px 26px 26px;
     display: flex;
     flex-direction: column;
     gap: 12px;
