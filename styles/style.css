@@ -636,3 +636,101 @@ body.modal-open {
 .piece.yellow{
     background-color: #f4d03f;
 }
+/* --- dice modal / arena (colar em style.css) --- */
+.dice-overlay{
+    position: fixed;
+    inset: 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:auto;
+    z-index:9999;
+    background: rgba(0,0,0,0.18); /* opcional: escurece fundo */
+  }
+  
+  .dice-arena{
+    position:relative;
+    width:min(80vmin,700px);
+    height:min(50vmin,500px);
+    border-radius:12px;
+    background:linear-gradient(180deg,#fff,#f0f3ff);
+    box-shadow:0 8px 28px rgba(60,60,100,0.12);
+    overflow:hidden;
+    perspective:1200px;
+    padding:18px;
+    box-sizing:border-box;
+  }
+  
+  .dice-pouch{
+    position:absolute;
+    left:50%;
+    top:22%;
+    transform:translate(-50%,-50%);
+    z-index:30;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+  
+  .dice-stick{
+    width:var(--stick-width,20vmin);
+    height:var(--stick-height,8vmin);
+    border-radius:8px;
+    box-shadow:0 8px 16px rgba(0,0,0,0.18);
+    transform-origin:center center;
+    transition: transform 700ms cubic-bezier(.18,.9,.2,1), left 700ms, top 700ms;
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform-style:preserve-3d;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+  }
+  
+  .dice-stick .face{
+    position:absolute;
+    width:100%; height:100%;
+    border-radius:8px;
+    backface-visibility:hidden;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700; font-size:1.8vmin;
+    box-sizing:border-box;
+    padding:6px;
+  }
+  .dice-face-up{
+    background: linear-gradient(90deg,var(--light,#fff) 0%, #fffef0 100%);
+    color:var(--dark,#222); border:3px solid rgba(0,0,0,0.06);
+  }
+  .dice-face-down{
+    background: linear-gradient(90deg,#333 0%, #111 100%);
+    color:white;
+    transform:rotateX(180deg);
+  }
+  
+  .dice-stick.initial{ transition: none; }
+  .dice-stick.fallen{ transition: transform 700ms cubic-bezier(.18,.9,.2,1), left 700ms, top 700ms; }
+  
+  .dice-result-bubble{
+    pointer-events:auto; font-family:Georgia,serif;
+    background:rgba(39,52,139,0.96); color:#fff; padding:22px 30px; border-radius:14px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; transform:scale(0);
+    transition:transform 240ms cubic-bezier(.2,.8,.2,1);
+    display:flex; flex-direction:column; gap:10px; align-items:center;
+    z-index: 10000;
+    position: absolute;
+  }
+  .dice-result-bubble.show{ transform:scale(1); }
+  .dice-result-bubble .big{ font-size:56px; font-weight:800; }
+  .dice-result-bubble .label{ font-size:14px; opacity:0.95; margin-top:2px; }
+  
+  .dice-countdown{
+    font-size:13px;
+    opacity:0.95;
+    background: rgba(255,255,255,0.06);
+    padding:6px 10px;
+    border-radius:8px;
+  }
+  

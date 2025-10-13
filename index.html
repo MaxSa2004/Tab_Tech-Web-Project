@@ -173,6 +173,9 @@
                     <button id="playButton" class="playButton">Start Game</button>
                 </div>
             </div>
+            <div class="arena" id="arena">
+              <!--pop up dos dados injetado em JS-->
+            </div>
 
             <!-- board: grid responsiva, colunas definidas via JS -->
             <div id="gameBoard" class="game-board" aria-label="Tabuleiro do jogo">
@@ -202,7 +205,7 @@
             <div id="messages" class="messages" role="log" aria-live="polite" aria-atomic="false"></div>
 
             <div class="input-area">
-                <button id="simDice" class="link-button" disabled title="Ainda não implementado">Throw dice</button>
+                <button id="throwDiceBtn" class="link-button">Throw dice</button>
                 <div class="current-player">Current player: <strong id="currentPlayer">1</strong></div>
                 <button id="nextTurn" class="link-button">Skip turn</button>
             </div>

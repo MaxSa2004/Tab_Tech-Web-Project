@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const messagesEl = document.getElementById('messages');
     const currentPlayerEl = document.getElementById('currentPlayer');
     const nextTurnBtn = document.getElementById('nextTurn');
-    const simDiceBtn = document.getElementById('simDice');
+    const simDiceBtn = document.getElementById('throwDiceBtn');
     const toggleMuteBtn = document.getElementById('toggleMute');
     const playButton = document.getElementById('playButton');
     const authForm = document.querySelector('.authForm');
@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedPiece = null;
 
     // dice handling
-    let diceValue = 0;
+    let lastDiceValue = null;
 
     // --- Board render (single function, responsive) ---
     function renderBoard(cols) {
@@ -170,9 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // simDice disabled for now (kept for future)
     if (simDiceBtn) simDiceBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        if (simDiceBtn.disabled) return;
-        // future: roll dice
-        showMessage({ who: 'player', player: currentPlayer, text: 'Dado lançado (simulado) — valor: 3' });
+        if (simDiceBtn.disabled) return;        
     });
 
     // --- initial rendering / seed messages ---
@@ -185,4 +183,251 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!widthSelect) console.warn('widthSelect not found');
     if (!gameBoard) console.warn('gameBoard not found');
     if (!messagesEl) console.warn('messagesEl not found');
+
+    /* ======= integração dos "dados" (pawns) no gameScript.js ======= */
+    /* Probabilidades para nº de paus virados para cima (0..4): 6%,25%,38%,25%,6% */
+    const upCountProbs = [0.06, 0.25, 0.38, 0.25, 0.06];
+    const namesMap = { 0: "Sitteh (0 → 6)", 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah" };
+
+    /* helper */
+    function sampleFromDistribution(probs) {
+        const r = Math.random();
+        let c = 0;
+        for (let i = 0; i < probs.length; i++) {
+            c += probs[i];
+            if (r <= c) return i;
+        }
+        return probs.length - 1;
+    }
+
+    /*-- variáveis internas para a Promise --*/
+    window.tabGame = window.tabGame || {};
+    window.tabGame._resolveResult = null;
+
+    /* cria o overlay + pouch e lança automaticamente se autoDrop true */
+    function createDicePouch(autoDrop = false) {
+        // se já houver overlay, remove (garantir estado limpo)
+        const prev = document.body.querySelector('.dice-overlay');
+        if (prev) prev.remove();
+
+        // overlay centrado na viewport
+        const overlay = document.createElement('div');
+        overlay.className = 'dice-overlay';
+
+        // arena dentro do overlay
+        const arena = document.createElement('div');
+        arena.className = 'dice-arena';
+        overlay.appendChild(arena);
+
+        // log/hint opcional
+        const hint = document.createElement('div');
+        hint.style.position = 'absolute';
+        hint.style.bottom = '12px';
+        hint.style.left = '14px';
+        hint.style.fontSize = '13px';
+        hint.style.color = '#333';
+        hint.style.opacity = '0.8';
+        hint.textContent = 'Lançamento automático...';
+        arena.appendChild(hint);
+
+        // pouch (conteúdo com os 4 paus)
+        const pouch = document.createElement('div');
+        pouch.className = 'dice-pouch';
+        arena.appendChild(pouch);
+
+        for (let i = 0; i < 4; i++) {
+            const s = document.createElement('div');
+            s.className = 'dice-stick initial';
+            s.dataset.index = i;
+            s.style.left = "50%";
+            s.style.top = "50%";
+            const randZ = (Math.random() * 8 - 4);
+            s.style.transform = `translate(-50%,-50%) rotateX(-90deg) rotateZ(${randZ}deg)`;
+            s.style.transformOrigin = '50% 85%';
+
+            const faceUp = document.createElement('div');
+            faceUp.className = 'face dice-face-up';
+            faceUp.textContent = 'CIMA';
+            const faceDown = document.createElement('div');
+            faceDown.className = 'face dice-face-down';
+            faceDown.textContent = 'BAIXO';
+            s.appendChild(faceUp);
+            s.appendChild(faceDown);
+            pouch.appendChild(s);
+        }
+
+        document.body.appendChild(overlay);
+
+        // lock UI: desativa botão se existir
+        const throwBtn = document.getElementById('throwDiceBtn');
+        if (throwBtn) throwBtn.disabled = true;
+
+        if (autoDrop) {
+            // pequeno atraso para render
+            setTimeout(() => dropDiceSticks(pouch, arena, overlay), 120);
+        }
+    }
+
+    /* animação e resultado */
+    function dropDiceSticks(pouch, arena, overlay) {
+        const sticks = Array.from(pouch.querySelectorAll('.dice-stick'));
+
+        // escolhe quantos ficam up (0..4)
+        const chosenUpCount = sampleFromDistribution(upCountProbs);
+
+        // escolhe quais dos 4 serão "up"
+        const indices = [0, 1, 2, 3];
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        const results = new Array(4).fill(false);
+        for (let k = 0; k < chosenUpCount; k++) results[indices[k]] = true;
+
+        // calcula espaçamento
+        const maxWide = Math.min(window.innerWidth, 900);
+        const gapPx = Math.max(54, Math.round(maxWide * 0.08));
+        sticks.forEach((s, i) => {
+            s.classList.remove('initial');
+            void s.offsetWidth; // forçar reflow
+            s.classList.add('fallen');
+
+            const posIndex = i - 1.5;
+            const offsetX = Math.round(posIndex * gapPx);
+            const offsetY = Math.round(6 + (Math.random() * 6 - 3));
+
+            const isUp = results[i];
+            const rotX = isUp ? 0 : 180;
+            const rotZ = (Math.random() * 6 - 3);
+
+            s.style.left = `calc(50% + ${offsetX}px)`;
+            s.style.top = `calc(50% + ${offsetY}px)`;
+            s.style.transform = `translate(-50%,-50%) rotateX(${rotX}deg) rotateZ(${rotZ}deg)`;
+            s.style.transitionDelay = `${i * 80}ms`;
+        });
+
+        const totalAnim = 700 + (sticks.length - 1) * 80;
+        setTimeout(() => {
+            const actualUp = results.reduce((a, b) => a + (b ? 1 : 0), 0);
+            const gameValue = (actualUp === 0) ? 6 : actualUp;
+
+            // regista valores
+            lastDiceValue = gameValue;
+
+            // mostra overlay com resultado (contador) dentro do mesmo overlay
+            showDiceResult(gameValue, actualUp, overlay);
+
+            // resolve Promise se alguém está à espera
+            if (window.tabGame && typeof window.tabGame._resolveResult === 'function') {
+                try {
+                    window.tabGame._resolveResult(gameValue);
+                } catch (e) {
+                    console.warn('resolve falhou', e);
+                }
+                window.tabGame._resolveResult = null;
+            }
+
+        }, totalAnim + 40);
+    }
+
+    /* mostrador de resultado + fecho automático */
+    function showDiceResult(gameValue, upCount, overlay) {
+        // limpa overlay anterior de result bubble, se houver
+        const prevBubble = overlay.querySelector('.dice-result-bubble');
+        if (prevBubble) prevBubble.remove();
+
+        const bubble = document.createElement('div');
+        bubble.className = 'dice-result-bubble';
+
+        const big = document.createElement('div'); big.className = 'big';
+        big.textContent = String(gameValue);
+        const label = document.createElement('div'); label.className = 'label';
+        label.innerHTML = `${namesMap[upCount] || 'Resultado'} — paus virados para cima: ${upCount}`;
+
+        const countdown = document.createElement('div');
+        countdown.className = 'dice-countdown';
+        let secs = 3;
+        countdown.textContent = `Fechando em ${secs}s`;
+
+        bubble.appendChild(big);
+        bubble.appendChild(label);
+        bubble.appendChild(countdown);
+
+        // centro do overlay
+        overlay.appendChild(bubble);
+
+        // anima balão
+        setTimeout(() => bubble.classList.add('show'), 20);
+
+        // contador visual
+        const intervalId = setInterval(() => {
+            secs -= 1;
+            if (secs > 0) {
+                countdown.textContent = `Fechando em ${secs}s`;
+            } else {
+                countdown.textContent = `Fechando...`;
+                clearInterval(intervalId);
+            }
+        }, 1000);
+        overlay._countdownInterval = intervalId;
+
+        // auto close
+        overlay._autoCloseTimer = setTimeout(() => {
+            if (overlay._countdownInterval) {
+                clearInterval(overlay._countdownInterval);
+                overlay._countdownInterval = null;
+            }
+            const ov = document.body.querySelector('.dice-overlay');
+            if (ov) ov.remove();
+
+            const throwBtn = document.getElementById('throwDiceBtn');
+            if (throwBtn) throwBtn.disabled = false;
+        }, 3000);
+        
+    }
+
+    /* interface pública: spawnAndLaunch devolve Promise */
+    window.tabGame.spawnAndLaunch = function () {
+        return new Promise((resolve, reject) => {
+            // se já está a correr, rejeita
+            if (document.body.querySelector('.dice-overlay')) {
+                return reject(new Error('Outro lançamento em curso'));
+            }
+            // guarda resolver
+            window.tabGame._resolveResult = resolve;
+            // cria e lança automaticamente
+            createDicePouch(true);
+        });
+    };
+
+    /* getters úteis (opcionais) */
+    window.tabGame.getLastValue = () => lastDiceValue;
+
+    /* === Exemplo: ligar ao botão Throw Dice ===
+       - garante que o botão tem id="throwDiceBtn" no index.html
+       - adapt a função updateGamePromptWithDice(result) para o teu jogo
+    */
+    const throwBtn = document.getElementById('throwDiceBtn');
+    if (throwBtn) {
+        throwBtn.addEventListener('click', async (e) => {
+            try {
+                // chama o modal e aguarda o resultado
+                const result = await window.tabGame.spawnAndLaunch();
+                console.log('Resultado do lançamento:', result);
+                showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor:  ${result}`});
+                // usa o result para atualizar o jogo:
+                // substitui a linha abaixo pela função do teu jogo que processa o resultado
+                if (typeof updateGamePromptWithDice === 'function') {
+                    updateGamePromptWithDice(result);
+                } else {
+                    // fallback: mostra num prompt/console se ainda não tiveres a função
+                    console.log('Chama a tua função para atualizar o jogo com:', result);
+                }
+            } catch (err) {
+                console.warn('Erro ao lançar dados:', err);
+            }
+        });
+    }
+
+
 });
