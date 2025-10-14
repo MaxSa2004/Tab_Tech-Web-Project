@@ -876,110 +876,6 @@ body.modal-open {
     box-sizing: border-box;
 }
 
-.captured-col {
-    flex: 1;
-    background: #ffffff;         /* fundo branco */
-    padding: 8px;
-    border-radius: 0;            /* ❌ sem cantos arredondados */
-    min-height: 42px;
-    border: 1px solid rgba(7, 32, 43, 0.3); /* borda sutil */
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-/*4a mudanca*/
-
-.captured {
-    display: flex;
-    gap: 10px;
-    justify-content: center; /* centraliza os conjuntos de capturados */
-    align-items: center;
-}
-
-.captured-col {
-    display: flex;
-    flex-wrap: wrap;          /* permite várias peças na mesma coluna se houver muitas */
-    justify-content: center;
-    gap: 8px;
-    background: #ffffff;
-    border: 1px solid rgba(7, 32, 43, 0.3);
-    padding: 8px;
-    min-width: 180px;         /* largura mínima da coluna */
-    min-height: 60px;         /* altura mínima da coluna */
-    box-sizing: border-box;
-    border-radius: 0;          /* retângulos sem cantos arredondados */
-}
-
-.captured-col button {
-    flex: 0 0 60px;           /* largura fixa */
-    height: 60px;              /* altura igual à largura -> quadrado ou retangular consistente */
-    border-radius: 0;          /* retângulo */
-    padding: 0;
-    font-size: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f4f4f4;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-/*5a mudanca*/
-
-/* área de peças capturadas */
-.captured {
-    display: flex;
-    justify-content: space-between; /* mantém colunas nas extremidades */
-    width: 100%;
-    margin-top: 16px;
-    gap: 10px;
-}
-
-/* cada coluna */
-.captured-col {
-    display: flex;
-    flex-wrap: wrap;               /* permite várias peças na mesma coluna */
-    gap: 8px;
-    background: #ffffff;
-    border: 1px solid rgba(7, 32, 43, 0.3);
-    padding: 6px;
-    box-sizing: border-box;
-    border-radius: 0;              /* retângulos sem cantos arredondados */
-    min-width: 200px;              /* largura mínima para peças grandes */
-    min-height: 100px;             /* altura mínima */
-    justify-content: flex-start;    /* padrão: peças alinhadas à esquerda */
-}
-
-/* coluna do oponente: peças à direita */
-.captured-col:nth-child(2) {
-    justify-content: flex-end;
-}
-
-/* títulos das colunas */
-.captured-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-
-/* botões das peças capturadas */
-.captured-col button {
-    flex: 0 0 100px;               /* largura grande */
-    height: 100px;                 /* altura igual à largura -> retângulo consistente */
-    border-radius: 0;              /* retângulo */
-    padding: 0;
-    font-size: 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f4f4f4;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/*6a mudanca*/
 
 .captured {
     display: flex;
@@ -1006,8 +902,114 @@ body.modal-open {
     align-items: flex-start;
 }
 
+/* Coluna do oponente — também topo-esquerda */
 .captured-col:nth-child(2) {
-    /* Coluna do oponente: topo-direita */
-    justify-content: flex-end;
-    align-items: flex-start; /* essencial para o topo */
+    justify-content: flex-start;
+    align-items: flex-start;
 }
+
+/* === capturadas — cantos arredondados e texto mais escuro === */
+.captured {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 16px;
+    gap: 10px;
+}
+
+.captured-col {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(7, 32, 43, 0.3);
+    padding: 10px 12px;
+    box-sizing: border-box;
+    border-radius: 14px; 
+    min-width: 200px;
+    min-height: 100px;
+
+    /* alinhameto*/
+    justify-content: flex-start;
+    align-items: flex-start;
+
+    /* leve sombra para realçar */
+    box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
+}
+
+/* títulos das áreas capturadas */
+.captured-title {
+    font-size: 13px;
+    color: #1e293b; 
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+}
+
+/* conteúdo da lista */
+.captured-list {
+    min-height: 28px;
+    color: #0f172a; 
+}
+
+main {
+  display: flex;
+  align-items: flex-end; 
+  justify-content: space-between;
+  width: 100%;
+  gap: 24px;
+}
+
+.captured {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 10px;
+  align-self: flex-end; 
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; 
+  height: 100%;
+  min-height: 250px; 
+  align-self: flex-end; 
+}
+
+
+.chat .messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin: 8px 0;
+}
+
+.chat .input-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; 
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(7, 32, 43, 0.15);
+}
+
+chat {
+  background: #fff;
+  border: 1px solid rgba(7, 32, 43, 0.3);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
+}
+
+.chat .input-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 8px;     
+  padding: 4px 0 0 0;     
+  border-top: 1px solid rgba(7, 32, 43, 0.15);
+}
+
