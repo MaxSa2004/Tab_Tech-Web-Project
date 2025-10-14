@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Board render (single function, responsive) ---
     function renderBoard(cols) {
+        
         redPieces = cols;
         yellowPieces = cols;
         // atualiza CSS var e grid-template
