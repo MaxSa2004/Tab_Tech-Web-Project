@@ -796,4 +796,218 @@ body.modal-open {
   margin-right: 4px;
   border-radius: 2px;
 }
+/*1a mudanca*/
+.board-wrapper {
+  background: linear-gradient(180deg, #071b2a, #05202b);
+  border-radius: 12px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;          /* center horizontally */
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 560px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  width: fit-content;           /* ✅ wrapper shrinks to board size */
+  margin: 0 auto;               /* ✅ centers the wrapper itself */
+}
 
+.game-board {
+  display: grid;
+  gap: 4px;
+  justify-content: center;
+  align-content: center;
+  background: #222;
+  border: 4px solid #444;
+  border-radius: 12px;
+  padding: 6px;
+  box-sizing: border-box;
+  --cell-size: 52px;
+  grid-template-columns: repeat(var(--cols), var(--cell-size));
+  width: calc(var(--cols) * var(--cell-size) + (var(--cols) - 1) * 4px + 12px); /* ✅ exact width math */
+}
+/*2a mudança*/
+
+.game-board {
+    display: grid;
+    gap: 4px;
+    justify-content: center;
+    align-content: center;
+    background: #222;
+    border: 4px solid #444;
+    border-radius: 12px;
+    padding: 6px;
+    box-sizing: border-box;
+
+    /* Fixed cell size */
+    --cell-size: 52px;
+
+    /* fixed columns using JS-set variable */
+    grid-template-columns: repeat(var(--cols), var(--cell-size));
+
+    /* exact width calculation: columns * cell size + gaps + padding */
+    width: calc(var(--cols) * var(--cell-size) + (var(--cols) - 1) * 4px + 12px);
+}
+
+.game-board .cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+}
+/*3a mudanca*/
+.config {
+    display: flex;
+    flex-direction: column;
+    align-items: center;   /* centraliza horizontalmente */
+    gap: 12px;
+    min-width: 700px;      /* tamanho fixo ou mínimo suficiente para 13-15 colunas */
+    width: 100%;           /* opcional: se quiser que ocupe todo o wrapper */
+    box-sizing: border-box;
+}
+.board-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;   /* centraliza horizontalmente tudo dentro */
+    gap: 12px;
+    min-height: 560px;
+    padding: 26px;
+    width: fit-content;    /* wrapper só do tamanho do board */
+    margin: 0 auto;        /* centraliza o wrapper na página */
+    box-sizing: border-box;
+}
+
+.captured-col {
+    flex: 1;
+    background: #ffffff;         /* fundo branco */
+    padding: 8px;
+    border-radius: 0;            /* ❌ sem cantos arredondados */
+    min-height: 42px;
+    border: 1px solid rgba(7, 32, 43, 0.3); /* borda sutil */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/*4a mudanca*/
+
+.captured {
+    display: flex;
+    gap: 10px;
+    justify-content: center; /* centraliza os conjuntos de capturados */
+    align-items: center;
+}
+
+.captured-col {
+    display: flex;
+    flex-wrap: wrap;          /* permite várias peças na mesma coluna se houver muitas */
+    justify-content: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(7, 32, 43, 0.3);
+    padding: 8px;
+    min-width: 180px;         /* largura mínima da coluna */
+    min-height: 60px;         /* altura mínima da coluna */
+    box-sizing: border-box;
+    border-radius: 0;          /* retângulos sem cantos arredondados */
+}
+
+.captured-col button {
+    flex: 0 0 60px;           /* largura fixa */
+    height: 60px;              /* altura igual à largura -> quadrado ou retangular consistente */
+    border-radius: 0;          /* retângulo */
+    padding: 0;
+    font-size: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+/*5a mudanca*/
+
+/* área de peças capturadas */
+.captured {
+    display: flex;
+    justify-content: space-between; /* mantém colunas nas extremidades */
+    width: 100%;
+    margin-top: 16px;
+    gap: 10px;
+}
+
+/* cada coluna */
+.captured-col {
+    display: flex;
+    flex-wrap: wrap;               /* permite várias peças na mesma coluna */
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(7, 32, 43, 0.3);
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 0;              /* retângulos sem cantos arredondados */
+    min-width: 200px;              /* largura mínima para peças grandes */
+    min-height: 100px;             /* altura mínima */
+    justify-content: flex-start;    /* padrão: peças alinhadas à esquerda */
+}
+
+/* coluna do oponente: peças à direita */
+.captured-col:nth-child(2) {
+    justify-content: flex-end;
+}
+
+/* títulos das colunas */
+.captured-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* botões das peças capturadas */
+.captured-col button {
+    flex: 0 0 100px;               /* largura grande */
+    height: 100px;                 /* altura igual à largura -> retângulo consistente */
+    border-radius: 0;              /* retângulo */
+    padding: 0;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/*6a mudanca*/
+
+.captured {
+    display: flex;
+    justify-content: space-between; /* mantém as colunas nas extremidades */
+    width: 100%;
+    margin-top: 16px;
+    gap: 10px;
+}
+
+.captured-col {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(7, 32, 43, 0.3);
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 0;
+    min-width: 200px;
+    min-height: 100px;
+
+    /* Alinhamento padrão: topo-esquerda */
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.captured-col:nth-child(2) {
+    /* Coluna do oponente: topo-direita */
+    justify-content: flex-end;
+    align-items: flex-start; /* essencial para o topo */
+}
