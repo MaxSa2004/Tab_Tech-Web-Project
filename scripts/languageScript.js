@@ -1,9 +1,8 @@
 const i18n = {
-    pt: { 
-        title: 'Tâb Game', // h1 do header
-        myBtnInstructions: 'Ver Instruções',
-        // div id para modal-content dentro de instructions
-        modalContentInstructions: `<h3>Como jogar Tâb</h3>
+  pt: {
+    title: 'Jogo Tâb',
+    myBtnInstructions: 'Ver Instruções',
+    modalContentInstructions: `<h3>Como jogar Tâb</h3>
         <h4>Introdução</h4>
         <p>O Tâb é um jogo de tabuleiro para dois jogadores, de luta em corrida, jogado no Médio Oriente e Norte de África.</p>
         <p>Joga-se num tabuleiro rectangular de 4 linhas e um número ímpar de colunas (normalmente 7–15).</p>
@@ -42,47 +41,317 @@ const i18n = {
         <hr>
         <h4>Fim do jogo</h4>
         <p>O jogo termina quando um jogador fica sem peças no tabuleiro; o outro jogador é o vencedor.</p> `,
-        myBtnClassifications: 'Ver Classificações',
-        // div id para modal-content dentro de classifications
-        modalContentClassifications: `<h3>Classifications</h3>
+    myBtnClassifications: 'Ver Classificações',
+    // div id para modal-content dentro de classifications
+    modalContentClassifications: `<h3>Classificações</h3>
+        <p>Tabela com classificações, usuário e número de vitórias.</p>`,
+    myBtnExtra: 'Mais sobre o Tâb',
+    modalContentExtra: `<h3>História do Tâb</h3>
+        <h4>Origens e Distribuição Geográfica</h4>
+        <p>O Tâb é um antigo jogo de tabuleiro de luta e corrida que teve origem no Médio Oriente e já foi amplamente praticado em todo o mundo islâmico. Fontes históricas descrevem a sua disseminação da África Ocidental para o Irão, a leste, e da Turquia, a norte, até à ilha de Anjouan, a sul.</p>
+        <p>Nesta vasta área desenvolveram-se inúmeras variantes locais: no Norte de África, o jogo era conhecido como sîg, enquanto na Somália se jogava uma forma relacionada chamada deleb. Todas estas versões partilhavam mecânicas semelhantes, envolvendo corridas e captura de peças ao longo de caminhos que se cruzavam.</p>
+        <hr>
+        <h4>Menções Mais Antigas e Pistas Linguísticas</h4>
+        <p>A referência mais antiga conhecida ao Tâb surge num poema de 1310, que menciona al-tâb wa-l-dukk, referindo-se provavelmente a uma versão inicial do jogo. As origens exatas são incertas, mas as evidências linguísticas sugerem influências orientais.</p>
+        <p>A palavra árabe tâb refere-se aos bastões de lançamento utilizados para determinar o movimento, enquanto seega (outro termo relacionado) denota o próprio tabuleiro. À medida que as rotas comerciais ligavam África, Arábia e Ásia, o jogo viajava com mercadores e peregrinos, chegando a leste até à Índia e a oeste até Trípoli.</p>
+        <hr>
+        <h4>Contexto Social e Relatos Históricos</h4>
+        <p>O Tab era especialmente popular entre as classes mais pobres do Egipto, onde continuou a ser jogado até ao século XIX. O viajante inglês Edward William Lane registou descrições detalhadas das suas regras e do jogo na década de 1820, fazendo da sua obra um dos relatos mais completos do jogo que chegaram até nós.</p>
+        <p>Após os escritos de Lane, estudiosos como Murray, Bell e Parlett ajudaram a reavivar o interesse pelo Tab durante o século XX. As evidências arqueológicas do Mediterrâneo Oriental também confirmaram o uso generalizado do jogo entre pessoas de todas as classes sociais, desde plebeus a comerciantes e viajantes.</p>
+        h4>Jogabilidade e Simbolismo</h4>
+        <p>Tâb é um jogo de guerra, tipicamente jogado num tabuleiro de três ou quatro filas. Pertence a uma família mais vasta de jogos de "luta em curso" — semelhantes ao Tablan indiano e ao Daldøs escandinavo — em que as peças de cada jogador correm pelo tabuleiro em direções opostas, capturando peças inimigas quando os caminhos se cruzam.</p>
+        <p>Uma característica distintiva do Tâb é a sua mecânica de conversão. Quando um jogador lança um resultado especial conhecido como tâb (frequentemente equivalente a "1" nos dados modernos), uma das suas peças é convertida de cristã (não convertida) para muçulmana (convertida). Apenas as peças convertidas podem mover-se livremente e participar nas capturas.
+        Esta regra reflete provavelmente o simbolismo cultural e religioso do jogo, fundindo uma jogabilidade estratégica com metáforas retiradas do mundo islâmico medieval.</p>
+        <hr>
+        <h4>Declínio e Redescoberta</h4>
+        <p>No final do período medieval, o Tâb tinha-se espalhado por grande parte do mundo islâmico, tornando-se um dos jogos tradicionais mais reconhecidos da região. Entrou em declínio gradual durante o século XIX, embora os viajantes e os etnógrafos continuassem a documentá-lo.</p>
+        <p>No século XX, os arqueólogos redescobriram tabuleiros e referências ao Tâb por todo o Mediterrâneo oriental, confirmando as suas profundas raízes históricas. A sua persistência durante séculos em todos os continentes faz dele um raro exemplo de um jogo de tabuleiro tradicional cujas regras, terminologia e significado simbólico sobreviveram praticamente intactos tanto pela tradição oral como pelos registos escritos.</p>`,
+        configTitle: "Configuração",
+        width1: "Largura",
+        mode: "Modo",
+        lvl: "Escolha o nível de dificuldade",
+        easy: "Fácil",
+        hard: "Difícil",
+        first_to_play : "Primeiro a jogar",
+        playButton: "Iniciar Jogo",
+        captured_one: "Suas peças",
+        captured_two: "Peças do oponente",
+        toggleMute: "Som: Ligado",
+        throwDiceBtn: "Lançar dado",
+        current: "Jogador atual",
+        nextTurn: "Passar a vez"
+  },
+  en: {
+    title: 'Tâb Game',
+    myBtnInstructions: 'See Instructions',
+    // div id para modal-content dentro de instructions
+    modalContentInstructions: `<h3>How to play Tâb</h3>
+        <h4>Introduction</h4>
+        <p>Tâb is a two player running-fight board game played across the Middle East and North Africa.</p>
+        <p>It's played on a rectangular board of 4 rows and an odd number of columns (typically 7-15).</p>
+        <p>The two players sit opposite each other; each begins with a full outer row of pieces.</p>
+        <hr>
+        <h4>Setup</h4>
+        <p>Choose an odd number of columns in the configuration panel.</p>
+        <p>Each player's pieces will initially be displayed on the first row (bottow row from the player's
+          perspective).
+        </p>
+        <hr>
+        <h4>Dice</h4>
+        <p>The game dice used is a combination of 4 wooden sticks. Each stickhas a lighter (flat) side and a darker
+          (rounded) side.</p>
+        <p>A throw is scored by counting the number of lighter sides facing up. The move value mapping used is the
+          following.</p>
+        <ul>
+          <li>0 lighter -> 6 (Sitteh) Probabilidade: 6%</li>
+          <li>1 lighter -> 1 (Tâb) Probabilidade: 25%</li>
+          <li>2 lighter -> 2 (Itneyn) Probabilidade: 38%</li>
+          <li>3 lighter -> 3 (Teláteh) Probabilidade: 25%</li>
+          <li>4 lighter -> 4 (Arba'ah) Probabilidade: 6%</li>
+        </ul>
+        <p>Throws of 1,4 and 6 grant the player an extra throw; 2 and 3 end the player's turn.</p>
+        <hr>
+        <h4>Beginning of the match</h4>
+        <p>At the start of the match, neither player may move until someone throws a tâb (1). </p>
+        <hr>
+        <h4>Movement</h4>
+        <p>To move a piece, not just the first one, if it wasn't moved before, the player needs to throw a tâb. After
+          that, that piece is "converted" and can move with every throw.</p>
+        <p>A piece moves forward the exact number of squares shown by the throw. The board's layout indicates the
+          allowed directions</p>
+        <p>A piece can only move once to the last row, and can only do so if there are no pieces (with the same
+          color)
+          on the first row. If that happens, you skip your turn on the button "Skip turn".</p>
+        <hr>
+        <h4>Capturing</h4>
+        <p>If a moving piece lands on one or more enemy pieces, those enemy pieces are knocked off the board and
+          goes
+          to
+          the oponent's side.</p>
+        <hr>
+        <h4>Restrictions</h4>
+        <p>No piece may return to its original home once it has left it.</p>
+        <p></p>
+        <hr>
+        <h4>End of game</h4>
+        <p>The game ends when one player has no pieces left on the board; the other player is the winner.</p>`,
+    myBtnClassifications: 'See Classifications',
+    // div id para modal-content dentro de classifications
+    modalContentClassifications: `<h3>Classifications</h3>
         <p>Table with rank, user and number of wins (IA included)</p>`,
-        myBtnExtra: 'Mais sobre o Tâb',
-        modalContentExtra: `<h3>Tâb's History</h3>
+    myBtnExtra: 'More about Tâb',
+    modalContentExtra: `<h3>Tâb's History</h3>
         <h4>Origins and Geographic Spread</h4>
-        <p>Tâb is an ancient running-fight board game that originated in the Middle East and was once played widely across the Islamic world. Historical sources describe its spread from West Africa to Iran in the east, and from Turkey in the north to the island of Anjouan in the south.</p>
-        <p>Across this vast area, numerous local variants developed: in North Africa the game was known as sîg, while in Somalia a related form called deleb was played. All these versions shared similar mechanics, involving racing and capturing pieces along intersecting paths.</p>
-        <p><img src="images/board.gif" alt="tâb board" style="display: block; margin: 0 auto;"></p>
+        <p>Tâb is an ancient running-fight board game that originated in the Middle East and was once played widely
+          across the Islamic world. Historical sources describe its spread from West Africa to Iran in the east, and
+          from Turkey in the north to the island of Anjouan in the south.</p>
+        <p>Across this vast area, numerous local variants developed: in North Africa the game was known as sîg, while
+          in Somalia a related form called deleb was played. All these versions shared similar mechanics, involving
+          racing and capturing pieces along intersecting paths.</p>
         <hr>
         <h4>Earliest Mentions and Linguistic Clues</h4>
-        <p>The earliest known reference to Tâb appears in a poem from 1310, which mentions al-tâb wa-l-dukk, likely referring to an early version of the game. The exact origins are uncertain, but linguistic evidence suggests Eastern influences.</p>
-        <p>The Arabic word tâb refers to the throwing sticks used to determine movement, while seega (another related term) denotes the board itself. As trade routes connected Africa, Arabia, and Asia, the game traveled with merchants and pilgrims, reaching as far east as India and as far west as Tripoli.</p>
+        <p>The earliest known reference to Tâb appears in a poem from 1310, which mentions al-tâb wa-l-dukk, likely
+          referring to an early version of the game. The exact origins are uncertain, but linguistic evidence suggests
+          Eastern influences.</p>
+        <p>The Arabic word tâb refers to the throwing sticks used to determine movement, while seega (another related
+          term) denotes the board itself. As trade routes connected Africa, Arabia, and Asia, the game traveled with
+          merchants and pilgrims, reaching as far east as India and as far west as Tripoli.</p>
         <hr>
         <h4>Social Context and Historical Accounts</h4>
-        <p>Tâb was especially popular among the poorer classes of Egypt, where it continued to be played well into the 19th century. The English traveler Edward William Lane recorded detailed descriptions of its rules and play in the 1820s, making his work one of the most complete surviving accounts of the game.</p>
-        <p>Following Lane’s writings, scholars such as Murray, Bell, and Parlett helped to revive interest in Tâb during the 20th century. Archaeological evidence from the eastern Mediterranean also confirmed the game’s widespread use among people of all social classes, from commoners to merchants and travelers.</p>
+        <p>Tâb was especially popular among the poorer classes of Egypt, where it continued to be played well into the
+          19th century. The English traveler Edward William Lane recorded detailed descriptions of its rules and play
+          in the 1820s, making his work one of the most complete surviving accounts of the game.</p>
+        <p>Following Lane’s writings, scholars such as Murray, Bell, and Parlett helped to revive interest in Tâb
+          during the 20th century. Archaeological evidence from the eastern Mediterranean also confirmed the game’s
+          widespread use among people of all social classes, from commoners to merchants and travelers.</p>
         <hr>
         <h4>Gameplay and Symbolism</h4>
-        <p>Tâb is a war game, typically played on a board of three or four rows. It belongs to a broader family of “running fight” games—similar to the Indian Tablan and Scandinavian Daldøs—in which each player’s pieces race around the board in opposite directions, capturing enemy pieces when paths intersect.</p>
-        <p>A distinctive feature of Tâb is its conversion mechanic. When a player throws a special result known as a tâb (often equivalent to a “1” in modern dice), one of their pieces is converted from a Christian (unconverted) to a Muslim (converted). Only the converted pieces can move freely and participate in captures.
-          This rule likely reflects the game’s cultural and religious symbolism, merging strategic gameplay with metaphors drawn from the medieval Islamic world.</p>
+        <p>Tâb is a war game, typically played on a board of three or four rows. It belongs to a broader family of
+          “running fight” games—similar to the Indian Tablan and Scandinavian Daldøs—in which each player’s pieces
+          race around the board in opposite directions, capturing enemy pieces when paths intersect.</p>
+        <p>A distinctive feature of Tâb is its conversion mechanic. When a player throws a special result known as a
+          tâb (often equivalent to a “1” in modern dice), one of their pieces is converted from a Christian
+          (unconverted) to a Muslim (converted). Only the converted pieces can move freely and participate in
+          captures.
+          This rule likely reflects the game’s cultural and religious symbolism, merging strategic gameplay with
+          metaphors drawn from the medieval Islamic world.</p>
         <hr>
         <h4>Decline and Rediscovery</h4>
-        <p>By the late medieval period, Tâb had spread across much of the Islamic world, becoming one of the most recognizable traditional games of the region. It gradually declined during the 19th century, though travelers and ethnographers continued to document it.</p>
-        <p>In the 20th century, archaeologists rediscovered boards and references to Tâb throughout the eastern Mediterranean, confirming its deep historical roots. Its endurance for centuries across continents makes it a rare example of a traditional board game whose rules, terminology, and symbolic meaning have survived largely intact through both oral tradition and written record.</p>`
+        <p>By the late medieval period, Tâb had spread across much of the Islamic world, becoming one of the most
+          recognizable traditional games of the region. It gradually declined during the 19th century, though
+          travelers and ethnographers continued to document it.</p>
+        <p>In the 20th century, archaeologists rediscovered boards and references to Tâb throughout the eastern
+          Mediterranean, confirming its deep historical roots. Its endurance for centuries across continents makes it
+          a rare example of a traditional board game whose rules, terminology, and symbolic meaning have survived
+          largely intact through both oral tradition and written record.</p>`,
+        configTitle: "Configuration",
+        width1: "Width",
+        mode: "Mode",
+        lvl: "Choose a level of difficulty",
+        easy: "Easy",
+        hard: "Hard",
+        first_to_play: "First to Play",
+        playButton: "Start Game",
+        captured_one: "Your pieces",
+        captured_two: "Oponnent's pieces",
+        toggleMute: "Sound: On",
+        throwDiceBtn: "Throw dice",
+        current: "Current player: ",
+        nextTurn: "Skip turn"
 
+  }
+};
 
- },
-    en: { title: 'Hello, welcome!' 
-}
-  };
+// languageScript.js
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof i18n === 'undefined') {
+    console.error('i18n não encontrado. Certifica-te que translations.js é carregado antes deste script.');
+    return;
+  }
+
+  // keys que contêm HTML (usar innerHTML)
+  const htmlKeys = ['modalContentInstructions', 'modalContentClassifications', 'modalContentExtra'];
+
+  // keys de texto que queremos atualizar (conforme o teu i18n)
+  const textKeys = [
+    'title', 'myBtnInstructions', 'myBtnClassifications', 'myBtnExtra',
+    'configTitle', 'width1', 'mode', 'lvl', 'easy', 'normal', 'hard',
+    'first_to_play', 'playButton', 'captured_one', 'captured_two',
+    'toggleMute', 'throwDiceBtn', 'current', 'nextTurn'
+  ];
 
   const setLang = (lang) => {
-    document.getElementById('title').textContent = i18n[lang].title;
-    document.documentElement.lang = lang; // acessibilidade / SEO hint
+    if (!i18n[lang]) {
+      console.warn('Língua não encontrada:', lang);
+      return;
+    }
+
+    // 1) atualizar textos simples / labels / botões de forma segura
+    textKeys.forEach(key => {
+      const value = i18n[lang][key];
+      if (value === undefined) return; // nada para esta key
+
+      const el = document.getElementById(key);
+
+      // se não existe elemento com esse id, tenta encontrar label[for="key"]
+      // (útil quando preferes usar label[for] em vez de ids nos labels)
+      const labelFor = document.querySelector(`label[for="${key}"]`);
+
+      // Caso: element exists
+      if (el) {
+        const tag = el.tagName;
+
+        // Não sobrescrever SELECTs diretamente (preserva options)
+        if (tag === 'SELECT') {
+          // tenta traduzir label associado (label[for="selectId"]) se existir
+          if (labelFor) labelFor.textContent = value;
+          else {
+            // se o select tem id igual ao key mas o label tem id diferente (ex: label id="width"), tenta por id
+            const labelById = document.getElementById(`${key}Label`) || document.getElementById(`${key}-label`);
+            if (labelById) labelById.textContent = value;
+          }
+          return;
+        }
+
+        // Não sobrescrever INPUT/checkbox/textarea — actualiza label ou placeholder
+        if (tag === 'INPUT' || tag === 'TEXTAREA') {
+          // procura label que envolva o input (ex: <label><input> Text</label>)
+          const wrappingLabel = el.closest('label');
+          if (wrappingLabel) {
+            // preserva o input e re-inserir com o novo texto
+            // usa outerHTML do input para não perder atributos
+            wrappingLabel.innerHTML = el.outerHTML + ' ' + value;
+            return;
+          }
+          // se houver label[for], atualiza
+          if (labelFor) {
+            labelFor.textContent = value;
+            return;
+          }
+          // fallback: atualiza placeholder se existir
+          if ('placeholder' in el) {
+            el.placeholder = value;
+          } else {
+            // como último recurso, não sobrescrever o input value
+            console.warn(`Não actualizei input #${key} por segurança; adiciona um label[for="${key}"] para traduzir.`);
+          }
+          return;
+        }
+
+        // Caso: elemento é container que contém o strong #currentPlayer (ex: div id="current")
+        if (key === 'current') {
+          // preserva elemento #currentPlayer
+          const strong = el.querySelector('#currentPlayer');
+          const strongHtml = strong ? strong.outerHTML : '';
+          el.innerHTML = `${value} ${strongHtml}`; // ex: "Current player: <strong id='currentPlayer'>1</strong>"
+          return;
+        }
+
+        // Caso: opções individuais com id (ex: <option id="easy">)
+        if (tag === 'OPTION') {
+          el.textContent = value;
+          return;
+        }
+
+        // Caso geral: botões, headings, divs, spans -> texto simples
+        el.textContent = value;
+        return;
+      }
+
+      // Se não existe elemento com id=key, talvez exista uma label[for="key"]
+      if (labelFor) {
+        labelFor.textContent = value;
+        return;
+      }
+
+      // Se não existe nem id nem label, procura por option com esse id (ex: options com id easy/hard)
+      const opt = document.getElementById(key);
+      if (opt && opt.tagName === 'OPTION') {
+        opt.textContent = value;
+        return;
+      }
+
+      // caso não encontrado: ignora silenciosamente (podes descomentar o log para debug)
+      // console.log(`(i18n) elemento para "${key}" não encontrado no DOM.`);
+    });
+
+    // 2) actualizar blocos HTML (modais, conteúdos com tags)
+    htmlKeys.forEach(key => {
+      const value = i18n[lang][key];
+      if (value === undefined) return;
+      const el = document.getElementById(key);
+      if (!el) {
+        // console.log(`(i18n) bloco HTML #${key} não encontrado.`);
+        return;
+      }
+      el.innerHTML = value;
+    });
+
+    // 3) traduzir opções específicas (caso tenhas <option id="easy"> etc.)
+    ['easy','normal','hard'].forEach(optId => {
+      const text = i18n[lang][optId];
+      if (text === undefined) return;
+      const optEl = document.getElementById(optId);
+      if (optEl && optEl.tagName === 'OPTION') optEl.textContent = text;
+    });
+
+    // acessibilidade / SEO hint
+    document.documentElement.lang = (lang === 'pt' ? 'pt-PT' : 'en');
+
+    // guarda escolha
     localStorage.setItem('siteLang', lang);
   };
 
-  document.getElementById('langPT').addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); });
-  document.getElementById('langEN').addEventListener('click', (e) => { e.preventDefault(); setLang('en'); });
+  // listeners com guard (se os elementos não existirem, nada falha)
+  const elPt = document.getElementById('langPT');
+  const elEn = document.getElementById('langEN');
+  if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); });
+  if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); });
 
-  setLang(localStorage.getItem('siteLang') || 'pt');
+  // inicializar (fallback para en conforme preferes)
+  setLang(localStorage.getItem('siteLang') || 'en');
+
+  // debug helper (descomenta se precisares)
+  // window.__i18n = i18n;
+  // console.log('i18n pronto. keys:', Object.keys(i18n));
+});
