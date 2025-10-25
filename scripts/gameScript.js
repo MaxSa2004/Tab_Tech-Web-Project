@@ -13,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // estado
     let currentPlayer = 1; // 1 or 2
-    let soundOn = true;
     let gameActive = false;
 
     // piece handling
@@ -49,6 +48,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // put initial pieces in rows index 0 and 3
                 const piece = document.createElement('div');
+
+                // states:
+                //  not-moved = never moved before, can only be moved by 1 space initially
+                //  moved = moved before can move any amount (never reached 4th row before)
+                //  row-four = moved and been in row 4 before (can never revisit row 4)
+                piece.setAttribute('move-state', 'not-moved');
+
                 piece.classList.add('piece');
                 // yellow
                 if (r == 0) {
@@ -110,39 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- Chat messages ---
-    function showMessage({ who = 'system', player = null, text }) {
-        const wrap = document.createElement('div');
-        wrap.className = 'message';
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.textContent = text;
-
-        if (who === 'system') {
-            wrap.classList.add('msg-server');
-            wrap.appendChild(bubble);
-        } else {
-            wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar';
-            avatar.textContent = 'P' + player;
-            const stack = document.createElement('div');
-            stack.appendChild(bubble);
-            wrap.appendChild(avatar);
-            wrap.appendChild(stack);
-        }
-
-        messagesEl.appendChild(wrap);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-
-        if (soundOn && typeof speechSynthesis !== 'undefined') {
-            const u = new SpeechSynthesisUtterance(text);
-            u.volume = 0.04;
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(u);
-        }
-    }
-
     // --- Turn handling ---
     function nextTurn() {
         currentPlayer = currentPlayer === 1 ? 2 : 1;
@@ -188,6 +161,61 @@ document.addEventListener("DOMContentLoaded", () => {
             // add selected tag to currently selected piece
             piece.classList.add('selected');
         }
+    }
+
+    function checkWinCondition() {
+        if (redPieces == 0) {
+            showMessage({ who: 'system', text: "PLAYER 2 WINS!" });
+            endGame();
+            return true;
+        } else if (yellowPieces == 0) {
+            showMessage({ who: 'system', text: "PLAYER 1 WINS!" });
+            endGame();
+            return true;
+        }
+
+        return false; // nobody won
+    }
+
+    // reset all settings and global vars back to initial values
+    function endGame() {
+        // estado
+        currentPlayer = 1; // 1 or 2
+        gameActive = false;
+
+        // piece handling
+        redPieces = 0; // player 1
+        yellowPieces = 0; // player 2
+        selectedPiece = null;
+
+        // dice handling
+        lastDiceValue = null;
+    }
+
+    // ------------------ Chat messages ------------------
+    function showMessage({ who = 'system', player = null, text }) {
+        const wrap = document.createElement('div');
+        wrap.className = 'message';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+
+        if (who === 'system') {
+            wrap.classList.add('msg-server');
+            wrap.appendChild(bubble);
+        } else {
+            wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = 'P' + player;
+            const stack = document.createElement('div');
+            stack.appendChild(bubble);
+            wrap.appendChild(avatar);
+            wrap.appendChild(stack);
+        }
+
+        messagesEl.appendChild(wrap);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
     // --- Event listeners for UI ---
@@ -391,7 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const countdown = document.createElement('div');
         countdown.className = 'dice-countdown';
-        let secs = 3;
+        let secs = 2;
         countdown.textContent = `Fechando em ${secs}s`;
 
         bubble.appendChild(big);
