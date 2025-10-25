@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // dice handling
     let lastDiceValue = null;
 
-    // --- Board render (single function, responsive) ---
+    // ---- KEY FUNCTIONS ----
     function renderBoard(cols) {
         redPieces = cols;
         yellowPieces = cols;
@@ -39,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 cell.dataset.r = r;
                 cell.dataset.c = c;
 
-                // seta ícone/arrow conforme padrão — mantém o teu padrão original
                 const arrow = document.createElement('i');
                 if (r === 0) arrow.className = 'arrow ' + (c === 0 ? 'down' : 'left');
                 else if (r === 1) arrow.className = 'arrow ' + (c === cols - 1 ? 'up down' : 'right');
@@ -68,7 +67,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 // add event listener to be used for piece selection
-                piece.addEventListener('click', () => selectPiece(piece));
+                //piece.addEventListener('click', () => selectPiece(piece));
+
+                // event listener for cell (handles clicks to play moves)
+                cell.addEventListener('click', () => handleCellClick(cell))
 
                 cell.appendChild(arrow);
                 gameBoard.appendChild(cell);
@@ -76,65 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function flipBoard() {
-        const cells = Array.from(gameBoard.querySelectorAll('.cell'));
-        const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
-
-        // remove selection of previously selected piece
-        if (selectedPiece) {
-            selectedPiece.classList.remove('selected');
-        }
-        selectedPiece = null;
-
-        // temp map to store where each piece should move
-        const tempPositions = [];
-
-        // fill new positions array
-        cells.forEach(cell => {
-            const piece = cell.querySelector('.piece');
-
-            // if not null
-            if (piece) {
-                const r = parseInt(cell.dataset.r, 10); // base 10 integer
-                const c = parseInt(cell.dataset.c, 10);
-
-                const newR = rows - 1 - r;
-                const newC = cols - 1 - c;
-                tempPositions.push({ piece, newR, newC });
-            }
-        });
-
-        // clear all pieces on board
-        cells.forEach(cell => cell.innerHTML = cell.innerHTML.replace(/<div class="piece.*?<\/div>/g, ''));
-
-        // place pieces in new positions
-        tempPositions.forEach(({ piece, newR, newC }) => {
-            const target = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
-            if (target) {
-                target.appendChild(piece);
-            }
-        });
-    }
-
-    // --- Turn handling ---
-    function nextTurn() {
-        currentPlayer = currentPlayer === 1 ? 2 : 1;
-        currentPlayerEl.textContent = currentPlayer;
-        showMessage({ who: 'system', text: `Agora é o turno do Jogador ${currentPlayer}.` });
-
-        // flipBoard to show perspective of now current player's turn
-        flipBoard();
-
-        const prompts = [
-            'Lança os dados!',
-            "É o teu turno de jogar",
-            'Move a peça X casas',
-            'Podes capturar se aterrissares numa peça inimiga',
-            'Escolhe uma das tuas peças para mover'
-        ];
-        const p = prompts[Math.floor(Math.random() * prompts.length)];
-        showMessage({ who: 'player', player: currentPlayer, text: p });
-    }
+    // --------------- TO COMPLETE ---------------
 
     // function to manage piece selection
     function selectPiece(piece) {
@@ -161,6 +105,204 @@ document.addEventListener("DOMContentLoaded", () => {
             // add selected tag to currently selected piece
             piece.classList.add('selected');
         }
+    }
+
+    // helper: clear any highlight classes
+    function clearHighlights() {
+        gameBoard.querySelectorAll('.cell.green-glow').forEach(c => {
+            c.classList.remove('green-glow', 'pulse');
+        });
+    }
+
+    // to complete
+    function handleCellClick(cell) {
+        if (!gameActive) return;
+
+        const pieceInCell = cell.querySelector('.piece');
+
+        // If it's your piece, select it
+        if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
+            (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
+            selectPiece(pieceInCell);
+            clearHighlights();
+            const possibleMoves = getValidMoves(selectedPiece);
+            possibleMoves.forEach(dest => dest.classList.add('green-glow'));
+            return;
+        }
+
+        // Otherwise, try moving/capturing with the currently selected piece
+        if (selectedPiece && lastDiceValue != null) {
+            const possibleMoves = getValidMoves(selectedPiece);
+            const isValidMove = possibleMoves.some(dest => dest === cell);
+
+            if (isValidMove) {
+                movePieceTo(selectedPiece, cell); // will remove enemy piece automatically
+                clearHighlights();
+                selectedPiece.classList.remove('selected');
+                selectedPiece = null;
+                lastDiceValue = null;
+                checkWinCondition();
+                nextTurn();
+            }
+        }
+    }
+
+
+    // --------------- TO COMPLETE ---------------
+    function getValidMoves(piece, diceValue = lastDiceValue) {
+        if (!piece || diceValue == null) return [];
+
+        const startCell = piece.parentElement;
+        const rows = 4;
+        const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
+
+        let r = parseInt(startCell.dataset.r, 10);
+        let c = parseInt(startCell.dataset.c, 10);
+
+        // --- special case: piece in row 1 ---
+        if (r === 1) {
+            let remaining = diceValue;
+            let currentC = c;
+
+            // move horizontally to the right along row 1
+            const stepsToRightEnd = cols - 1 - currentC;
+            const horizontalMove = Math.min(remaining, stepsToRightEnd);
+            currentC += horizontalMove;
+            remaining -= horizontalMove;
+
+            // if all movement done on row 1, just return that cell
+            if (remaining === 0) {
+                const targetCell = gameBoard.querySelector(`.cell[data-r="1"][data-c="${currentC}"]`);
+                return targetCell ? [targetCell] : [];
+            }
+
+            // spillover: can go UP or DOWN from current column
+            const targets = [];
+            const upCell = gameBoard.querySelector(`.cell[data-r="0"][data-c="${currentC}"]`);
+            const downCell = gameBoard.querySelector(`.cell[data-r="2"][data-c="${currentC}"]`);
+            if (upCell) targets.push({ cell: upCell, r: 0, c: currentC });
+            if (downCell) targets.push({ cell: downCell, r: 2, c: currentC });
+
+            // if remaining > 1, continue moving along arrow path for each option
+            if (remaining > 1) {
+                const furtherTargets = [];
+                targets.forEach(({ cell, r, c }) => {
+                    let currentCell = cell;
+                    let rem = remaining - 1;
+                    for (let step = 0; step < rem; step++) {
+                        const arrow = currentCell.querySelector('.arrow');
+                        if (!arrow) break;
+
+                        let newR = parseInt(currentCell.dataset.r, 10);
+                        let newC = parseInt(currentCell.dataset.c, 10);
+
+                        if (arrow.classList.contains('up')) newR--;
+                        if (arrow.classList.contains('down')) newR++;
+                        if (arrow.classList.contains('left')) newC--;
+                        if (arrow.classList.contains('right')) newC++;
+
+                        if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) break;
+
+                        currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
+                    }
+                    if (currentCell) furtherTargets.push(currentCell);
+                });
+                return furtherTargets;
+            }
+
+            // if remaining === 1, just return UP/DOWN cells
+            return targets.map(t => t.cell);
+        }
+
+        // --- normal movement along arrow path for other rows ---
+        let currentCell = startCell;
+        for (let step = 0; step < diceValue; step++) {
+            const arrow = currentCell.querySelector('.arrow');
+            if (!arrow) break;
+
+            let newR = parseInt(currentCell.dataset.r, 10);
+            let newC = parseInt(currentCell.dataset.c, 10);
+
+            if (arrow.classList.contains('up')) newR--;
+            if (arrow.classList.contains('down')) newR++;
+            if (arrow.classList.contains('left')) newC--;
+            if (arrow.classList.contains('right')) newC++;
+
+            if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) return [];
+
+            currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
+        }
+
+        return currentCell ? [currentCell] : [];
+    }
+
+
+
+    function movePieceTo(piece, destCell) {
+        const existingPiece = destCell.querySelector('.piece');
+        if (existingPiece) {
+            // capture logic: remove enemy piece
+            if (existingPiece.classList.contains('red')) {
+                redPieces--;
+                showMessage({ who: 'system', text: `Red pieces remaining: ${redPieces}.` });
+            }
+            else if (existingPiece.classList.contains('yellow')) {
+                yellowPieces--;
+                showMessage({ who: 'system', text: `Yellow pieces remaining: ${yellowPieces}.` });
+            }
+            existingPiece.remove();
+        }
+
+        destCell.appendChild(piece);
+    }
+
+
+    function flipBoard() {
+        const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
+        const cells = Array.from(gameBoard.querySelectorAll('.cell'));
+
+        // remove selection
+        if (selectedPiece) {
+            selectedPiece.classList.remove('selected');
+            selectedPiece = null;
+        }
+
+        // collect all current pieces with their flipped coordinates
+        const newPositions = [];
+        cells.forEach(cell => {
+            const piece = cell.querySelector('.piece');
+            if (piece) {
+                const r = parseInt(cell.dataset.r, 10);
+                const c = parseInt(cell.dataset.c, 10);
+                const newR = rows - 1 - r;
+                const newC = cols - 1 - c;
+                newPositions.push({ piece, newR, newC });
+            }
+        });
+
+        // clear ALL pieces but leave arrows intact
+        cells.forEach(cell => {
+            const piece = cell.querySelector('.piece');
+            if (piece) piece.remove();
+        });
+
+        // append each piece to its mirrored destination
+        newPositions.forEach(({ piece, newR, newC }) => {
+            const dest = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
+            if (dest) dest.appendChild(piece);
+        });
+    }
+
+
+    // --- Turn handling ---
+    function nextTurn() {
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        currentPlayerEl.textContent = currentPlayer;
+        showMessage({ who: 'system', text: `Agora é o turno do Jogador ${currentPlayer}.` });
+
+        // flipBoard to show perspective of now current player's turn
+        flipBoard();
+
     }
 
     function checkWinCondition() {

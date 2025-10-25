@@ -1021,3 +1021,17 @@ chat {
   border-top: 1px solid rgba(7, 32, 43, 0.15);
 }
 
+.lang-switch {
+    font-family: 'Inter', sans-serif;
+}
+
+.cell.green-glow {
+  border-color: rgba(46, 204, 113, 1); /* solid bright green border */
+  background: linear-gradient(180deg, rgba(230,255,235,1), rgba(210,255,220,0.95));
+  box-shadow:
+    0 0 30px 8px rgba(46, 204, 113, 0.65),   /* strong outer glow */
+    0 0 12px rgba(46, 204, 113, 0.45) inset; /* bright inner glow */
+  transition: box-shadow 200ms ease, transform 160ms ease, border-color 160ms ease;
+  z-index: 5;
+  cursor: pointer;
+}
