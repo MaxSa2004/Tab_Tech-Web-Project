@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // estado
     let currentPlayer = 1; // 1 or 2
     let soundOn = true;
+    let gameActive = false;
 
     // piece handling
     let redPieces = 0; // player 1
@@ -25,7 +26,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Board render (single function, responsive) ---
     function renderBoard(cols) {
-        
         redPieces = cols;
         yellowPieces = cols;
         // atualiza CSS var e grid-template
@@ -61,6 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     cell.appendChild(piece);
                 }
 
+                // add event listener to be used for piece selection
+                piece.addEventListener('click', () => selectPiece(piece));
+
                 cell.appendChild(arrow);
                 gameBoard.appendChild(cell);
             }
@@ -70,6 +73,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function flipBoard() {
         const cells = Array.from(gameBoard.querySelectorAll('.cell'));
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
+
+        // remove selection of previously selected piece
+        if (selectedPiece) {
+            selectedPiece.classList.remove('selected');
+        }
+        selectedPiece = null;
 
         // temp map to store where each piece should move
         const tempPositions = [];
@@ -154,6 +163,33 @@ document.addEventListener("DOMContentLoaded", () => {
         showMessage({ who: 'player', player: currentPlayer, text: p });
     }
 
+    // function to manage piece selection
+    function selectPiece(piece) {
+        if (!gameActive) {
+            return;
+        }
+
+        if (selectedPiece == piece) {
+            selectedPiece.classList.remove('selected');
+            selectedPiece = null;
+            return;
+        }
+
+        // make sure only current player's pieces can be selected
+        if ((currentPlayer == 1 && piece.classList.contains('red')) ||
+            (currentPlayer == 2 && piece.classList.contains('yellow'))) {
+            // remove selected tag from previously selected piece
+            if (selectedPiece) {
+                selectedPiece.classList.remove('selected');
+            }
+
+            selectedPiece = piece;
+
+            // add selected tag to currently selected piece
+            piece.classList.add('selected');
+        }
+    }
+
     // --- Event listeners for UI ---
     if (nextTurnBtn) nextTurnBtn.addEventListener('click', nextTurn);
     if (widthSelect) widthSelect.addEventListener('change', () => renderBoard(parseInt(widthSelect.value, 10)));
@@ -163,15 +199,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (authForm) authForm.addEventListener('submit', (ev) => ev.preventDefault());
 
-    // Play button sample behaviour
+    // Play button behaviour
     if (playButton) playButton.addEventListener('click', () => {
         showMessage({ who: 'system', text: 'Jogo iniciado — boas jogadas!' });
+        gameActive = true;
+
+        if (nextTurnBtn) nextTurnBtn.disabled = false;
+        if (simDiceBtn) simDiceBtn.disabled = false;
     });
+
+    // initially inactive (becomes active when game started)
+    if (nextTurnBtn) nextTurnBtn.disabled = true;
+    if (simDiceBtn) simDiceBtn.disabled = true;
 
     // simDice disabled for now (kept for future)
     if (simDiceBtn) simDiceBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        if (simDiceBtn.disabled) return;        
+        if (simDiceBtn.disabled) return;
     });
 
     // --- initial rendering / seed messages ---
@@ -384,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const throwBtn = document.getElementById('throwDiceBtn');
             if (throwBtn) throwBtn.disabled = false;
         }, 3000);
-        
+
     }
 
     /* interface pública: spawnAndLaunch devolve Promise */
@@ -415,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // chama o modal e aguarda o resultado
                 const result = await window.tabGame.spawnAndLaunch();
                 console.log('Resultado do lançamento:', result);
-                showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor:  ${result}`});
+                showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor:  ${result}` });
                 // usa o result para atualizar o jogo:
                 // substitui a linha abaixo pela função do teu jogo que processa o resultado
                 if (typeof updateGamePromptWithDice === 'function') {
