@@ -163,7 +163,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 selectedPiece.classList.remove('selected');
                 selectedPiece = null;
 
-                checkWinCondition();
+                const win = checkWinCondition();
+                if (win) {
+                    return;
+                }
 
                 if (lastDiceValue === 4 || lastDiceValue === 6) {
                     throwBtn.disabled = false;
