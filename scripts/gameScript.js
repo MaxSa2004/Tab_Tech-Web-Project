@@ -193,6 +193,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const c = parseInt(startCell.dataset.c, 10);
         const moveState = piece.getAttribute('move-state');
 
+        // identify current player color
+        const playerClass = piece.classList.contains('red') ? 'red' : 'yellow';
+
+        // RULE: cannot enter top row if any of your pieces remain in bottom row
+        const hasBasePieces = Array
+            .from(gameBoard.querySelectorAll(`.piece.${playerClass}`))
+            .some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
+
         // --- special case: piece in row 1 ---
         if (r === 1) {
             let remaining = diceValue;
@@ -216,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const downCell = gameBoard.querySelector(`.cell[data-r="2"][data-c="${currentC}"]`);
 
             // Rule: if piece is row-four and NOT currently in top row, forbid moving into row 0
-            if (!(moveState === 'row-four' && r !== 0) && upCell) {
+            if (!hasBasePieces && !(moveState === 'row-four' && r !== 0) && upCell) {
                 targets.push({ cell: upCell, r: 0, c: currentC });
             }
             if (downCell) targets.push({ cell: downCell, r: 2, c: currentC });
@@ -269,16 +277,17 @@ document.addEventListener("DOMContentLoaded", () => {
             if (arrow.classList.contains('left')) newC--;
             if (arrow.classList.contains('right')) newC++;
 
-            if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) return [];
+            if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) break;
 
-            // prevent returning to top row if it's already a row-four piece
-            if (moveState === 'row-four' && r !== 0 && newR === 0) return [];
+            // block entering top row if base pieces remain, or if row-four piece tries to re-enter
+            if ((hasBasePieces && newR === 0) || (moveState === 'row-four' && r !== 0 && newR === 0)) break;
 
             currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
         }
 
         return currentCell ? [currentCell] : [];
     }
+
 
 
 
