@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                if (lastDiceValue === 4 || lastDiceValue === 6) {
+                if (lastDiceValue === 4 || lastDiceValue === 6 || lastDiceValue === 1) {
                     throwBtn.disabled = false;
                     nextTurnBtn.disabled = true;
                 } else {
@@ -688,11 +688,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (hasValidMove()) {
                     nextTurnBtn.disabled = true; // no skipping yet
                     throwBtn.disabled = true;
+                    console.log("HERE");
+
+                    if (result === 4) {
+                        showMessage({ who: 'system', text: 'Tiraste 4 - ganhas outro lançamento!' });
+                    } else if (result === 6) {
+                        showMessage({ who: 'system', text: 'Tiraste 6 - ganhas outro lançamento!' });
+                    } else if (result === 1) {
+                        showMessage({ who: 'system', text: 'Tiraste 1 - ganhas outro lançamento!' });
+                    }
                     return;
                 }
-                if (result === 4 || result === 6) {
 
-                }
+
                 // handle button state after rolling
                 // if player rolls 4 or 6 - they get another roll (keep throw active)
                 if (result === 4) {
@@ -703,7 +711,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     showMessage({ who: 'system', text: 'Tiraste 6 - ganhas outro lançamento!' });
                     throwBtn.disabled = false;  // keep active
                     nextTurnBtn.disabled = true; // no skipping yet
-                } else {
+                } else if (result === 1) {
+                    showMessage({ who: 'system', text: 'Tiraste 1 - ganhas outro lançamento!' });
+                    throwBtn.disabled = false;  // keep active
+                    nextTurnBtn.disabled = true; // no skipping yet
+                }
+                else {
                     // otherwise, lock the dice until next turn
                     throwBtn.disabled = true;
                     nextTurnBtn.disabled = false;
