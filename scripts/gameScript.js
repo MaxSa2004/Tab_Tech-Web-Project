@@ -5,29 +5,62 @@ document.addEventListener("DOMContentLoaded", () => {
     const messagesEl = document.getElementById('messages');
     const currentPlayerEl = document.getElementById('currentPlayer');
     const nextTurnBtn = document.getElementById('nextTurn');
-    const simDiceBtn = document.getElementById('throwDiceBtn');
+    const throwBtn = document.getElementById('throwDiceBtn'); // mover para o topo
     const toggleMuteBtn = document.getElementById('toggleMute');
     const playButton = document.getElementById('playButton');
     const authForm = document.querySelector('.authForm');
+
+    // selects de configuração
+    const modeSelect = document.getElementById('game_mode');
+    const iaLevelSelect = document.getElementById('ia_lvl');
+    const firstToPlayCheckbox = document.getElementById('first_to_play');
+
     const rows = 4;
 
     // estado
     let currentPlayer = 1; // 1 or 2
     let gameActive = false;
 
-    // piece handling
-    let redPieces = 0; // player 1
-    let yellowPieces = 0; // player 2
+    // estado IA / modo
+    let gameMode = 'player';      // 'player' | 'ia'
+    let vsAI = false;
+    let aiDifficulty = 'normal';  // 'easy' | 'normal' | 'hard'
+    let aiPlayerNum = null;       // 1 (red) ou 2 (yellow)
+    let humanPlayerNum = 1;
+
+    // peças
+    let redPieces = 0;
+    let yellowPieces = 0;
     let selectedPiece = null;
 
-    // dice handling
+    // dados
     let lastDiceValue = null;
 
-    // ---- KEY FUNCTIONS ----
+    // helpers cor
+    function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
+
+    // validação de config + UX do botão Start
+    function isConfigValid() {
+        const modeVal = modeSelect ? modeSelect.value : '';
+        if (modeVal !== 'player' && modeVal !== 'ia') return false;
+        if (modeVal === 'ia') {
+            const diff = iaLevelSelect ? iaLevelSelect.value : '';
+            if (!['easy', 'normal', 'hard'].includes(diff)) return false;
+        }
+        return true;
+    }
+    function updatePlayButtonState() {
+        if (!playButton) return;
+        playButton.disabled = !isConfigValid();
+    }
+    if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState);
+    if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState);
+    updatePlayButtonState(); // estado inicial
+
+    // ---- RENDER TABULEIRO ----
     function renderBoard(cols) {
         redPieces = cols;
         yellowPieces = cols;
-        // atualiza CSS var e grid-template
         gameBoard.style.setProperty('--cols', cols);
         gameBoard.style.gridTemplateColumns = `repeat(${cols}, minmax(36px, 1fr))`;
         gameBoard.innerHTML = '';
@@ -45,32 +78,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 else if (r === 2) arrow.className = 'arrow ' + (c === 0 ? 'up' : 'left');
                 else if (r === 3) arrow.className = 'arrow ' + (c === cols - 1 ? 'up' : 'right');
 
-                // put initial pieces in rows index 0 and 3
+                // peças iniciais
                 const piece = document.createElement('div');
-
-                // states:
-                //  not-moved = never moved before, can only be moved by 1 space initially
-                //  moved = moved before can move any amount (never reached 4th row before)
-                //  row-four = moved and been in row 4 before (can never revisit row 4)
                 piece.setAttribute('move-state', 'not-moved');
-
                 piece.classList.add('piece');
-                // yellow
-                if (r == 0) {
-                    piece.classList.add('yellow');
-                    cell.appendChild(piece);
-                }
-                // red
-                if (r == 3) {
-                    piece.classList.add('red');
-                    cell.appendChild(piece);
-                }
 
-                // add event listener to be used for piece selection
-                //piece.addEventListener('click', () => selectPiece(piece));
+                if (r == 0) { piece.classList.add('yellow'); cell.appendChild(piece); }
+                if (r == 3) { piece.classList.add('red'); cell.appendChild(piece); }
 
-                // event listener for cell (handles clicks to play moves)
-                cell.addEventListener('click', () => handleCellClick(cell))
+                // jogada por clique
+                cell.addEventListener('click', () => handleCellClick(cell));
 
                 cell.appendChild(arrow);
                 gameBoard.appendChild(cell);
@@ -78,78 +95,53 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --------------- TO COMPLETE ---------------
-
-    // function to manage piece selection
+    // seleção de peça
     function selectPiece(piece) {
-        if (!gameActive) {
-            return;
-        }
-
+        if (!gameActive) return;
         if (selectedPiece == piece) {
             selectedPiece.classList.remove('selected');
             selectedPiece = null;
-            clearHighlights(); // piece is unselected now so clear highlights
+            clearHighlights();
             return;
         }
-
-        // make sure only current player's pieces can be selected
         if ((currentPlayer == 1 && piece.classList.contains('red')) ||
             (currentPlayer == 2 && piece.classList.contains('yellow'))) {
-            // remove selected tag from previously selected piece
-            if (selectedPiece) {
-                selectedPiece.classList.remove('selected');
-            }
-
+            if (selectedPiece) selectedPiece.classList.remove('selected');
             selectedPiece = piece;
-
-            // add selected tag to currently selected piece
             piece.classList.add('selected');
         }
     }
 
-    // helper: clear any highlight classes
     function clearHighlights() {
         gameBoard.querySelectorAll('.cell.green-glow').forEach(c => {
             c.classList.remove('green-glow', 'pulse');
         });
     }
 
-    // to complete
     function handleCellClick(cell) {
         if (!gameActive) return;
+        // bloquear input no turno da IA
+        if (vsAI && currentPlayer === aiPlayerNum) return;
 
         const pieceInCell = cell.querySelector('.piece');
 
-        // if it's your piece, select it
+        // selecionar peça do jogador atual
         if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
             (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
             selectPiece(pieceInCell);
-
-            // if selectPiece just deselected the piece, selectedPiece will be null —
-            // bail out now so we don't re-highlight.
-            if (!selectedPiece) {
-                return;
-            }
-
+            if (!selectedPiece) return;
             clearHighlights();
 
-            // restrict highlights if piece hasn't moved yet
             const state = pieceInCell.getAttribute('move-state');
-            const diceAllowed = (state === 'not-moved' && lastDiceValue !== 1)
-                ? [] // not allowed to move
-                : getValidMoves(pieceInCell);
-
+            const diceAllowed = (state === 'not-moved' && lastDiceValue !== 1) ? [] : getValidMoves(pieceInCell);
             diceAllowed.forEach(dest => dest.classList.add('green-glow'));
             return;
         }
 
-        // otherwise, try moving/capturing with the currently selected piece
+        // tentar mover a peça selecionada para a célula clicada
         if (selectedPiece && lastDiceValue != null) {
             const state = selectedPiece.getAttribute('move-state');
-            if (state === 'not-moved' && lastDiceValue !== 1) {
-                return;
-            }
+            if (state === 'not-moved' && lastDiceValue !== 1) return;
 
             const possibleMoves = getValidMoves(selectedPiece);
             const isValidMove = possibleMoves.some(dest => dest === cell);
@@ -158,15 +150,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (state === 'not-moved' && lastDiceValue === 1) {
                     selectedPiece.setAttribute('move-state', 'moved');
                 }
-                movePieceTo(selectedPiece, cell); // will remove enemy piece automatically
+                movePieceTo(selectedPiece, cell);
                 clearHighlights();
                 selectedPiece.classList.remove('selected');
                 selectedPiece = null;
 
-                const win = checkWinCondition();
-                if (win) {
-                    return;
-                }
+                if (checkWinCondition()) return;
 
                 if (lastDiceValue === 4 || lastDiceValue === 6 || lastDiceValue === 1) {
                     throwBtn.disabled = false;
@@ -179,57 +168,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-
-
-    // --------------- TO COMPLETE ---------------
     function getValidMoves(piece, diceValue = lastDiceValue) {
         if (!piece || diceValue == null) return [];
 
         const startCell = piece.parentElement;
-        const rows = 4;
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
 
         const r = parseInt(startCell.dataset.r, 10);
         const c = parseInt(startCell.dataset.c, 10);
         const moveState = piece.getAttribute('move-state');
-
-        // identify current player color
         const playerClass = piece.classList.contains('red') ? 'red' : 'yellow';
 
-        // RULE: cannot enter top row if any of your pieces remain in bottom row
+        // regra: não pode entrar na fila de topo se tiver peças na base
         const hasBasePieces = Array
             .from(gameBoard.querySelectorAll(`.piece.${playerClass}`))
             .some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
 
-        // --- special case: piece in row 1 ---
+        // caso especial: fila 1 (index 1)
         if (r === 1) {
             let remaining = diceValue;
             let currentC = c;
 
-            // move horizontally to the right along row 1
             const stepsToRightEnd = cols - 1 - currentC;
             const horizontalMove = Math.min(remaining, stepsToRightEnd);
             currentC += horizontalMove;
             remaining -= horizontalMove;
 
-            // if all movement done on row 1, just return that cell
             if (remaining === 0) {
                 const targetCell = gameBoard.querySelector(`.cell[data-r="1"][data-c="${currentC}"]`);
                 return targetCell ? [targetCell] : [];
             }
 
-            // spillover: can go UP or DOWN from current column
             const targets = [];
             const upCell = gameBoard.querySelector(`.cell[data-r="0"][data-c="${currentC}"]`);
             const downCell = gameBoard.querySelector(`.cell[data-r="2"][data-c="${currentC}"]`);
 
-            // Rule: if piece is row-four and NOT currently in top row, forbid moving into row 0
             if (!hasBasePieces && !(moveState === 'row-four' && r !== 0) && upCell) {
                 targets.push({ cell: upCell, r: 0, c: currentC });
             }
             if (downCell) targets.push({ cell: downCell, r: 2, c: currentC });
 
-            // if remaining > 1, continue moving along arrow path for each option
             if (remaining > 1) {
                 const furtherTargets = [];
                 targets.forEach(({ cell }) => {
@@ -248,8 +226,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (arrow.classList.contains('right')) newC++;
 
                         if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) break;
-
-                        // block movement back into top row if already row-four and not currently in top row
                         if (moveState === 'row-four' && r !== 0 && newR === 0) break;
 
                         currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
@@ -259,11 +235,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 return furtherTargets;
             }
 
-            // if remaining === 1, just return UP/DOWN cells
             return targets.map(t => t.cell);
         }
 
-        // --- normal movement along arrow path for other rows ---
+        // movimento normal pelas setas
         let currentCell = startCell;
         for (let step = 0; step < diceValue; step++) {
             const arrow = currentCell.querySelector('.arrow');
@@ -278,8 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (arrow.classList.contains('right')) newC++;
 
             if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) break;
-
-            // block entering top row if base pieces remain, or if row-four piece tries to re-enter
             if ((hasBasePieces && newR === 0) || (moveState === 'row-four' && r !== 0 && newR === 0)) break;
 
             currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
@@ -288,13 +261,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return currentCell ? [currentCell] : [];
     }
 
-
-
-
     function movePieceTo(piece, destCell) {
         const existingPiece = destCell.querySelector('.piece');
         if (existingPiece) {
-            // capture logic: remove enemy piece
             if (existingPiece.classList.contains('red')) {
                 redPieces--;
                 showMessage({ who: 'system', text: `Red pieces remaining: ${redPieces}.` });
@@ -307,32 +276,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const destRow = parseInt(destCell.dataset.r, 10);
         const currentState = piece.getAttribute('move-state');
-
-        // if the dest is top row or already been in row-four before
         if (destRow === 0 || currentState === 'row-four') {
             piece.setAttribute('move-state', 'row-four');
         }
-
         destCell.appendChild(piece);
     }
 
-
-
     function flipBoard() {
         lastDiceValue = null;
-        throwBtn.disabled = false;
-        nextTurnBtn.disabled = true;
+        // preparar UI para novo turno
+        if (throwBtn) throwBtn.disabled = (vsAI && (currentPlayer === aiPlayerNum));
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
 
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
         const cells = Array.from(gameBoard.querySelectorAll('.cell'));
 
-        // remove selection
         if (selectedPiece) {
             selectedPiece.classList.remove('selected');
             selectedPiece = null;
         }
 
-        // collect all current pieces with their flipped coordinates
         const newPositions = [];
         cells.forEach(cell => {
             const piece = cell.querySelector('.piece');
@@ -345,29 +308,28 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // clear ALL pieces but leave arrows intact
         cells.forEach(cell => {
             const piece = cell.querySelector('.piece');
             if (piece) piece.remove();
         });
 
-        // append each piece to its mirrored destination
         newPositions.forEach(({ piece, newR, newC }) => {
             const dest = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
             if (dest) dest.appendChild(piece);
         });
     }
 
-
-    // --- Turn handling ---
+    // --- Turnos ---
     function nextTurn() {
         currentPlayer = currentPlayer === 1 ? 2 : 1;
         currentPlayerEl.textContent = currentPlayer;
         showMessage({ who: 'system', text: `Agora é o turno do Jogador ${currentPlayer}.` });
-
-        // flipBoard to show perspective of now current player's turn
         flipBoard();
 
+        // se for IA, lança automaticamente
+        if (vsAI && currentPlayer === aiPlayerNum) {
+            setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno da IA:', err)), 200);
+        }
     }
 
     function checkWinCondition() {
@@ -380,29 +342,30 @@ document.addEventListener("DOMContentLoaded", () => {
             endGame();
             return true;
         }
-
-        return false; // nobody won
+        return false;
     }
 
-    // reset all settings and global vars back to initial values
     function endGame() {
-        // estado
-        currentPlayer = 1; // 1 or 2
+        currentPlayer = 1;
         gameActive = false;
 
-        // piece handling
-        redPieces = 0; // player 1
-        yellowPieces = 0; // player 2
+        redPieces = 0;
+        yellowPieces = 0;
         selectedPiece = null;
 
-        // dice handling
+        // IA
+        vsAI = false;
+        aiPlayerNum = null;
+        humanPlayerNum = 1;
+
         lastDiceValue = null;
-        renderBoard(parseInt(widthSelect.value, 10)); // reset the board to initial state
-        nextTurnBtn.disabled = true;
-        simDiceBtn.disabled = true;
+        renderBoard(parseInt(widthSelect.value, 10));
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
+        if (throwBtn) throwBtn.disabled = true;
+        updatePlayButtonState();
     }
 
-    // ------------------ Chat messages ------------------
+    // mensagens
     function showMessage({ who = 'system', player = null, text }) {
         const wrap = document.createElement('div');
         wrap.className = 'message';
@@ -428,51 +391,272 @@ document.addEventListener("DOMContentLoaded", () => {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    // --- Event listeners for UI ---
+    // UI listeners
     if (nextTurnBtn) nextTurnBtn.addEventListener('click', nextTurn);
     if (widthSelect) widthSelect.addEventListener('change', () => renderBoard(parseInt(widthSelect.value, 10)));
     if (toggleMuteBtn) toggleMuteBtn.addEventListener('click', (e) => {
-        soundOn = !soundOn;
-        e.target.textContent = soundOn ? 'Som: ligado' : 'Som: desligado';
+        // soundOn é opcional no teu projeto; ignora se não existir
+        window.soundOn = !window.soundOn;
+        e.target.textContent = window.soundOn ? 'Som: ligado' : 'Som: desligado';
     });
     if (authForm) authForm.addEventListener('submit', (ev) => ev.preventDefault());
 
-    // Play button behaviour
+    // Start Game
     if (playButton) playButton.addEventListener('click', () => {
+        // bloqueio: só começa com config válida
+        if (!isConfigValid()) {
+            showMessage({ who: 'system', text: 'Seleciona o modo e (se vs IA) a dificuldade antes de começar.' });
+            updatePlayButtonState();
+            return;
+        }
+
+        const modeVal = modeSelect.value;
+        const diffSel = (modeVal === 'ia') ? iaLevelSelect.value : 'normal';
+        const humanFirst = firstToPlayCheckbox ? !!firstToPlayCheckbox.checked : true;
+
+        gameMode = modeVal;
+        vsAI = (modeVal === 'ia');
+        aiDifficulty = diffSel;
+
+        currentPlayer = humanFirst ? 1 : 2;
+        currentPlayerEl.textContent = currentPlayer;
+
+        if (vsAI) {
+            humanPlayerNum = humanFirst ? 1 : 2;
+            aiPlayerNum = humanFirst ? 2 : 1;
+        } else {
+            humanPlayerNum = 1;
+            aiPlayerNum = null;
+        }
+
         showMessage({ who: 'system', text: 'Jogo iniciado — boas jogadas!' });
         gameActive = true;
 
         if (nextTurnBtn) nextTurnBtn.disabled = true;
-        if (simDiceBtn) simDiceBtn.disabled = false;
+        if (throwBtn) throwBtn.disabled = (vsAI && currentPlayer === aiPlayerNum) ? true : false;
+
+        // se IA começa, dispara o turno dela
+        if (vsAI && currentPlayer === aiPlayerNum) {
+            setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);
+        }
     });
 
-    // initially inactive (becomes active when game started)
-    if (nextTurnBtn) nextTurnBtn.disabled = true;
-    if (simDiceBtn) simDiceBtn.disabled = true;
+    // botão de dados
+    if (throwBtn) {
+        throwBtn.addEventListener('click', async (e) => {
+            // bloquear no turno da IA
+            if (vsAI && currentPlayer === aiPlayerNum) {
+                e.preventDefault();
+                return;
+            }
+            if (!gameActive) return;
 
-    // simDice disabled for now (kept for future)
-    if (simDiceBtn) simDiceBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (simDiceBtn.disabled) return;
-    });
+            try {
+                const result = await window.tabGame.spawnAndLaunch();
+                showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor: ${result}` });
 
-    // --- initial rendering / seed messages ---
-    const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
-    renderBoard(initialCols);
-    showMessage({ who: 'system', text: 'Bem-vindo! Use "Mudar turno" para simular.' });
-    showMessage({ who: 'player', player: 1, text: 'Lança os dados! (simulação)' });
+                if (hasValidMove()) {
+                    nextTurnBtn.disabled = true;
+                    throwBtn.disabled = true;
 
-    // debug warnings for missing DOM pieces (console helps)
-    if (!widthSelect) console.warn('widthSelect not found');
-    if (!gameBoard) console.warn('gameBoard not found');
-    if (!messagesEl) console.warn('messagesEl not found');
+                    if (result === 4 || result === 6 || result === 1) {
+                        showMessage({ who: 'system', text: `Tiraste ${result} - ganhas outro lançamento!` });
+                    }
+                    return;
+                }
 
-    /* ======= integração dos "dados" (pawns) no gameScript.js ======= */
-    /* Probabilidades para nº de paus virados para cima (0..4): 6%,25%,38%,25%,6% */
+                if (result === 4 || result === 6 || result === 1) {
+                    showMessage({ who: 'system', text: `Tiraste ${result} - ganhas outro lançamento!` });
+                    throwBtn.disabled = false;
+                    nextTurnBtn.disabled = true;
+                } else {
+                    throwBtn.disabled = true;
+                    nextTurnBtn.disabled = false;
+                }
+            } catch (err) {
+                console.warn('Erro ao lançar dados:', err);
+            }
+        });
+    }
+
+    // há jogada válida?
+    function hasValidMove(player = currentPlayer, diceValue = lastDiceValue) {
+        if (diceValue == null) return false;
+
+        const playerClass = player === 1 ? 'red' : 'yellow';
+        const ownPieces = Array.from(gameBoard.querySelectorAll('.piece.' + playerClass));
+
+        for (const piece of ownPieces) {
+            const state = piece.getAttribute('move-state');
+            if (state === 'not-moved' && diceValue !== 1) continue;
+
+            const possible = getValidMoves(piece, diceValue);
+            if (!possible || possible.length === 0) continue;
+
+            for (const dest of possible) {
+                const occupant = dest.querySelector('.piece');
+                if (!occupant) return true;
+                if (!occupant.classList.contains(playerClass)) return true;
+            }
+        }
+        return false;
+    }
+    // helper: enumerar todas as jogadas legais no DOM para um jogador e dado
+    function enumerateLegalMovesDOM(playerNum, diceValue) {
+        const color = getColorForPlayerNum(playerNum);
+        const moves = [];
+        const pieces = Array.from(gameBoard.querySelectorAll('.piece.' + color));
+
+        for (const piece of pieces) {
+            const state = piece.getAttribute('move-state');
+            if (state === 'not-moved' && diceValue !== 1) continue;
+
+            const fromCell = piece.parentElement;
+            const fromR = parseInt(fromCell.dataset.r, 10);
+            const fromC = parseInt(fromCell.dataset.c, 10);
+
+            const valids = getValidMoves(piece, diceValue); // células DOM
+            for (const dest of valids) {
+                const occ = dest.querySelector('.piece');
+                if (occ && occ.classList.contains(color)) continue; // bloqueado por peça própria
+                const toR = parseInt(dest.dataset.r, 10);
+                const toC = parseInt(dest.dataset.c, 10);
+                moves.push({ piece, from: { r: fromR, c: fromC }, destCell: dest, to: { r: toR, c: toC } });
+            }
+        }
+        return moves;
+    }
+
+    // =============== TURNO DA IA ===============
+    async function runAiTurnLoop() {
+        if (!vsAI || !gameActive || currentPlayer !== aiPlayerNum) return;
+
+        // bloquear UI do jogador durante a IA
+        if (throwBtn) throwBtn.disabled = true;
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
+
+        const aiColor = getColorForPlayerNum(aiPlayerNum);
+        const difficulty = aiDifficulty || 'normal';
+
+        while (gameActive && currentPlayer === aiPlayerNum) {
+            let result;
+            try {
+                result = await window.tabGame.spawnAndLaunch();
+            } catch (err) {
+                console.warn('Falha ao lançar dados para IA:', err);
+                break;
+            }
+
+            // estabilizar o valor do dado
+            lastDiceValue = result;
+
+            showMessage({ who: 'system', text: `IA lançou o dado — valor: ${result}` });
+
+            // fonte de verdade: jogadas legais no DOM (mesmas regras do humano)
+            const domMoves = enumerateLegalMovesDOM(aiPlayerNum, result);
+
+            if (domMoves.length === 0) {
+                // sem jogada possível
+                if (result === 1 || result === 4 || result === 6) {
+                    showMessage({ who: 'system', text: 'IA sem jogadas, mas ganhou novo lançamento.' });
+                    lastDiceValue = null;
+                    continue; // IA volta a lançar
+                } else {
+                    showMessage({ who: 'system', text: 'IA sem jogadas. Passa a vez.' });
+                    lastDiceValue = null;
+                    nextTurn();
+                    break;
+                }
+            }
+
+            // tentar usar a jogada do motor (ai.js); se falhar, usar fallback do DOM
+            let chosenMove = null;
+
+            try {
+                if (window.TAB_AI && typeof window.TAB_AI.getAIMove === 'function') {
+                    const choice = window.TAB_AI.getAIMove(result, aiColor, difficulty);
+                    if (choice && choice.from && choice.to) {
+                        const fromCell = gameBoard.querySelector(`.cell[data-r="${choice.from.r}"][data-c="${choice.from.c}"]`);
+                        const destCell = gameBoard.querySelector(`.cell[data-r="${choice.to.r}"][data-c="${choice.to.c}"]`);
+                        const piece = fromCell ? fromCell.querySelector(`.piece.${aiColor}`) : null;
+
+                        if (fromCell && destCell && piece) {
+                            // validar com as mesmas regras do humano
+                            const legalCells = getValidMoves(piece, result);
+                            const isInLegalList = legalCells.some(cell => cell === destCell);
+                            const occ = destCell.querySelector('.piece');
+                            const blockedByOwn = occ && occ.classList.contains(aiColor);
+
+                            if (isInLegalList && !blockedByOwn) {
+                                chosenMove = { piece, from: choice.from, destCell, to: choice.to };
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Erro a obter jogada da IA:', e);
+            }
+
+            if (!chosenMove) {
+                // Fallback: escolher uma jogada válida do DOM (preferir captura)
+                const captureMoves = domMoves.filter(m => {
+                    const occ = m.destCell.querySelector('.piece');
+                    return occ && !occ.classList.contains(aiColor);
+                });
+                chosenMove = captureMoves[0] || domMoves[0];
+                // nota: chosenMove contém { piece, from, destCell, to }
+                if (!chosenMove) {
+                    // extremamente improvável, mas protege
+                    console.warn('Sem fallback de jogada embora domMoves > 0 — a passar a vez.');
+                    if (result === 1 || result === 4 || result === 6) {
+                        showMessage({ who: 'system', text: 'IA sem jogada legal, mas ganhou novo lançamento.' });
+                        lastDiceValue = null;
+                        continue;
+                    } else {
+                        showMessage({ who: 'system', text: 'IA sem jogada legal. Passa a vez.' });
+                        lastDiceValue = null;
+                        nextTurn();
+                        break;
+                    }
+                }
+            }
+
+            // Executar a jogada escolhida (IA ou fallback)
+            const piece = chosenMove.piece;
+            const destCell = chosenMove.destCell;
+
+            // se estava "not-moved" e saiu 1, converter para "moved"
+            const state = piece.getAttribute('move-state');
+            if (state === 'not-moved' && result === 1) {
+                piece.setAttribute('move-state', 'moved');
+            }
+
+            // efeito visual opcional (comentado; podes ativar se quiseres feedback)
+            // piece.classList.add('selected');
+            // destCell.classList.add('green-glow');
+            // setTimeout(() => { piece.classList.remove('selected'); destCell.classList.remove('green-glow'); }, 500);
+
+            movePieceTo(piece, destCell);
+
+            if (checkWinCondition()) return;
+
+            // regra dos lançamentos extra
+            if (result === 1 || result === 4 || result === 6) {
+                showMessage({ who: 'system', text: 'IA ganhou mais um lançamento.' });
+                lastDiceValue = null;
+                continue; // IA volta a lançar
+            } else {
+                lastDiceValue = null;
+                nextTurn(); // passa para o jogador
+                break;
+            }
+        }
+    }
+
+    // ======= Dados (sticks) =======
     const upCountProbs = [0.06, 0.25, 0.38, 0.25, 0.06];
     const namesMap = { 0: "Sitteh (0 → 6)", 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah" };
 
-    /* helper */
     function sampleFromDistribution(probs) {
         const r = Math.random();
         let c = 0;
@@ -483,26 +667,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return probs.length - 1;
     }
 
-    /*-- variáveis internas para a Promise --*/
     window.tabGame = window.tabGame || {};
     window.tabGame._resolveResult = null;
 
-    /* cria o overlay + pouch e lança automaticamente se autoDrop true */
     function createDicePouch(autoDrop = false) {
-        // se já houver overlay, remove (garantir estado limpo)
         const prev = document.body.querySelector('.dice-overlay');
         if (prev) prev.remove();
 
-        // overlay centrado na viewport
         const overlay = document.createElement('div');
         overlay.className = 'dice-overlay';
 
-        // arena dentro do overlay
         const arena = document.createElement('div');
         arena.className = 'dice-arena';
         overlay.appendChild(arena);
 
-        // log/hint opcional
         const hint = document.createElement('div');
         hint.style.position = 'absolute';
         hint.style.bottom = '12px';
@@ -513,7 +691,6 @@ document.addEventListener("DOMContentLoaded", () => {
         hint.textContent = 'Lançamento automático...';
         arena.appendChild(hint);
 
-        // pouch (conteúdo com os 4 paus)
         const pouch = document.createElement('div');
         pouch.className = 'dice-pouch';
         arena.appendChild(pouch);
@@ -541,24 +718,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.body.appendChild(overlay);
 
-        // lock UI: desativa botão se existir
-        const throwBtn = document.getElementById('throwDiceBtn');
         if (throwBtn) throwBtn.disabled = true;
-
-        if (autoDrop) {
-            // pequeno atraso para render
-            setTimeout(() => dropDiceSticks(pouch, arena, overlay), 120);
-        }
+        if (autoDrop) setTimeout(() => dropDiceSticks(pouch, arena, overlay), 120);
     }
 
-    /* animação e resultado */
     function dropDiceSticks(pouch, arena, overlay) {
         const sticks = Array.from(pouch.querySelectorAll('.dice-stick'));
 
-        // escolhe quantos ficam up (0..4)
         const chosenUpCount = sampleFromDistribution(upCountProbs);
 
-        // escolhe quais dos 4 serão "up"
         const indices = [0, 1, 2, 3];
         for (let i = indices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -567,12 +735,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const results = new Array(4).fill(false);
         for (let k = 0; k < chosenUpCount; k++) results[indices[k]] = true;
 
-        // calcula espaçamento
         const maxWide = Math.min(window.innerWidth, 900);
         const gapPx = Math.max(54, Math.round(maxWide * 0.08));
         sticks.forEach((s, i) => {
             s.classList.remove('initial');
-            void s.offsetWidth; // forçar reflow
+            void s.offsetWidth;
             s.classList.add('fallen');
 
             const posIndex = i - 1.5;
@@ -594,13 +761,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const actualUp = results.reduce((a, b) => a + (b ? 1 : 0), 0);
             const gameValue = (actualUp === 0) ? 6 : actualUp;
 
-            // regista valores
             lastDiceValue = gameValue;
-
-            // mostra overlay com resultado (contador) dentro do mesmo overlay
             showDiceResult(gameValue, actualUp, overlay);
 
-            // resolve Promise se alguém está à espera
             if (window.tabGame && typeof window.tabGame._resolveResult === 'function') {
                 try {
                     window.tabGame._resolveResult(gameValue);
@@ -609,13 +772,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 window.tabGame._resolveResult = null;
             }
-
         }, totalAnim + 40);
     }
 
-    /* mostrador de resultado + fecho automático */
     function showDiceResult(gameValue, upCount, overlay) {
-        // limpa overlay anterior de result bubble, se houver
         const prevBubble = overlay.querySelector('.dice-result-bubble');
         if (prevBubble) prevBubble.remove();
 
@@ -636,13 +796,9 @@ document.addEventListener("DOMContentLoaded", () => {
         bubble.appendChild(label);
         bubble.appendChild(countdown);
 
-        // centro do overlay
         overlay.appendChild(bubble);
-
-        // anima balão
         setTimeout(() => bubble.classList.add('show'), 20);
 
-        // contador visual
         const intervalId = setInterval(() => {
             secs -= 1;
             if (secs > 0) {
@@ -654,7 +810,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 1000);
         overlay._countdownInterval = intervalId;
 
-        // auto close
         overlay._autoCloseTimer = setTimeout(() => {
             if (overlay._countdownInterval) {
                 clearInterval(overlay._countdownInterval);
@@ -662,116 +817,47 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const ov = document.body.querySelector('.dice-overlay');
             if (ov) ov.remove();
-
-            const throwBtn = document.getElementById('throwDiceBtn');
         }, 3000);
-
     }
 
-    /* interface pública: spawnAndLaunch devolve Promise */
+    // substitui a função inteira
     window.tabGame.spawnAndLaunch = function () {
-        return new Promise((resolve, reject) => {
-            // se já está a correr, rejeita
-            if (document.body.querySelector('.dice-overlay')) {
-                return reject(new Error('Outro lançamento em curso'));
+        return new Promise((resolve) => {
+            // Fechar overlay anterior se existir, limpando timers para evitar leaks
+            const prev = document.body.querySelector('.dice-overlay');
+            if (prev) {
+                try {
+                    if (prev._countdownInterval) {
+                        clearInterval(prev._countdownInterval);
+                        prev._countdownInterval = null;
+                    }
+                    if (prev._autoCloseTimer) {
+                        clearTimeout(prev._autoCloseTimer);
+                        prev._autoCloseTimer = null;
+                    }
+                } catch (e) {
+                    console.warn('Falha a limpar timers do overlay anterior:', e);
+                }
+                prev.remove();
             }
-            // guarda resolver
+
+            // Guardar o resolver e criar novo overlay + lançamento
             window.tabGame._resolveResult = resolve;
-            // cria e lança automaticamente
             createDicePouch(true);
         });
     };
-
-    /* getters úteis (opcionais) */
     window.tabGame.getLastValue = () => lastDiceValue;
 
-    const throwBtn = document.getElementById('throwDiceBtn');
-    if (throwBtn) {
-        throwBtn.addEventListener('click', async (e) => {
-            try {
-                // chama o modal e aguarda o resultado
-                const result = await window.tabGame.spawnAndLaunch();
-                console.log('Resultado do lançamento:', result);
-                showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor:  ${result}` });
+    // --- inicialização ---
+    const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
+    renderBoard(initialCols);
+    showMessage({ who: 'system', text: 'Bem-vindo! Seleciona o modo/dificuldade e carrega em "Start Game".' });
 
-                if (hasValidMove()) {
-                    nextTurnBtn.disabled = true; // no skipping yet
-                    throwBtn.disabled = true;
-                    console.log("HERE");
+    if (nextTurnBtn) nextTurnBtn.disabled = true;
+    if (throwBtn) throwBtn.disabled = true;
 
-                    if (result === 4) {
-                        showMessage({ who: 'system', text: 'Tiraste 4 - ganhas outro lançamento!' });
-                    } else if (result === 6) {
-                        showMessage({ who: 'system', text: 'Tiraste 6 - ganhas outro lançamento!' });
-                    } else if (result === 1) {
-                        showMessage({ who: 'system', text: 'Tiraste 1 - ganhas outro lançamento!' });
-                    }
-                    return;
-                }
-
-
-                // handle button state after rolling
-                // if player rolls 4 or 6 - they get another roll (keep throw active)
-                if (result === 4) {
-                    showMessage({ who: 'system', text: 'Tiraste 4 - ganhas outro lançamento!' });
-                    throwBtn.disabled = false;  // keep active
-                    nextTurnBtn.disabled = true; // no skipping yet
-                } else if (result === 6) {
-                    showMessage({ who: 'system', text: 'Tiraste 6 - ganhas outro lançamento!' });
-                    throwBtn.disabled = false;  // keep active
-                    nextTurnBtn.disabled = true; // no skipping yet
-                } else if (result === 1) {
-                    showMessage({ who: 'system', text: 'Tiraste 1 - ganhas outro lançamento!' });
-                    throwBtn.disabled = false;  // keep active
-                    nextTurnBtn.disabled = true; // no skipping yet
-                }
-                else {
-                    // otherwise, lock the dice until next turn
-                    throwBtn.disabled = true;
-                    nextTurnBtn.disabled = false;
-                }
-
-            } catch (err) {
-                console.warn('Erro ao lançar dados:', err);
-            }
-        });
-    }
-
-    // returns true if `player` (defaults to currentPlayer) has at least one legal move
-    function hasValidMove(player = currentPlayer, diceValue = lastDiceValue) {
-        // if no dice rolled, there are no moves to evaluate
-        if (diceValue == null) return false;
-
-        const playerClass = player === 1 ? 'red' : 'yellow';
-        const ownPieces = Array.from(gameBoard.querySelectorAll('.piece.' + playerClass));
-
-        for (const piece of ownPieces) {
-            const state = piece.getAttribute('move-state');
-
-            // rule: pieces with move-state 'not-moved' can only move when diceValue === 1
-            if (state === 'not-moved' && diceValue !== 1) continue;
-
-            // get possible destination cells for this piece
-            const possible = getValidMoves(piece, diceValue);
-            if (!possible || possible.length === 0) continue;
-
-            // filter out destinations blocked by same-player pieces; captures allowed
-            for (const dest of possible) {
-                const occupant = dest.querySelector('.piece');
-                if (!occupant) {
-                    // empty destination -> valid move found
-                    return true;
-                }
-                // if occupied by opponent, it's a valid capture
-                if (!occupant.classList.contains(playerClass)) {
-                    return true;
-                }
-                // else occupied by own piece -> not a valid destination
-            }
-        }
-
-        // no piece had a valid destination
-        return false;
-    }
-
+    // avisos debug
+    if (!widthSelect) console.warn('widthSelect not found');
+    if (!gameBoard) console.warn('gameBoard not found');
+    if (!messagesEl) console.warn('messagesEl not found');
 });
