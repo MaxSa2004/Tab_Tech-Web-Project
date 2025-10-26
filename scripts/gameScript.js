@@ -388,7 +388,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // dice handling
         lastDiceValue = null;
-        renderBoard(); // reset the board to initial state
+        renderBoard(parseInt(widthSelect.value, 10)); // reset the board to initial state
+        nextTurnBtn.disabled = true;
+        simDiceBtn.disabled = true;
     }
 
     // ------------------ Chat messages ------------------
