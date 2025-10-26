@@ -162,9 +162,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 clearHighlights();
                 selectedPiece.classList.remove('selected');
                 selectedPiece = null;
-                lastDiceValue = null;
+
                 checkWinCondition();
-                nextTurn();
+
+                if (lastDiceValue === 4 || lastDiceValue === 6) {
+                    throwBtn.disabled = false;
+                    nextTurnBtn.disabled = true;
+                } else {
+                    nextTurn();
+                }
+                lastDiceValue = null;
             }
         }
     }
@@ -300,6 +307,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function flipBoard() {
+        lastDiceValue = null;
+        throwBtn.disabled = false;
+        nextTurnBtn.disabled = true;
+
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
         const cells = Array.from(gameBoard.querySelectorAll('.cell'));
 
@@ -374,6 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // dice handling
         lastDiceValue = null;
+        renderBoard(); // reset the board to initial state
     }
 
     // ------------------ Chat messages ------------------
@@ -416,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showMessage({ who: 'system', text: 'Jogo iniciado — boas jogadas!' });
         gameActive = true;
 
-        if (nextTurnBtn) nextTurnBtn.disabled = false;
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (simDiceBtn) simDiceBtn.disabled = false;
     });
 
@@ -638,7 +650,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (ov) ov.remove();
 
             const throwBtn = document.getElementById('throwDiceBtn');
-            if (throwBtn) throwBtn.disabled = false;
         }, 3000);
 
     }
@@ -660,10 +671,6 @@ document.addEventListener("DOMContentLoaded", () => {
     /* getters úteis (opcionais) */
     window.tabGame.getLastValue = () => lastDiceValue;
 
-    /* === Exemplo: ligar ao botão Throw Dice ===
-       - garante que o botão tem id="throwDiceBtn" no index.html
-       - adapt a função updateGamePromptWithDice(result) para o teu jogo
-    */
     const throwBtn = document.getElementById('throwDiceBtn');
     if (throwBtn) {
         throwBtn.addEventListener('click', async (e) => {
@@ -672,19 +679,72 @@ document.addEventListener("DOMContentLoaded", () => {
                 const result = await window.tabGame.spawnAndLaunch();
                 console.log('Resultado do lançamento:', result);
                 showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor:  ${result}` });
-                // usa o result para atualizar o jogo:
-                // substitui a linha abaixo pela função do teu jogo que processa o resultado
-                if (typeof updateGamePromptWithDice === 'function') {
-                    updateGamePromptWithDice(result);
-                } else {
-                    // fallback: mostra num prompt/console se ainda não tiveres a função
-                    console.log('Chama a tua função para atualizar o jogo com:', result);
+
+                if (hasValidMove()) {
+                    nextTurnBtn.disabled = true; // no skipping yet
+                    throwBtn.disabled = true;
+                    return;
                 }
+                if (result === 4 || result === 6) {
+
+                }
+                // handle button state after rolling
+                // if player rolls 4 or 6 - they get another roll (keep throw active)
+                if (result === 4) {
+                    showMessage({ who: 'system', text: 'Tiraste 4 - ganhas outro lançamento!' });
+                    throwBtn.disabled = false;  // keep active
+                    nextTurnBtn.disabled = true; // no skipping yet
+                } else if (result === 6) {
+                    showMessage({ who: 'system', text: 'Tiraste 6 - ganhas outro lançamento!' });
+                    throwBtn.disabled = false;  // keep active
+                    nextTurnBtn.disabled = true; // no skipping yet
+                } else {
+                    // otherwise, lock the dice until next turn
+                    throwBtn.disabled = true;
+                    nextTurnBtn.disabled = false;
+                }
+
             } catch (err) {
                 console.warn('Erro ao lançar dados:', err);
             }
         });
     }
 
+    // returns true if `player` (defaults to currentPlayer) has at least one legal move
+    function hasValidMove(player = currentPlayer, diceValue = lastDiceValue) {
+        // if no dice rolled, there are no moves to evaluate
+        if (diceValue == null) return false;
+
+        const playerClass = player === 1 ? 'red' : 'yellow';
+        const ownPieces = Array.from(gameBoard.querySelectorAll('.piece.' + playerClass));
+
+        for (const piece of ownPieces) {
+            const state = piece.getAttribute('move-state');
+
+            // rule: pieces with move-state 'not-moved' can only move when diceValue === 1
+            if (state === 'not-moved' && diceValue !== 1) continue;
+
+            // get possible destination cells for this piece
+            const possible = getValidMoves(piece, diceValue);
+            if (!possible || possible.length === 0) continue;
+
+            // filter out destinations blocked by same-player pieces; captures allowed
+            for (const dest of possible) {
+                const occupant = dest.querySelector('.piece');
+                if (!occupant) {
+                    // empty destination -> valid move found
+                    return true;
+                }
+                // if occupied by opponent, it's a valid capture
+                if (!occupant.classList.contains(playerClass)) {
+                    return true;
+                }
+                // else occupied by own piece -> not a valid destination
+            }
+        }
+
+        // no piece had a valid destination
+        return false;
+    }
 
 });
