@@ -642,8 +642,18 @@ body.modal-open {
 }
 
 .piece.yellow{
-    background-color: #f4d03f;
+    background-color: #f9ce23;
 }
+
+/* applies to any piece that has move-state="row-four" */
+/* make red and yellow versions still distinct */
+.piece.red[move-state="row-four"] {
+  background-color: #f28383; /* lighter red */
+}
+.piece.yellow[move-state="row-four"] {
+  background-color: #f5e475; /* lighter yellow */
+}
+
 /* --- dice modal / arena (colar em style.css) --- */
 .dice-overlay{
     position: fixed;
@@ -1035,3 +1045,4 @@ chat {
   z-index: 5;
   cursor: pointer;
 }
+

@@ -89,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (selectedPiece == piece) {
             selectedPiece.classList.remove('selected');
             selectedPiece = null;
+            clearHighlights(); // piece is unselected now so clear highlights
             return;
         }
 
@@ -120,22 +121,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const pieceInCell = cell.querySelector('.piece');
 
-        // If it's your piece, select it
+        // if it's your piece, select it
         if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
             (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
             selectPiece(pieceInCell);
+
+            // if selectPiece just deselected the piece, selectedPiece will be null —
+            // bail out now so we don't re-highlight.
+            if (!selectedPiece) {
+                return;
+            }
+
             clearHighlights();
-            const possibleMoves = getValidMoves(selectedPiece);
-            possibleMoves.forEach(dest => dest.classList.add('green-glow'));
+
+            // restrict highlights if piece hasn't moved yet
+            const state = pieceInCell.getAttribute('move-state');
+            const diceAllowed = (state === 'not-moved' && lastDiceValue !== 1)
+                ? [] // not allowed to move
+                : getValidMoves(pieceInCell);
+
+            diceAllowed.forEach(dest => dest.classList.add('green-glow'));
             return;
         }
 
-        // Otherwise, try moving/capturing with the currently selected piece
+        // otherwise, try moving/capturing with the currently selected piece
         if (selectedPiece && lastDiceValue != null) {
+            const state = selectedPiece.getAttribute('move-state');
+            if (state === 'not-moved' && lastDiceValue !== 1) {
+                return;
+            }
+
             const possibleMoves = getValidMoves(selectedPiece);
             const isValidMove = possibleMoves.some(dest => dest === cell);
 
             if (isValidMove) {
+                if (state === 'not-moved' && lastDiceValue === 1) {
+                    selectedPiece.setAttribute('move-state', 'moved');
+                }
                 movePieceTo(selectedPiece, cell); // will remove enemy piece automatically
                 clearHighlights();
                 selectedPiece.classList.remove('selected');
@@ -148,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+
     // --------------- TO COMPLETE ---------------
     function getValidMoves(piece, diceValue = lastDiceValue) {
         if (!piece || diceValue == null) return [];
@@ -156,8 +179,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const rows = 4;
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
 
-        let r = parseInt(startCell.dataset.r, 10);
-        let c = parseInt(startCell.dataset.c, 10);
+        const r = parseInt(startCell.dataset.r, 10);
+        const c = parseInt(startCell.dataset.c, 10);
+        const moveState = piece.getAttribute('move-state');
 
         // --- special case: piece in row 1 ---
         if (r === 1) {
@@ -180,13 +204,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const targets = [];
             const upCell = gameBoard.querySelector(`.cell[data-r="0"][data-c="${currentC}"]`);
             const downCell = gameBoard.querySelector(`.cell[data-r="2"][data-c="${currentC}"]`);
-            if (upCell) targets.push({ cell: upCell, r: 0, c: currentC });
+
+            // Rule: if piece is row-four and NOT currently in top row, forbid moving into row 0
+            if (!(moveState === 'row-four' && r !== 0) && upCell) {
+                targets.push({ cell: upCell, r: 0, c: currentC });
+            }
             if (downCell) targets.push({ cell: downCell, r: 2, c: currentC });
 
             // if remaining > 1, continue moving along arrow path for each option
             if (remaining > 1) {
                 const furtherTargets = [];
-                targets.forEach(({ cell, r, c }) => {
+                targets.forEach(({ cell }) => {
                     let currentCell = cell;
                     let rem = remaining - 1;
                     for (let step = 0; step < rem; step++) {
@@ -202,6 +230,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (arrow.classList.contains('right')) newC++;
 
                         if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) break;
+
+                        // block movement back into top row if already row-four and not currently in top row
+                        if (moveState === 'row-four' && r !== 0 && newR === 0) break;
 
                         currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
                     }
@@ -230,6 +261,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (newR < 0 || newR >= rows || newC < 0 || newC >= cols) return [];
 
+            // prevent returning to top row if it's already a row-four piece
+            if (moveState === 'row-four' && r !== 0 && newR === 0) return [];
+
             currentCell = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
         }
 
@@ -245,16 +279,24 @@ document.addEventListener("DOMContentLoaded", () => {
             if (existingPiece.classList.contains('red')) {
                 redPieces--;
                 showMessage({ who: 'system', text: `Red pieces remaining: ${redPieces}.` });
-            }
-            else if (existingPiece.classList.contains('yellow')) {
+            } else if (existingPiece.classList.contains('yellow')) {
                 yellowPieces--;
                 showMessage({ who: 'system', text: `Yellow pieces remaining: ${yellowPieces}.` });
             }
             existingPiece.remove();
         }
 
+        const destRow = parseInt(destCell.dataset.r, 10);
+        const currentState = piece.getAttribute('move-state');
+
+        // if the dest is top row or already been in row-four before
+        if (destRow === 0 || currentState === 'row-four') {
+            piece.setAttribute('move-state', 'row-four');
+        }
+
         destCell.appendChild(piece);
     }
+
 
 
     function flipBoard() {
