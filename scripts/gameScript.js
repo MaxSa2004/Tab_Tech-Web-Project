@@ -266,10 +266,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (existingPiece) {
             if (existingPiece.classList.contains('red')) {
                 redPieces--;
-                showMessage({ who: 'system', text: `Peças vermelhas restantes: ${redPieces}.` });
+                showMessage({ who: 'system', key: 'red_pieces', params:{count: redPieces }});
             } else if (existingPiece.classList.contains('yellow')) {
                 yellowPieces--;
-                showMessage({ who: 'system', text: `Peças amarelas restantes: ${yellowPieces}.` });
+                showMessage({ who: 'system', key: 'yellow_pieces', params:{count:yellowPieces }});
             }
             existingPiece.remove();
         }
@@ -323,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function nextTurn() {
         currentPlayer = currentPlayer === 1 ? 2 : 1;
         currentPlayerEl.textContent = currentPlayer;
-        showMessage({ who: 'system', text: `Agora é o turno do Jogador ${currentPlayer}.` });
+        showMessage({ who: 'system', key: 'msg_turn_of', params: {player: currentPlayer }});
         flipBoard();
 
         // se for IA, lança automaticamente
@@ -334,11 +334,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function checkWinCondition() {
         if (redPieces == 0) {
-            showMessage({ who: 'system', text: "O JOGADOR 2 GANHOU!" });
+            showMessage({ who: 'system', key: 'msg_player_won', params:{player:2}});
             endGame();
             return true;
         } else if (yellowPieces == 0) {
-            showMessage({ who: 'system', text: "O JOGADOR 1 GANHOU!" });
+            showMessage({ who: 'system', key: 'msg_player_won', params:{player: 1}});
             endGame();
             return true;
         }
@@ -366,30 +366,59 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // mensagens
-    function showMessage({ who = 'system', player = null, text }) {
+    function showMessage({ who = 'system', player = null, text, key, params }) {
         const wrap = document.createElement('div');
         wrap.className = 'message';
+      
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text;
-
-        if (who === 'system') {
-            wrap.classList.add('msg-server');
-            wrap.appendChild(bubble);
+      
+        if (key) {
+          // guardar key/params para re-tradução futura
+          bubble.dataset.i18nKey = key;
+          if (params && Object.keys(params).length) {
+            bubble.dataset.i18nParams = JSON.stringify(params);
+          }
+          bubble.textContent = t(key, params || {});
         } else {
-            wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar';
-            avatar.textContent = 'P' + player;
-            const stack = document.createElement('div');
-            stack.appendChild(bubble);
-            wrap.appendChild(avatar);
-            wrap.appendChild(stack);
+          // fallback: texto literal (não será re-traduzido no futuro)
+          bubble.textContent = text ?? '';
         }
-
+      
+        if (who === 'system') {
+          wrap.classList.add('msg-server');
+          wrap.appendChild(bubble);
+        } else {
+          wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
+          const avatar = document.createElement('div');
+          avatar.className = 'avatar';
+          avatar.textContent = 'P' + player;
+          const stack = document.createElement('div');
+          stack.appendChild(bubble);
+          wrap.appendChild(avatar);
+          wrap.appendChild(stack);
+        }
+      
         messagesEl.appendChild(wrap);
         messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+      }
+      
+      // função para re-traduzir as bolhas já existentes
+      function refreshChatBubbles() {
+        if (!messagesEl) return;
+        const bubbles = messagesEl.querySelectorAll('.bubble[data-i18n-key]');
+        bubbles.forEach(b => {
+          const key = b.dataset.i18nKey;
+          let params = {};
+          if (b.dataset.i18nParams) {
+            try { params = JSON.parse(b.dataset.i18nParams); } catch {}
+          }
+          b.textContent = t(key, params);
+        });
+      }
+      
+      // expõe para o languageScript chamar após setLang
+      window.__refreshChat = refreshChatBubbles;
 
     // UI listeners
     if (nextTurnBtn) nextTurnBtn.addEventListener('click', nextTurn);
@@ -405,7 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (playButton) playButton.addEventListener('click', () => {
         // bloqueio: só começa com config válida
         if (!isConfigValid()) {
-            showMessage({ who: 'system', text: 'Seleciona o modo e (se vs IA) a dificuldade antes de começar.' });
+            showMessage({ who: 'system', key: 'select_mode'});
             updatePlayButtonState();
             return;
         }
@@ -429,7 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
             aiPlayerNum = null;
         }
 
-        showMessage({ who: 'system', text: 'Jogo iniciado - Bom jogo!' });
+        showMessage({ who: 'system', key: 'msg_game_started'});
         gameActive = true;
 
         if (nextTurnBtn) nextTurnBtn.disabled = true;
@@ -453,20 +482,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const result = await window.tabGame.spawnAndLaunch();
-                showMessage({ who: 'player', player: currentPlayer, text: `Dado lançado — valor: ${result}` });
+                showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params:{value: result}});
 
                 if (hasValidMove()) {
                     nextTurnBtn.disabled = true;
                     throwBtn.disabled = true;
 
                     if (result === 4 || result === 6 || result === 1) {
-                        showMessage({ who: 'system', text: `Tiraste ${result} - ganhas outro lançamento!` });
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params:{value: result}});
                     }
                     return;
                 }
 
                 if (result === 4 || result === 6 || result === 1) {
-                    showMessage({ who: 'system', text: `Tiraste ${result} - ganhas outro lançamento!` });
+                    showMessage({ who: 'system', key: 'msg_dice_thrown_double', params:{value: result}});
                     throwBtn.disabled = false;
                     nextTurnBtn.disabled = true;
                 } else {
@@ -550,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // estabilizar o valor do dado
             lastDiceValue = result;
 
-            showMessage({ who: 'system', text: `IA lançou o dado — valor: ${result}` });
+            showMessage({ who: 'system', key: 'msg_ai_dice', params:{value: result}});
 
             // fonte de verdade: jogadas legais no DOM (mesmas regras do humano)
             const domMoves = enumerateLegalMovesDOM(aiPlayerNum, result);
@@ -558,11 +587,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (domMoves.length === 0) {
                 // sem jogada possível
                 if (result === 1 || result === 4 || result === 6) {
-                    showMessage({ who: 'system', text: 'IA sem jogadas, mas ganhou um novo lançamento.' });
+                    showMessage({ who: 'system', key: 'msg_ai_no_moves_extra'});
                     lastDiceValue = null;
                     continue; // IA volta a lançar
                 } else {
-                    showMessage({ who: 'system', text: 'IA sem jogadas. Passa a vez.' });
+                    showMessage({ who: 'system', key: 'msg_ai_no_moves_pass'});
                     lastDiceValue = null;
                     nextTurn();
                     break;
@@ -609,11 +638,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     // extremamente improvável, mas protege
                     console.warn('Sem fallback de jogada, embora domMoves > 0 — a passar a vez.');
                     if (result === 1 || result === 4 || result === 6) {
-                        showMessage({ who: 'system', text: 'IA sem jogada legal, mas ganhou um novo lançamento.' });
+                        showMessage({ who: 'system', key: 'msg_ai_no_moves_extra'});
                         lastDiceValue = null;
                         continue;
                     } else {
-                        showMessage({ who: 'system', text: 'IA sem jogada legal. Passa a vez.' });
+                        showMessage({ who: 'system', key: 'msg_ai_no_moves_pass'});
                         lastDiceValue = null;
                         nextTurn();
                         break;
@@ -642,7 +671,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // regra dos lançamentos extra
             if (result === 1 || result === 4 || result === 6) {
-                showMessage({ who: 'system', text: 'IA ganhou mais um lançamento.' });
+                showMessage({ who: 'system', text:t('msg_ai_extra_roll') });
                 lastDiceValue = null;
                 continue; // IA volta a lançar
             } else {
@@ -688,7 +717,8 @@ document.addEventListener("DOMContentLoaded", () => {
         hint.style.fontSize = '13px';
         hint.style.color = '#333';
         hint.style.opacity = '0.8';
-        hint.textContent = 'Lançamento automático...';
+        hint.dataset.i18nKey = 'dice_auto_hint';
+        hint.textContent = t('dice_auto_hint');
         arena.appendChild(hint);
 
         const pouch = document.createElement('div');
@@ -707,10 +737,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const faceUp = document.createElement('div');
             faceUp.className = 'face dice-face-up';
-            faceUp.textContent = 'CIMA';
+            faceUp.dataset.i18nKey = 'dice_face_up';
+            faceUp.textContent = t('dice_face_up');
             const faceDown = document.createElement('div');
             faceDown.className = 'face dice-face-down';
-            faceDown.textContent = 'BAIXO';
+            faceDown.dataset.i18nKey = 'dice_face_down';
+            faceDown.textContent = t('dice_face_down');
             s.appendChild(faceUp);
             s.appendChild(faceDown);
             pouch.appendChild(s);
@@ -785,12 +817,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const big = document.createElement('div'); big.className = 'big';
         big.textContent = String(gameValue);
         const label = document.createElement('div'); label.className = 'label';
-        label.innerHTML = `${namesMap[upCount] || 'Resultado'} — paus virados para cima: ${upCount}`;
+        label.dataset.i18nKey = 'dice_label';
+        label.dataset.diceUp = String(upCount);
+        const diceName = t(`dice_name_${upCount}`);
+        label.dataset.i18nParams = JSON.stringify({ name: diceName, up: upCount });
+        label.textContent = t('dice_label', { name: diceName, up: upCount });
 
         const countdown = document.createElement('div');
         countdown.className = 'dice-countdown';
         let secs = 2;
-        countdown.textContent = `Fechando em ${secs}s`;
+        countdown.dataset.i18nKey = 'dice_countdown';
+        countdown.dataset.secs = String(secs);
+        countdown.textContent = t('dice_countdown', { secs });
 
         bubble.appendChild(big);
         bubble.appendChild(label);
@@ -802,9 +840,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const intervalId = setInterval(() => {
             secs -= 1;
             if (secs > 0) {
-                countdown.textContent = `Fechando em ${secs}s`;
+                countdown.dataset.i18nKey = 'dice_countdown';
+                countdown.dataset.secs = String(secs);
+                countdown.textContent = t('dice_countdown', { secs });
             } else {
-                countdown.textContent = `Fechando...`;
+                countdown.dataset.i18nKey = 'dice_closing';
+                delete countdown.dataset.secs;
+                countdown.textContent = t('dice_closing');
                 clearInterval(intervalId);
             }
         }, 1000);
@@ -819,6 +861,39 @@ document.addEventListener("DOMContentLoaded", () => {
             if (ov) ov.remove();
         }, 3000);
     }
+    function refreshDiceOverlay() {
+        const ov = document.body.querySelector('.dice-overlay');
+        if (!ov) return;
+      
+        // Re-traduz tudo que tem data-i18n-key
+        ov.querySelectorAll('[data-i18n-key]').forEach(el => {
+          const key = el.dataset.i18nKey;
+          let params = {};
+      
+          // label: recompõe o nome pelo up guardado
+          if (key === 'dice_label') {
+            const up = parseInt(el.dataset.diceUp || '0', 10);
+            const name = t(`dice_name_${up}`);
+            params = { name, up };
+            el.dataset.i18nParams = JSON.stringify(params);
+            el.textContent = t(key, params);
+            return;
+          }
+      
+          // countdown: reaplica com os segundos atuais, se existirem
+          if (key === 'dice_countdown' && el.dataset.secs) {
+            params = { secs: parseInt(el.dataset.secs, 10) };
+            el.textContent = t(key, params);
+            return;
+          }
+      
+          // demais: sem params
+          el.textContent = t(key, params);
+        });
+      }
+      
+      // expõe para o languageScript chamar
+      window.__refreshDice = refreshDiceOverlay;
 
     // substitui a função inteira
     window.tabGame.spawnAndLaunch = function () {
@@ -851,7 +926,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- inicialização ---
     const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
     renderBoard(initialCols);
-    showMessage({ who: 'system', text: 'Bem-vindo! Seleciona o modo/dificuldade e carrega em "Iniciar Jogo".' });
+    showMessage({ who: 'system', key: 'select_mode'});
 
     if (nextTurnBtn) nextTurnBtn.disabled = true;
     if (throwBtn) throwBtn.disabled = true;
@@ -860,4 +935,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!widthSelect) console.warn('widthSelect not found');
     if (!gameBoard) console.warn('gameBoard not found');
     if (!messagesEl) console.warn('messagesEl not found');
+
+    function t(key, params = {}) {
+        const lang = window.currentLang || 'pt';
+        // tenta ler primeiro da variável global i18n; se não existir, usa window.i18n
+        const root = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
+        const dict = root[lang] || {};
+        // fallback para en depois pt; e por fim mostra a própria key (útil para debug)
+        let str = dict[key] ?? root.en?.[key] ?? root.pt?.[key] ?? key;
+        return String(str).replace(/\{(\w+)\}/g, (_, k) => params[k] ?? '');
+      }
 });

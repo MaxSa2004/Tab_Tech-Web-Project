@@ -1,3 +1,4 @@
+window.currentLang = window.currentLang || 'pt';
 const i18n = {
   pt: {
     title: 'Jogo Tâb',
@@ -74,12 +75,36 @@ const i18n = {
         hard: "Difícil",
         first_to_play : "Primeiro a jogar",
         playButton: "Iniciar Jogo",
+        prompts: "Mensagens do Jogo",
         captured_one: "Suas peças",
         captured_two: "Peças do oponente",
         toggleMute: "Som: Ligado",
         throwDiceBtn: "Lançar dado",
         current: "Jogador atual",
-        nextTurn: "Passar a vez"
+        nextTurn: "Passar a vez",
+        msg_game_started: "Jogo iniciado - Bom jogo!",
+        msg_turn_of: "Agora é o turno do Jogador {player}.",
+        msg_player_won: "O JOGADOR {player} GANHOU!",
+        msg_dice_thrown_double: "Tiraste {value} - ganhas outro lançamento!",
+        msg_dice_thrown: "Dado lançado - valor: {value}.",
+        msg_ai_dice: "IA lançou o dado - valor: {value}",
+        msg_ai_no_moves_extra: "IA não tem movimentos possíveis - mas ganhou um novo lançamento.",
+        msg_ai_no_moves_pass: "IA sem movimentos possíveis - passa a vez.",
+        msg_ai_extra_roll: "IA ganhou mais um lançamento.",
+        red_pieces: "Peças vermelhas restantes: {count}",
+        yellow_pieces: "Peças amarelas restantes: {count}",
+        select_mode: "Seleciona o modo de jogo e, se for vs. IA, selecciona o nível de dificuldade antes de começares.",
+        dice_auto_hint: "Lançamento automático...",
+        dice_face_up: "CIMA",
+        dice_face_down: "BAIXO",
+        dice_label:"{name} - paus virados para cima: {up}",
+        dice_countdown: "Fechando em {secs}s",
+        dice_closing: "Fechando...",
+        dice_name_0: "Sitteh",
+        dice_name_1: "Tâb",
+        dice_name_2: "Itneyn",
+        dice_name_3: "Teláteh",
+        dice_name_4: "Arba'ah"
   },
   en: {
     title: 'Tâb Game',
@@ -192,12 +217,36 @@ const i18n = {
         hard: "Hard",
         first_to_play: "First to Play",
         playButton: "Start Game",
+        prompts: "Game Prompts",
         captured_one: "Your pieces",
         captured_two: "Oponnent's pieces",
         toggleMute: "Sound: On",
         throwDiceBtn: "Throw dice",
         current: "Current player: ",
-        nextTurn: "Skip turn"
+        nextTurn: "Skip turn",
+        msg_game_started: "Game started - Have fun!",
+        msg_turn_of: "It's Player {player}'s turn.",
+        msg_player_won: "PLAYER {player} WINS!",
+        msg_dice_thrown_double: "You rolled {value} - you get another throw!",
+        msg_dice_thrown: "Dice thrown - value: {value}.",
+        msg_ai_dice: "AI rolled the dice - value: {value}",
+        msg_ai_no_moves_extra: "AI has no possible moves - but earned a new throw.",
+        msg_ai_no_moves_pass: "AI has no possible moves - skips turn.",
+        msg_ai_extra_roll: "AI gets another throw.",
+        red_pieces: "Red pieces remaining: {count}",
+        yellow_pieces: "Yellow pieces remaining: {count}",
+        select_mode: "Select the game mode and, if it's vs IA, select the difficulty level before you start.",
+        dice_auto_hint: "Auto throwing...",
+        dice_face_up: "UP",
+        dice_face_down: "DOWN",
+        dice_label:"{name} - sticks facing up: {up}",
+        dice_countdown: "Closing in {secs}s",
+        dice_closing: "Closing...",
+        dice_name_0: "Sitteh",
+        dice_name_1: "Tâb",
+        dice_name_2: "Itneyn",
+        dice_name_3: "Teláteh",
+        dice_name_4: "Arba'ah"
 
   }
 };
@@ -217,10 +266,11 @@ document.addEventListener('DOMContentLoaded', () => {
     'title', 'myBtnInstructions', 'myBtnClassifications', 'myBtnExtra',
     'configTitle', 'width1', 'mode', 'lvl', 'easy', 'normal', 'hard',
     'first_to_play', 'playButton', 'captured_one', 'captured_two',
-    'toggleMute', 'throwDiceBtn', 'current', 'nextTurn'
+    'toggleMute', 'throwDiceBtn', 'current', 'nextTurn', 'prompts'
   ];
 
   const setLang = (lang) => {
+    window.currentLang = lang;
     if (!i18n[lang]) {
       console.warn('Língua não encontrada:', lang);
       return;
@@ -340,6 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // guarda escolha
     localStorage.setItem('siteLang', lang);
+
+    if (window.__refreshChat) window.__refreshChat();
+    if (window.__refreshDice) window.__refreshDice();
+
   };
 
   // listeners com guard (se os elementos não existirem, nada falha)
