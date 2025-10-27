@@ -41,6 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // helpers cor
     function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
+    function isHumanTurn() {
+        return !vsAI || currentPlayer !== aiPlayerNum;
+    }
 
     // validação de config + UX do botão Start
     function isConfigValid() {
@@ -345,7 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (existingPiece) {
             const color = existingPiece.classList.contains('red') ? 'red' : 'yellow';
             TabStats.onCapture(currentPlayer, color);
-
             if (existingPiece.classList.contains('red')) {
                 redPieces--;
                 showMessage({ who: 'system', key: 'red_pieces', params: { count: redPieces } });
@@ -414,6 +416,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // se for IA, lança automaticamente
         if (vsAI && currentPlayer === aiPlayerNum) {
             setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno da IA:', err)), 200);
+        } else {
+            if (throwBtn && !throwBtn.disabled) {
+                showMessage({ who: 'system', key: 'msg_dice' });
+            }
         }
     }
 
@@ -570,6 +576,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (throwBtn) throwBtn.disabled = (vsAI && aiPlayerNum === 1);
         if (playButton) playButton.disabled = true;
         if (leaveButton) leaveButton.disabled = false;
+        if (isHumanTurn() && throwBtn && !throwBtn.disabled) {
+            showMessage({ who: 'system', key: 'msg_dice' });
+        }
+
         // se IA começa, dispara o turno dela
         if (vsAI && 1 === aiPlayerNum) {
             setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);
@@ -589,31 +599,69 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const result = await window.tabGame.spawnAndLaunch();
+                lastDiceValue = result;
                 showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
-
-                if (hasValidMove()) {
-                    nextTurnBtn.disabled = true;
-                    throwBtn.disabled = true;
-
-                    if (result === 4 || result === 6 || result === 1) {
+                const playerColor = getColorForPlayerNum(currentPlayer);
+                const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
+                const captureMoves = legalMoves.filter(m => {
+                    const occ = m.destCell.querySelector('.piece');
+                    return occ && !occ.classList.contains(playerColor);
+                });
+                // Se NÃO há jogadas válidas, mostra logo as mensagens correspondentes
+                if (legalMoves.length === 0) {
+                    if (result === 1 || result === 4 || result === 6) {
+                        if(result===1){
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_one'});
+                        }
+                        showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
                         showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                        // stats
                         TabStats.onDice(currentPlayer, result);
                         TabStats.onExtraRoll(currentPlayer, result);
+                        // UI
+                        throwBtn.disabled = false;
+                        nextTurnBtn.disabled = true;
+                    } else {
+                        showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+                        // stats
+                        TabStats.onDice(currentPlayer, result);
+                        // UI
+                        throwBtn.disabled = true;
+                        nextTurnBtn.disabled = false;
                     }
-                    return;
+                    return; // nada mais a fazer neste lançamento
                 }
 
+                // Há jogadas válidas — se existir pelo menos uma captura, avisa JÁ
+                if (captureMoves.length > 0) {
+                    showMessage({
+                        who: 'player',
+                        player: currentPlayer,
+                        key: 'msg_capture',
+                        params: { n: captureMoves.length }
+                    });
+                } else {
+                    showMessage({ who: 'system', key: 'msg_player_can_move' });
+                }
+
+                // Mantém o teu comportamento: com jogada válida, bloqueia botões até mover
+                nextTurnBtn.disabled = true;
+                throwBtn.disabled = true;
+
+                // Se for 1/4/6, informa que terá novo lançamento (após o movimento)
                 if (result === 4 || result === 6 || result === 1) {
+                    if(result===1){
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_one'});
+                    }
                     showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                    // Regista stats agora para não perder o evento
                     TabStats.onDice(currentPlayer, result);
                     TabStats.onExtraRoll(currentPlayer, result);
-                    throwBtn.disabled = false;
-                    nextTurnBtn.disabled = true;
                 } else {
-                    throwBtn.disabled = true;
-                    nextTurnBtn.disabled = false;
+                    // 2/3 — apenas regista o lançamento; a passagem de turno será decidida após mover
                     TabStats.onDice(currentPlayer, result);
                 }
+
             } catch (err) {
                 console.warn('Erro ao lançar dados:', err);
             }
@@ -666,6 +714,30 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         return moves;
+    }
+
+    // Conta quantas jogadas levam a capturar uma peça inimiga
+    function countCaptureMoves(playerNum, diceValue) {
+        const color = getColorForPlayerNum(playerNum);
+        const moves = enumerateLegalMovesDOM(playerNum, diceValue);
+        let n = 0;
+        for (const m of moves) {
+            const occ = m.destCell.querySelector('.piece');
+            if (occ && !occ.classList.contains(color)) n++;
+        }
+        return n;
+    }
+
+    // Mostra aviso se existir pelo menos uma captura possível
+    function warnIfCaptureAvailable(playerNum, diceValue) {
+        const n = countCaptureMoves(playerNum, diceValue);
+        if (n > 0) {
+            showMessage({
+                who: 'system',
+                key: 'msg_capture',
+                params: { n }
+            });
+        }
     }
 
     // =============== TURNO DA IA ===============
