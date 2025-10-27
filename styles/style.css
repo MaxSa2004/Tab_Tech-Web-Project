@@ -276,7 +276,8 @@ button[disabled] {
     display: flex;
     justify-content: center;
     align-items: center;
-    aspect-ratio: 1 / 1; /*forces cell to be square*/
+    aspect-ratio: 1 / 1;
+    /*forces cell to be square*/
     line-height: 1;
     overflow: hidden;
     box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
@@ -615,18 +616,20 @@ body.modal-open {
 /*pieces*/
 .piece {
     border-radius: 50%;
-    width: 80%;/* size relative to cell */
-    height: 80%; 
+    width: 80%;
+    /* size relative to cell */
+    height: 80%;
     position: absolute;
     margin: auto;
     top: 0;
     bottom: 0;
-    z-index: 2; /*make sure on top of arrow*/
+    z-index: 2;
+    /*make sure on top of arrow*/
 }
 
 .piece:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     cursor: pointer;
 }
 
@@ -637,120 +640,158 @@ body.modal-open {
     transform: scale(1.1);
 }
 
-.piece.red{
+.piece.red {
     background-color: red;
 }
 
-.piece.yellow{
+.piece.yellow {
     background-color: #f9ce23;
 }
 
 /* applies to any piece that has move-state="row-four" */
 /* make red and yellow versions still distinct */
 .piece.red[move-state="row-four"] {
-  background-color: #f28383; /* lighter red */
+    background-color: #f28383;
+    /* lighter red */
 }
+
 .piece.yellow[move-state="row-four"] {
-  background-color: #f5e475; /* lighter yellow */
+    background-color: #f5e475;
+    /* lighter yellow */
 }
 
 /* --- dice modal / arena (colar em style.css) --- */
-.dice-overlay{
+.dice-overlay {
     position: fixed;
     inset: 0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    pointer-events:auto;
-    z-index:9999;
-    background: rgba(0,0,0,0.18); /* opcional: escurece fundo */
-  }
-  
-  .dice-arena{
-    position:relative;
-    width:min(80vmin,700px);
-    height:min(50vmin,500px);
-    border-radius:12px;
-    background:linear-gradient(180deg,#fff,#f0f3ff);
-    box-shadow:0 8px 28px rgba(60,60,100,0.12);
-    overflow:hidden;
-    perspective:1200px;
-    padding:18px;
-    box-sizing:border-box;
-  }
-  
-  .dice-pouch{
-    position:absolute;
-    left:50%;
-    top:22%;
-    transform:translate(-50%,-50%);
-    z-index:30;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    pointer-events:none;
-  }
-  
-  .dice-stick{
-    width:var(--stick-width,20vmin);
-    height:var(--stick-height,8vmin);
-    border-radius:8px;
-    box-shadow:0 8px 16px rgba(0,0,0,0.18);
-    transform-origin:center center;
-    transition: transform 700ms cubic-bezier(.18,.9,.2,1), left 700ms, top 700ms;
-    position:absolute;
-    left:50%;
-    top:50%;
-    transform-style:preserve-3d;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    user-select:none;
-  }
-  
-  .dice-stick .face{
-    position:absolute;
-    width:100%; height:100%;
-    border-radius:8px;
-    backface-visibility:hidden;
-    display:flex;align-items:center;justify-content:center;
-    font-weight:700; font-size:1.8vmin;
-    box-sizing:border-box;
-    padding:6px;
-  }
-  .dice-face-up{
-    background: linear-gradient(90deg,var(--light,#fff) 0%, #fffef0 100%);
-    color:var(--dark,#222); border:3px solid rgba(0,0,0,0.06);
-  }
-  .dice-face-down{
-    background: linear-gradient(90deg,#333 0%, #111 100%);
-    color:white;
-    transform:rotateX(180deg);
-  }
-  
-  .dice-stick.initial{ transition: none; }
-  .dice-stick.fallen{ transition: transform 700ms cubic-bezier(.18,.9,.2,1), left 700ms, top 700ms; }
-  
-  .dice-result-bubble{
-    pointer-events:auto; font-family:Georgia,serif;
-    background:rgba(39,52,139,0.96); color:#fff; padding:22px 30px; border-radius:14px;
-    box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; transform:scale(0);
-    transition:transform 240ms cubic-bezier(.2,.8,.2,1);
-    display:flex; flex-direction:column; gap:10px; align-items:center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.18);
+    /* opcional: escurece fundo */
+}
+
+.dice-arena {
+    position: relative;
+    width: min(80vmin, 700px);
+    height: min(50vmin, 500px);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fff, #f0f3ff);
+    box-shadow: 0 8px 28px rgba(60, 60, 100, 0.12);
+    overflow: hidden;
+    perspective: 1200px;
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.dice-pouch {
+    position: absolute;
+    left: 50%;
+    top: 22%;
+    transform: translate(-50%, -50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.dice-stick {
+    width: var(--stick-width, 20vmin);
+    height: var(--stick-height, 8vmin);
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+    transform-origin: center center;
+    transition: transform 700ms cubic-bezier(.18, .9, .2, 1), left 700ms, top 700ms;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-style: preserve-3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+.dice-stick .face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.8vmin;
+    box-sizing: border-box;
+    padding: 6px;
+}
+
+.dice-face-up {
+    background: linear-gradient(90deg, var(--light, #fff) 0%, #fffef0 100%);
+    color: var(--dark, #222);
+    border: 3px solid rgba(0, 0, 0, 0.06);
+}
+
+.dice-face-down {
+    background: linear-gradient(90deg, #333 0%, #111 100%);
+    color: white;
+    transform: rotateX(180deg);
+}
+
+.dice-stick.initial {
+    transition: none;
+}
+
+.dice-stick.fallen {
+    transition: transform 700ms cubic-bezier(.18, .9, .2, 1), left 700ms, top 700ms;
+}
+
+.dice-result-bubble {
+    pointer-events: auto;
+    font-family: Georgia, serif;
+    background: rgba(39, 52, 139, 0.96);
+    color: #fff;
+    padding: 22px 30px;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    transform: scale(0);
+    transition: transform 240ms cubic-bezier(.2, .8, .2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
     z-index: 10000;
     position: absolute;
-  }
-  .dice-result-bubble.show{ transform:scale(1); }
-  .dice-result-bubble .big{ font-size:56px; font-weight:800; }
-  .dice-result-bubble .label{ font-size:14px; opacity:0.95; margin-top:2px; }
-  
-  .dice-countdown{
-    font-size:13px;
-    opacity:0.95;
-    background: rgba(255,255,255,0.06);
-    padding:6px 10px;
-    border-radius:8px;
-  }
+}
+
+.dice-result-bubble.show {
+    transform: scale(1);
+}
+
+.dice-result-bubble .big {
+    font-size: 56px;
+    font-weight: 800;
+}
+
+.dice-result-bubble .label {
+    font-size: 14px;
+    opacity: 0.95;
+    margin-top: 2px;
+}
+
+.dice-countdown {
+    font-size: 13px;
+    opacity: 0.95;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
 /**/
 /* ===== fixed-size cells, consistent across different column counts ===== */
 .game-board {
@@ -793,14 +834,15 @@ body.modal-open {
 /* Responsive fallback: allow horizontal scroll on narrow viewports */
 @media (max-width: 1000px) {
     .game-board {
-        display: block;           /* let it scroll horizontally in its container */
+        display: block;
+        /* let it scroll horizontally in its container */
         overflow-x: auto;
         padding-bottom: 8px;
         -webkit-overflow-scrolling: touch;
     }
 
     /* preserve grid inside the scrolling wrapper */
-    .game-board > .grid-inner {
+    .game-board>.grid-inner {
         display: grid;
         gap: 4px;
         grid-template-columns: repeat(var(--cols), var(--cell-size));
@@ -808,43 +850,49 @@ body.modal-open {
 }
 
 .flag-icon {
-  width: 20px;
-  height: 14px;
-  vertical-align: middle;
-  margin-right: 4px;
-  border-radius: 2px;
+    width: 20px;
+    height: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    border-radius: 2px;
 }
+
 /*1a mudanca*/
 .board-wrapper {
-  background: linear-gradient(180deg, #071b2a, #05202b);
-  border-radius: 12px;
-  padding: 26px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;          /* center horizontally */
-  justify-content: flex-start;
-  gap: 12px;
-  min-height: 560px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
-  width: fit-content;           /* ✅ wrapper shrinks to board size */
-  margin: 0 auto;               /* ✅ centers the wrapper itself */
+    background: linear-gradient(180deg, #071b2a, #05202b);
+    border-radius: 12px;
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* center horizontally */
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 560px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+    width: fit-content;
+    /* ✅ wrapper shrinks to board size */
+    margin: 0 auto;
+    /* ✅ centers the wrapper itself */
 }
 
 .game-board {
-  display: grid;
-  gap: 4px;
-  justify-content: center;
-  align-content: center;
-  background: #222;
-  border: 4px solid #444;
-  border-radius: 12px;
-  padding: 6px;
-  box-sizing: border-box;
-  --cell-size: 52px;
-  grid-template-columns: repeat(var(--cols), var(--cell-size));
-  width: calc(var(--cols) * var(--cell-size) + (var(--cols) - 1) * 4px + 12px); /* ✅ exact width math */
+    display: grid;
+    gap: 4px;
+    justify-content: center;
+    align-content: center;
+    background: #222;
+    border: 4px solid #444;
+    border-radius: 12px;
+    padding: 6px;
+    box-sizing: border-box;
+    --cell-size: 52px;
+    grid-template-columns: repeat(var(--cols), var(--cell-size));
+    width: calc(var(--cols) * var(--cell-size) + (var(--cols) - 1) * 4px + 12px);
+    /* ✅ exact width math */
 }
+
 /*2a mudança*/
 
 .game-board {
@@ -872,32 +920,41 @@ body.modal-open {
     width: var(--cell-size);
     height: var(--cell-size);
 }
+
 /*3a mudanca*/
 .config {
     display: flex;
     flex-direction: column;
-    align-items: center;   /* centraliza horizontalmente */
+    align-items: center;
+    /* centraliza horizontalmente */
     gap: 12px;
-    min-width: 700px;      /* tamanho fixo ou mínimo suficiente para 13-15 colunas */
-    width: 100%;           /* opcional: se quiser que ocupe todo o wrapper */
+    min-width: 700px;
+    /* tamanho fixo ou mínimo suficiente para 13-15 colunas */
+    width: 100%;
+    /* opcional: se quiser que ocupe todo o wrapper */
     box-sizing: border-box;
 }
+
 .board-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center;   /* centraliza horizontalmente tudo dentro */
+    align-items: center;
+    /* centraliza horizontalmente tudo dentro */
     gap: 12px;
     min-height: 560px;
     padding: 26px;
-    width: fit-content;    /* wrapper só do tamanho do board */
-    margin: 0 auto;        /* centraliza o wrapper na página */
+    width: fit-content;
+    /* wrapper só do tamanho do board */
+    margin: 0 auto;
+    /* centraliza o wrapper na página */
     box-sizing: border-box;
 }
 
 
 .captured {
     display: flex;
-    justify-content: space-between; /* mantém as colunas nas extremidades */
+    justify-content: space-between;
+    /* mantém as colunas nas extremidades */
     width: 100%;
     margin-top: 16px;
     gap: 10px;
@@ -937,98 +994,118 @@ body.modal-open {
 
 .captured-col {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;     /* IMPORTANTE */
+    align-items: flex-start;    /* alinha à esquerda */
+    gap: 6px;                   /* espaço entre título e lista */
     background: #ffffff;
     border: 1px solid rgba(7, 32, 43, 0.3);
     padding: 10px 12px;
     box-sizing: border-box;
-    border-radius: 14px; 
+    border-radius: 14px;
     min-width: 200px;
     min-height: 100px;
-
-    /* alinhameto*/
-    justify-content: flex-start;
-    align-items: flex-start;
-
-    /* leve sombra para realçar */
     box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
-}
+  }
 
 /* títulos das áreas capturadas */
 .captured-title {
     font-size: 13px;
-    color: #1e293b; 
+    color: #1e293b;
     font-weight: 600;
     margin-bottom: 6px;
     letter-spacing: 0.3px;
 }
 
-/* conteúdo da lista */
+
+/* Lista: fila única, começa à esquerda, ocupa a largura toda */
 .captured-list {
-    min-height: 28px;
-    color: #0f172a; 
-}
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;          /* tudo numa linha */
+    justify-content: flex-start;/* começa à esquerda */
+    width: 100%;                /* fica por baixo do título */
+    gap: 0;
+    padding-top: 4px;
+    overflow: hidden;           /* se exceder largura, recorta */
+    min-height: 40px;           /* >= tamanho do token */
+  }
+  
+  /* Token grande, com sobreposição de metade */
+  .captured-list .captured-token {
+    position: relative;         /* não absoluto */
+    width: 40px;                /* aumenta aqui o tamanho */
+    height: 40px;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 0 2px rgba(7, 32, 43, 0.08) inset, 0 1px 2px rgba(0,0,0,0.12);
+    margin-left: -20px;         /* metade de 40px = 20px, dá o "meia-por-cima" */
+  }
+  
+  /* o primeiro token não entra para a esquerda */
+  .captured-list .captured-token:first-child {
+    margin-left: 0;
+  }
+  
+  /* Cores fixas dos tokens */
+  .captured-list .captured-token.red {
+    background: #c92c2c;
+  }
+  .captured-list .captured-token.yellow {
+    background: #eab308;
+  }
 
 main {
-  display: flex;
-  align-items: flex-end; 
-  justify-content: space-between;
-  width: 100%;
-  gap: 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+    gap: 24px;
 }
 
-.captured {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  gap: 10px;
-  align-self: flex-end; 
-}
 
 .chat {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between; 
-  height: 100%;
-  min-height: 250px; 
-  align-self: flex-end; 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 250px;
+    align-self: flex-end;
 }
 
 
 .chat .messages {
-  flex-grow: 1;
-  overflow-y: auto;
-  margin: 8px 0;
+    flex-grow: 1;
+    overflow-y: auto;
+    margin: 8px 0;
 }
 
 .chat .input-area {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end; 
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 8px;
-  border-top: 1px solid rgba(7, 32, 43, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid rgba(7, 32, 43, 0.15);
 }
 
 chat {
-  background: #fff;
-  border: 1px solid rgba(7, 32, 43, 0.3);
-  border-radius: 14px;
-  padding: 10px;
-  box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
+    background: #fff;
+    border: 1px solid rgba(7, 32, 43, 0.3);
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
 }
 
 .chat .input-area {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
 
-  margin-bottom: 8px;     
-  padding: 4px 0 0 0;     
-  border-top: 1px solid rgba(7, 32, 43, 0.15);
+    margin-bottom: 8px;
+    padding: 4px 0 0 0;
+    border-top: 1px solid rgba(7, 32, 43, 0.15);
 }
 
 .lang-switch {
@@ -1036,13 +1113,15 @@ chat {
 }
 
 .cell.green-glow {
-  border-color: rgba(46, 204, 113, 1); /* solid bright green border */
-  background: linear-gradient(180deg, rgba(230,255,235,1), rgba(210,255,220,0.95));
-  box-shadow:
-    0 0 30px 8px rgba(46, 204, 113, 0.65),   /* strong outer glow */
-    0 0 12px rgba(46, 204, 113, 0.45) inset; /* bright inner glow */
-  transition: box-shadow 200ms ease, transform 160ms ease, border-color 160ms ease;
-  z-index: 5;
-  cursor: pointer;
+    border-color: rgba(46, 204, 113, 1);
+    /* solid bright green border */
+    background: linear-gradient(180deg, rgba(230, 255, 235, 1), rgba(210, 255, 220, 0.95));
+    box-shadow:
+        0 0 30px 8px rgba(46, 204, 113, 0.65),
+        /* strong outer glow */
+        0 0 12px rgba(46, 204, 113, 0.45) inset;
+    /* bright inner glow */
+    transition: box-shadow 200ms ease, transform 160ms ease, border-color 160ms ease;
+    z-index: 5;
+    cursor: pointer;
 }
-
