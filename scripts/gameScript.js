@@ -266,10 +266,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (existingPiece) {
             if (existingPiece.classList.contains('red')) {
                 redPieces--;
-                showMessage({ who: 'system', text: `Red pieces remaining: ${redPieces}.` });
+                showMessage({ who: 'system', text: `Peças vermelhas restantes: ${redPieces}.` });
             } else if (existingPiece.classList.contains('yellow')) {
                 yellowPieces--;
-                showMessage({ who: 'system', text: `Yellow pieces remaining: ${yellowPieces}.` });
+                showMessage({ who: 'system', text: `Peças amarelas restantes: ${yellowPieces}.` });
             }
             existingPiece.remove();
         }
@@ -334,11 +334,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function checkWinCondition() {
         if (redPieces == 0) {
-            showMessage({ who: 'system', text: "PLAYER 2 WINS!" });
+            showMessage({ who: 'system', text: "O JOGADOR 2 GANHOU!" });
             endGame();
             return true;
         } else if (yellowPieces == 0) {
-            showMessage({ who: 'system', text: "PLAYER 1 WINS!" });
+            showMessage({ who: 'system', text: "O JOGADOR 1 GANHOU!" });
             endGame();
             return true;
         }
@@ -558,7 +558,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (domMoves.length === 0) {
                 // sem jogada possível
                 if (result === 1 || result === 4 || result === 6) {
-                    showMessage({ who: 'system', text: 'IA sem jogadas, mas ganhou novo lançamento.' });
+                    showMessage({ who: 'system', text: 'IA sem jogadas, mas ganhou um novo lançamento.' });
                     lastDiceValue = null;
                     continue; // IA volta a lançar
                 } else {
@@ -594,7 +594,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
             } catch (e) {
-                console.warn('Erro a obter jogada da IA:', e);
+                console.warn('Erro ao obter jogada da IA:', e);
             }
 
             if (!chosenMove) {
@@ -607,9 +607,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 // nota: chosenMove contém { piece, from, destCell, to }
                 if (!chosenMove) {
                     // extremamente improvável, mas protege
-                    console.warn('Sem fallback de jogada embora domMoves > 0 — a passar a vez.');
+                    console.warn('Sem fallback de jogada, embora domMoves > 0 — a passar a vez.');
                     if (result === 1 || result === 4 || result === 6) {
-                        showMessage({ who: 'system', text: 'IA sem jogada legal, mas ganhou novo lançamento.' });
+                        showMessage({ who: 'system', text: 'IA sem jogada legal, mas ganhou um novo lançamento.' });
                         lastDiceValue = null;
                         continue;
                     } else {
@@ -655,7 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ======= Dados (sticks) =======
     const upCountProbs = [0.06, 0.25, 0.38, 0.25, 0.06];
-    const namesMap = { 0: "Sitteh (0 → 6)", 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah" };
+    const namesMap = { 0: "Sitteh", 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah" };
 
     function sampleFromDistribution(probs) {
         const r = Math.random();
@@ -851,7 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- inicialização ---
     const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
     renderBoard(initialCols);
-    showMessage({ who: 'system', text: 'Bem-vindo! Seleciona o modo/dificuldade e carrega em "Start Game".' });
+    showMessage({ who: 'system', text: 'Bem-vindo! Seleciona o modo/dificuldade e carrega em "Iniciar Jogo".' });
 
     if (nextTurnBtn) nextTurnBtn.disabled = true;
     if (throwBtn) throwBtn.disabled = true;
