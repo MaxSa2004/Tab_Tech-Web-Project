@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const authForm = document.querySelector('.authForm');
     const capturedP1 = document.getElementById('capturedP1');
     const capturedP2 = document.getElementById('capturedP2');
+    const leaveButton = document.getElementById('leaveButton');
 
     // selects de configuração
     const modeSelect = document.getElementById('game_mode');
@@ -51,9 +52,64 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return true;
     }
+    function setConfigEnabled(enabled) {
+        if (widthSelect) widthSelect.disabled = !enabled;
+        if (modeSelect) modeSelect.disabled = !enabled;
+        if (iaLevelSelect) iaLevelSelect.disabled = !enabled;
+        if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = !enabled;
+    }
+
     function updatePlayButtonState() {
         if (!playButton) return;
-        playButton.disabled = !isConfigValid();
+        playButton.disabled = !isConfigValid() || gameActive == true;
+        if(leaveButton){
+            leaveButton.disabled = !gameActive;
+        }
+    }
+    if (leaveButton) {
+        leaveButton.addEventListener('click', () => {
+            if (!gameActive) return;
+
+            // Fechar overlay dos dados se estiver aberto (evita “ficar pendurado”)
+            const prev = document.body.querySelector('.dice-overlay');
+            if (prev) {
+                try {
+                    if (prev._countdownInterval) { clearInterval(prev._countdownInterval); prev._countdownInterval = null; }
+                    if (prev._autoCloseTimer) { clearTimeout(prev._autoCloseTimer); prev._autoCloseTimer = null; }
+                } catch (e) { }
+                prev.remove();
+            }
+
+            // Mensagem neutra e terminar sem vencedor
+            showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
+
+            // Não definir vencedor; não mostrar summary (ou mostra se preferires)
+            // TabStats.setWinner(null); // se adaptares o summary para “Sem vencedor”
+            // TabStats.showSummary();   // opcional
+
+            // Finalização “limpa” como endGame, mas sem vencedor
+            gameActive = false;
+            currentPlayer = 1;
+            selectedPiece = null;
+            lastDiceValue = null;
+
+            // limpar capturas
+            if (capturedP1) capturedP1.innerHTML = '';
+            if (capturedP2) capturedP2.innerHTML = '';
+
+            // UI de turno/botões
+            if (nextTurnBtn) nextTurnBtn.disabled = true;
+            if (throwBtn) throwBtn.disabled = true;
+
+            // reativar configs e botões
+            setConfigEnabled(true);
+            if (playButton) playButton.disabled = !isConfigValid();
+            if (leaveButton) leaveButton.disabled = true;
+            gameActive = false;
+            // re-render board conforme a largura selecionada
+            renderBoard(parseInt(widthSelect.value, 10));
+            updatePlayButtonState();
+        });
     }
     if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState);
     if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState);
@@ -266,20 +322,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!pieceEl) return;
         const target = capturedByPlayer === 1 ? capturedP1 : capturedP2;
         if (!target) return;
-      
+
         const isRed = pieceEl.classList.contains('red');
         const colorClass = isRed ? 'red' : 'yellow';
-      
+
         // cria token independente das regras de .piece
         const token = document.createElement('div');
         token.className = `captured-token ${colorClass}`;
         token.setAttribute('aria-label', colorClass === 'red' ? 'Captured red piece' : 'Captured yellow piece');
-      
+
         target.appendChild(token);
-      
+
         // remove a peça original do tabuleiro
         pieceEl.remove();
-      }
+    }
 
     function movePieceTo(piece, destCell) {
         const existingPiece = destCell.querySelector('.piece');
@@ -382,9 +438,14 @@ document.addEventListener("DOMContentLoaded", () => {
         lastDiceValue = null;
         if (capturedP1) capturedP1.innerHTML = '';
         if (capturedP2) capturedP2.innerHTML = '';
+        gameActive = false;
         renderBoard(parseInt(widthSelect.value, 10));
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = true;
+        // reativar configurações e gerir botões principais
+        setConfigEnabled(true);
+        if (playButton) playButton.disabled = !isConfigValid();
+        if (leaveButton) leaveButton.disabled = true;
         updatePlayButtonState();
     }
 
@@ -483,10 +544,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         showMessage({ who: 'system', key: 'msg_game_started' });
         gameActive = true;
+        updatePlayButtonState();
+        setConfigEnabled(false);
 
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = (vsAI && currentPlayer === aiPlayerNum) ? true : false;
-
+        if (playButton) playButton.disabled = true;
+        if (leaveButton) leaveButton.disabled = false;
         // se IA começa, dispara o turno dela
         if (vsAI && currentPlayer === aiPlayerNum) {
             setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);

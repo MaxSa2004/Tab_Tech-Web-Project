@@ -75,6 +75,7 @@ const i18n = {
         hard: "Difícil",
         first_to_play : "Primeiro a jogar",
         playButton: "Iniciar Jogo",
+        leaveButton: "Sair do Jogo",
         prompts: "Mensagens do Jogo",
         captured_one: "Suas peças",
         captured_two: "Peças do oponente",
@@ -83,6 +84,7 @@ const i18n = {
         current: "Jogador atual",
         nextTurn: "Passar a vez",
         msg_game_started: "Jogo iniciado - Bom jogo!",
+        msg_leave_game: "Jogador {player} saiu do jogo.",
         msg_turn_of: "Agora é o turno do Jogador {player}.",
         msg_player_won: "O JOGADOR {player} GANHOU!",
         msg_dice_thrown_double: "Tiraste {value} - ganhas outro lançamento!",
@@ -218,6 +220,7 @@ const i18n = {
         hard: "Hard",
         first_to_play: "First to Play",
         playButton: "Start Game",
+        leaveButton: "Leave Game",
         prompts: "Game Prompts",
         captured_one: "Your pieces",
         captured_two: "Oponnent's pieces",
@@ -226,6 +229,7 @@ const i18n = {
         current: "Current player: ",
         nextTurn: "Skip turn",
         msg_game_started: "Game started - Have fun!",
+        msg_leave_game: "Player {player} has left the game.",
         msg_turn_of: "It's Player {player}'s turn.",
         msg_player_won: "PLAYER {player} WINS!",
         msg_dice_thrown_double: "You rolled {value} - you get another throw!",
@@ -268,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'title', 'myBtnInstructions', 'myBtnClassifications', 'myBtnExtra',
     'configTitle', 'width1', 'mode', 'lvl', 'easy', 'normal', 'hard',
     'first_to_play', 'playButton', 'captured_one', 'captured_two',
-    'toggleMute', 'throwDiceBtn', 'current', 'nextTurn', 'prompts'
+    'toggleMute', 'throwDiceBtn', 'current', 'nextTurn', 'prompts', 'leaveButton'
   ];
 
   const setLang = (lang) => {

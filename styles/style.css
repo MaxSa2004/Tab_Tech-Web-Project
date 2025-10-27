@@ -92,6 +92,24 @@ button {
     box-shadow: 0 6px 18px rgba(11, 121, 247, 0.12);
 }
 
+/* Botão “Desistir” (ao lado do Iniciar Jogo) */
+.leaveButton {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ef4444, #dc2626);
+    /* vermelho */
+    color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(220, 38, 38, 0.18);
+}
+
+.leaveButton[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 /* SECONDARY — caixa clara com borda (para os 3 botões) */
 .btn-secondary,
 #myBtnInstructions,
@@ -994,9 +1012,12 @@ body.modal-open {
 
 .captured-col {
     display: flex;
-    flex-direction: column;     /* IMPORTANTE */
-    align-items: flex-start;    /* alinha à esquerda */
-    gap: 6px;                   /* espaço entre título e lista */
+    flex-direction: column;
+    /* IMPORTANTE */
+    align-items: flex-start;
+    /* alinha à esquerda */
+    gap: 6px;
+    /* espaço entre título e lista */
     background: #ffffff;
     border: 1px solid rgba(7, 32, 43, 0.3);
     padding: 10px 12px;
@@ -1005,7 +1026,7 @@ body.modal-open {
     min-width: 200px;
     min-height: 100px;
     box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
-  }
+}
 
 /* títulos das áreas capturadas */
 .captured-title {
@@ -1021,38 +1042,47 @@ body.modal-open {
 .captured-list {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;          /* tudo numa linha */
-    justify-content: flex-start;/* começa à esquerda */
-    width: 100%;                /* fica por baixo do título */
+    flex-wrap: nowrap;
+    /* tudo numa linha */
+    justify-content: flex-start;
+    /* começa à esquerda */
+    width: 100%;
+    /* fica por baixo do título */
     gap: 0;
     padding-top: 4px;
-    overflow: hidden;           /* se exceder largura, recorta */
-    min-height: 40px;           /* >= tamanho do token */
-  }
-  
-  /* Token grande, com sobreposição de metade */
-  .captured-list .captured-token {
-    position: relative;         /* não absoluto */
-    width: 40px;                /* aumenta aqui o tamanho */
+    overflow: hidden;
+    /* se exceder largura, recorta */
+    min-height: 40px;
+    /* >= tamanho do token */
+}
+
+/* Token grande, com sobreposição de metade */
+.captured-list .captured-token {
+    position: relative;
+    /* não absoluto */
+    width: 40px;
+    /* aumenta aqui o tamanho */
     height: 40px;
     border-radius: 50%;
     pointer-events: none;
-    box-shadow: 0 0 0 2px rgba(7, 32, 43, 0.08) inset, 0 1px 2px rgba(0,0,0,0.12);
-    margin-left: -20px;         /* metade de 40px = 20px, dá o "meia-por-cima" */
-  }
-  
-  /* o primeiro token não entra para a esquerda */
-  .captured-list .captured-token:first-child {
+    box-shadow: 0 0 0 2px rgba(7, 32, 43, 0.08) inset, 0 1px 2px rgba(0, 0, 0, 0.12);
+    margin-left: -20px;
+    /* metade de 40px = 20px, dá o "meia-por-cima" */
+}
+
+/* o primeiro token não entra para a esquerda */
+.captured-list .captured-token:first-child {
     margin-left: 0;
-  }
-  
-  /* Cores fixas dos tokens */
-  .captured-list .captured-token.red {
+}
+
+/* Cores fixas dos tokens */
+.captured-list .captured-token.red {
     background: #c92c2c;
-  }
-  .captured-list .captured-token.yellow {
+}
+
+.captured-list .captured-token.yellow {
     background: #eab308;
-  }
+}
 
 main {
     display: flex;
