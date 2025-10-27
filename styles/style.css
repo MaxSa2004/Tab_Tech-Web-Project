@@ -7,6 +7,7 @@
     --text: #e6eef8;
     --muted: #94a3b8;
     --gap: 16px;
+    --bubble-pad-y: 8px; 
 }
 
 /* Reset / base */
@@ -380,7 +381,7 @@ button[disabled] {
     max-width: 78%;
     display: flex;
     gap: 10px;
-    align-items: flex-end;
+    align-items: flex-start;
     opacity: 0;
     transform: translateY(6px);
     animation: msgIn .24s forwards
@@ -394,7 +395,7 @@ button[disabled] {
 }
 
 .message .bubble {
-    padding: 10px 12px;
+    padding: var(--bubble-pad-y) 12px;
     border-radius: 12px;
     font-size: 14px;
     line-height: 1.25;
@@ -436,15 +437,41 @@ button[disabled] {
     border: 1px dashed rgba(148, 163, 184, 0.08)
 }
 
-.avatar {
-    width: 36px;
-    height: 36px;
+/* === Avatar circular com anel === */
+.message .avatar {
+    position: relative;
+    width: 26px;              /* ajusta se quiseres maior/menor */
+    height: 26px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700
-}
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1;
+    background: #fff;
+    border: 2px solid transparent;   /* a cor vem por jogador abaixo */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    margin-top: var(--bubble-pad-y);
+  }
+  
+  /* Cores por jogador (usa as classes que já colocas na mensagem) */
+  .msg-player1 .avatar {
+    color: #b91c1c;                 /* vermelho escuro do texto */
+    border-color: #dc2626;          /* vermelho do anel */
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);  /* anel externo suave */
+  }
+  
+  .msg-player2 .avatar {
+    color: #92400e;                 /* âmbar escuro do texto */
+    border-color: #f59e0b;          /* âmbar do anel */
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18); /* anel externo suave */
+  }
+  
+  /* Opcional: efeito de foco/hover */
+  .message .avatar:hover {
+    transform: translateZ(0) scale(1.03);
+    transition: transform .12s ease;
+  }
 
 /* input area in chat */
 .input-area {
