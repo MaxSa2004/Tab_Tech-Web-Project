@@ -579,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // estabilizar o valor do dado
             lastDiceValue = result;
 
-            showMessage({ who: 'system', key: 'msg_ai_dice', params:{value: result}});
+            showMessage({ who: 'player', player: currentPlayer,  key: 'msg_ai_dice', params:{value: result}});
 
             // fonte de verdade: jogadas legais no DOM (mesmas regras do humano)
             const domMoves = enumerateLegalMovesDOM(aiPlayerNum, result);
@@ -587,11 +587,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (domMoves.length === 0) {
                 // sem jogada possível
                 if (result === 1 || result === 4 || result === 6) {
-                    showMessage({ who: 'system', key: 'msg_ai_no_moves_extra'});
+                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_extra'});
                     lastDiceValue = null;
                     continue; // IA volta a lançar
                 } else {
-                    showMessage({ who: 'system', key: 'msg_ai_no_moves_pass'});
+                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_pass'});
                     lastDiceValue = null;
                     nextTurn();
                     break;
@@ -638,11 +638,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     // extremamente improvável, mas protege
                     console.warn('Sem fallback de jogada, embora domMoves > 0 — a passar a vez.');
                     if (result === 1 || result === 4 || result === 6) {
-                        showMessage({ who: 'system', key: 'msg_ai_no_moves_extra'});
+                        showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_extra'});
                         lastDiceValue = null;
                         continue;
                     } else {
-                        showMessage({ who: 'system', key: 'msg_ai_no_moves_pass'});
+                        showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_pass'});
                         lastDiceValue = null;
                         nextTurn();
                         break;
@@ -671,7 +671,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // regra dos lançamentos extra
             if (result === 1 || result === 4 || result === 6) {
-                showMessage({ who: 'system', text:t('msg_ai_extra_roll') });
+                showMessage({ who: 'player', player: currentPlayer, key:'msg_ai_extra_roll' });
                 lastDiceValue = null;
                 continue; // IA volta a lançar
             } else {
