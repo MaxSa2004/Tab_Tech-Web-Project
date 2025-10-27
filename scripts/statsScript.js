@@ -1,5 +1,4 @@
 // Caso seja para fazer tracking de estatísticas do jogo, implementar aqui.
-
 (function () {
   const DEFAULT_LABELS = {
     pt: {
@@ -17,7 +16,8 @@
       summary_captures: "Capturas",
       summary_passes: "Passes",
       summary_extra_rolls: "Lançamentos extra",
-      summary_dice_distribution: "Distribuição dos dados"
+      summary_dice_distribution: "Distribuição dos dados",
+      summary_no_winner: "Sem vencedor"
     },
     en: {
       summary_title: "Game summary",
@@ -34,14 +34,16 @@
       summary_captures: "Captures",
       summary_passes: "Passes",
       summary_extra_rolls: "Extra throws",
-      summary_dice_distribution: "Dice distribution"
+      summary_dice_distribution: "Dice distribution",
+      summary_no_winner: "No winner"
     }
   };
 
   function tLocal(key, params = {}) {
     const lang = (window.currentLang || 'pt');
-    const dict = (window.i18n && window.i18n[lang]) || DEFAULT_LABELS[lang] || DEFAULT_LABELS.en;
-    let str = dict[key] ?? DEFAULT_LABELS.en[key] ?? key;
+    const dict = (window.i18n && window.i18n[lang]) || {};
+    const fallback = DEFAULT_LABELS[lang] || DEFAULT_LABELS.en;
+    let str = dict[key] ?? fallback[key] ?? DEFAULT_LABELS.en[key] ?? key;
     return String(str).replace(/\{(\w+)\}/g, (_, k) => params[k] ?? '');
   }
 
@@ -56,9 +58,9 @@
 
         mode: null,           // 'player' | 'ia'
         aiDifficulty: null,   // 'easy' | 'normal' | 'hard' | null
-        cols: null,           // número de colunas
-        firstPlayer: null,    // 1 | 2
-        winner: null,         // 1 | 2
+        cols: null,           // nº colunas
+        firstPlayer: 1,       // 1 | 2 (P1 começa nas tuas regras)
+        winner: null,         // 1 | 2 | null
 
         turns: 0,
         moves: { 1: 0, 2: 0 },
@@ -71,7 +73,7 @@
       };
     },
 
-    start({ mode, aiDifficulty, cols, firstPlayer }) {
+    start({ mode, aiDifficulty, cols, firstPlayer = 1 }) {
       this.reset();
       this.data.mode = mode;
       this.data.aiDifficulty = mode === 'ia' ? (aiDifficulty || 'normal') : null;
@@ -115,9 +117,9 @@
       this.data.log.push({ t: 'extra', player, value });
     },
 
-    setWinner(player) {
+    setWinner(playerOrNull) {
       if (!this.data) return;
-      this.data.winner = player;
+      this.data.winner = playerOrNull; // 1 | 2 | null (desistência)
     },
 
     showSummary() {
@@ -130,10 +132,11 @@
       const secs = Math.floor((this.data.durationMs % 60000) / 1000);
       const durationText = `${mins}m ${secs}s`;
 
-      // remover modal anterior se existir
+      // remove modal anterior se existir
       const prev = document.getElementById('gameSummaryModal');
       if (prev) prev.remove();
 
+      // estrutura da modal (usa as tuas classes)
       const modal = document.createElement('div');
       modal.className = 'modal is-open';
       modal.id = 'gameSummaryModal';
@@ -155,23 +158,31 @@
       const title = document.createElement('h3');
       title.textContent = tLocal('summary_title');
 
-      const p = (labelKey, value) => `<p><strong>${tLocal(labelKey)}:</strong> ${value}</p>`;
       const md = this.data;
-      const modeLabel = md.mode === 'ia' ? `${tLocal('summary_mode_vs_ai')} (${md.aiDifficulty})` : tLocal('summary_mode_vs_player');
+      const modeLabel = md.mode === 'ia'
+        ? `${tLocal('summary_mode_vs_ai')} (${md.aiDifficulty})`
+        : tLocal('summary_mode_vs_player');
+
+      const winnerText = (md.winner === 1 || md.winner === 2)
+        ? `P${md.winner}`
+        : tLocal('summary_no_winner');
+
+      // helper para linhas
+      const p = (labelKey, value) => `<p><strong>${tLocal(labelKey)}:</strong> ${value}</p>`;
 
       const html = `
-        ${p('summary_winner', `P${md.winner}`)}
+        ${p('summary_winner', winnerText)}
         ${p('summary_duration', durationText)}
         ${p('summary_mode', modeLabel)}
         ${p('summary_board_cols', md.cols)}
-        ${p('summary_first_player', `P${md.firstPlayer}`)}
+        ${p('summary_first_player', `${md.firstPlayer}`)}
         <hr>
         ${p('summary_turns', md.turns)}
-        ${p('summary_moves', `P1 ${md.moves[1]} · P2 ${md.moves[2]}`)}
-        ${p('summary_captures', `P1 ${md.captures[1]} · P2 ${md.captures[2]}`)}
-        ${p('summary_passes', `P1 ${md.passes[1]} · P2 ${md.passes[2]}`)}
-        ${p('summary_extra_rolls', `P1 ${md.extraRolls[1]} · P2 ${md.extraRolls[2]}`)}
-        ${p('summary_dice_distribution', `1: ${md.diceCounts[1]} · 2: ${md.diceCounts[2]} · 3: ${md.diceCounts[3]} · 4: ${md.diceCounts[4]} · 6: ${md.diceCounts[6]}`)}
+        ${p('summary_moves', `P1: ${md.moves[1]} , P2: ${md.moves[2]}`)}
+        ${p('summary_captures', `P1: ${md.captures[1]} , P2: ${md.captures[2]}`)}
+        ${p('summary_passes', `P1: ${md.passes[1]} , P2: ${md.passes[2]}`)}
+        ${p('summary_extra_rolls', `P1: ${md.extraRolls[1]} , P2: ${md.extraRolls[2]}`)}
+        ${p('summary_dice_distribution', `1: ${md.diceCounts[1]} , 2: ${md.diceCounts[2]} , 3: ${md.diceCounts[3]} , 4: ${md.diceCounts[4]} , 6: ${md.diceCounts[6]}`)}
       `;
 
       const body = document.createElement('div');

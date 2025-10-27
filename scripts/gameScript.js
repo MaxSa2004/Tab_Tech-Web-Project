@@ -62,14 +62,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function updatePlayButtonState() {
         if (!playButton) return;
         playButton.disabled = !isConfigValid() || gameActive == true;
-        if(leaveButton){
+        if (leaveButton) {
             leaveButton.disabled = !gameActive;
         }
     }
     if (leaveButton) {
         leaveButton.addEventListener('click', () => {
             if (!gameActive) return;
-
+            TabStats.setWinner(null);
+            TabStats.showSummary();
             // Fechar overlay dos dados se estiver aberto (evita “ficar pendurado”)
             const prev = document.body.querySelector('.dice-overlay');
             if (prev) {
@@ -342,6 +343,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function movePieceTo(piece, destCell) {
         const existingPiece = destCell.querySelector('.piece');
         if (existingPiece) {
+            const color = existingPiece.classList.contains('red') ? 'red' : 'yellow';
+            TabStats.onCapture(currentPlayer, color);
+
             if (existingPiece.classList.contains('red')) {
                 redPieces--;
                 showMessage({ who: 'system', key: 'red_pieces', params: { count: redPieces } });
@@ -359,6 +363,7 @@ document.addEventListener("DOMContentLoaded", () => {
             piece.setAttribute('move-state', 'row-four');
         }
         destCell.appendChild(piece);
+        TabStats.onMove(currentPlayer);
     }
 
     function flipBoard() {
@@ -402,6 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function nextTurn() {
         currentPlayer = currentPlayer === 1 ? 2 : 1;
         currentPlayerEl.textContent = currentPlayer;
+        TabStats.onTurnAdvance();
         showMessage({ who: 'system', key: 'msg_turn_of', params: { player: currentPlayer } });
         flipBoard();
 
@@ -414,10 +420,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkWinCondition() {
         if (redPieces == 0) {
             showMessage({ who: 'system', key: 'msg_player_won', params: { player: 2 } });
+            TabStats.setWinner(2);
             endGame();
             return true;
         } else if (yellowPieces == 0) {
             showMessage({ who: 'system', key: 'msg_player_won', params: { player: 1 } });
+            TabStats.setWinner(1);
             endGame();
             return true;
         }
@@ -425,6 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function endGame() {
+        TabStats.showSummary();
         currentPlayer = 1;
         gameActive = false;
 
@@ -507,7 +516,12 @@ document.addEventListener("DOMContentLoaded", () => {
     window.__refreshChat = refreshChatBubbles;
 
     // UI listeners
-    if (nextTurnBtn) nextTurnBtn.addEventListener('click', nextTurn);
+    if (nextTurnBtn) {
+        nextTurnBtn.addEventListener('click', () => {
+            TabStats.onPass(currentPlayer);
+            nextTurn();
+        });
+    }
     if (widthSelect) widthSelect.addEventListener('change', () => renderBoard(parseInt(widthSelect.value, 10)));
     if (toggleMuteBtn) toggleMuteBtn.addEventListener('click', (e) => {
         // soundOn é opcional no teu projeto; ignora se não existir
@@ -537,8 +551,15 @@ document.addEventListener("DOMContentLoaded", () => {
         aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null;
 
         currentPlayer = 1;
-        currentPlayer.textContent = currentPlayer;
-
+        currentPlayerEl.textContent = currentPlayer;
+        // dentro do handler do playButton, após leres as configs e antes de bloquear UI:
+        TabStats.start({
+            mode: gameMode,
+            aiDifficulty,
+            cols: parseInt(widthSelect.value, 10),
+            firstPlayer: vsAI ? (humanFirst ? "Human" : "Ai") : null
+        });
+        TabStats.onTurnAdvance();
         showMessage({ who: 'system', key: 'msg_game_started' });
 
         gameActive = true;
@@ -553,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (vsAI && 1 === aiPlayerNum) {
             setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);
         }
+
     });
 
     // botão de dados
@@ -575,17 +597,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (result === 4 || result === 6 || result === 1) {
                         showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                        TabStats.onDice(currentPlayer, result);
+                        TabStats.onExtraRoll(currentPlayer, result);
                     }
                     return;
                 }
 
                 if (result === 4 || result === 6 || result === 1) {
                     showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                    TabStats.onDice(currentPlayer, result);
+                    TabStats.onExtraRoll(currentPlayer, result);
                     throwBtn.disabled = false;
                     nextTurnBtn.disabled = true;
                 } else {
                     throwBtn.disabled = true;
                     nextTurnBtn.disabled = false;
+                    TabStats.onDice(currentPlayer, result);
                 }
             } catch (err) {
                 console.warn('Erro ao lançar dados:', err);
@@ -663,6 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // estabilizar o valor do dado
             lastDiceValue = result;
+            TabStats.onDice(currentPlayer, result);
 
             showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_dice', params: { value: result } });
 
@@ -673,11 +701,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 // sem jogada possível
                 if (result === 1 || result === 4 || result === 6) {
                     showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_extra' });
+                    TabStats.onExtraRoll(currentPlayer, result);
                     lastDiceValue = null;
                     continue; // IA volta a lançar
                 } else {
                     showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_pass' });
                     lastDiceValue = null;
+                    TabStats.onPass(currentPlayer);
                     nextTurn();
                     break;
                 }
