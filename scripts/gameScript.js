@@ -531,28 +531,24 @@ document.addEventListener("DOMContentLoaded", () => {
         vsAI = (modeVal === 'ia');
         aiDifficulty = diffSel;
 
-        currentPlayer = humanFirst ? 1 : 2;
-        currentPlayerEl.textContent = currentPlayer;
+        humanPlayerNum = humanFirst ? 1 : 2;
+        aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null;
 
-        if (vsAI) {
-            humanPlayerNum = humanFirst ? 1 : 2;
-            aiPlayerNum = humanFirst ? 2 : 1;
-        } else {
-            humanPlayerNum = 1;
-            aiPlayerNum = null;
-        }
+        currentPlayer = 1;
+        currentPlayer.textContent = currentPlayer;
 
         showMessage({ who: 'system', key: 'msg_game_started' });
+
         gameActive = true;
         updatePlayButtonState();
         setConfigEnabled(false);
 
         if (nextTurnBtn) nextTurnBtn.disabled = true;
-        if (throwBtn) throwBtn.disabled = (vsAI && currentPlayer === aiPlayerNum) ? true : false;
+        if (throwBtn) throwBtn.disabled = (vsAI && aiPlayerNum === 1);
         if (playButton) playButton.disabled = true;
         if (leaveButton) leaveButton.disabled = false;
         // se IA começa, dispara o turno dela
-        if (vsAI && currentPlayer === aiPlayerNum) {
+        if (vsAI && 1 === aiPlayerNum) {
             setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);
         }
     });
