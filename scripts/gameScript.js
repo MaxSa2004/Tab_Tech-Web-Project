@@ -882,7 +882,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const ov = document.body.querySelector('.dice-overlay');
             if (ov) ov.remove();
-        }, 3000);
+        }, 2000);
     }
     function refreshDiceOverlay() {
         const ov = document.body.querySelector('.dice-overlay');
