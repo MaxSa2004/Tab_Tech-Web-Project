@@ -92,6 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
             currentPlayer = 1;
             selectedPiece = null;
             lastDiceValue = null;
+            aiPlayerNum = null;
+            humanPlayerNum = 1;
 
             // limpar capturas
             if (capturedP1) capturedP1.innerHTML = '';
@@ -105,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setConfigEnabled(true);
             if (playButton) playButton.disabled = !isConfigValid();
             if (leaveButton) leaveButton.disabled = true;
-            gameActive = false;
+
             // re-render board conforme a largura selecionada
             renderBoard(parseInt(widthSelect.value, 10));
             updatePlayButtonState();
