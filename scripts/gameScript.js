@@ -429,7 +429,7 @@ document.addEventListener("DOMContentLoaded", () => {
             aiPlayerNum = null;
         }
 
-        showMessage({ who: 'system', text: 'Jogo iniciado — boas jogadas!' });
+        showMessage({ who: 'system', text: 'Jogo iniciado - Bom jogo!' });
         gameActive = true;
 
         if (nextTurnBtn) nextTurnBtn.disabled = true;
