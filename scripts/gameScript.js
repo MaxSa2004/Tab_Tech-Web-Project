@@ -588,85 +588,109 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // botão de dados
-    if (throwBtn) {
-        throwBtn.addEventListener('click', async (e) => {
-            // bloquear no turno da IA
-            if (vsAI && currentPlayer === aiPlayerNum) {
-                e.preventDefault();
-                return;
-            }
-            if (!gameActive) return;
-
-            try {
-                const result = await window.tabGame.spawnAndLaunch();
-                lastDiceValue = result;
-                showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
-                const playerColor = getColorForPlayerNum(currentPlayer);
-                const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
-                const captureMoves = legalMoves.filter(m => {
-                    const occ = m.destCell.querySelector('.piece');
-                    return occ && !occ.classList.contains(playerColor);
-                });
-                // Se NÃO há jogadas válidas, mostra logo as mensagens correspondentes
-                if (legalMoves.length === 0) {
-                    if (result === 1 || result === 4 || result === 6) {
-                        if(result===1){
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_one'});
-                        }
-                        showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                        // stats
-                        TabStats.onDice(currentPlayer, result);
-                        TabStats.onExtraRoll(currentPlayer, result);
-                        // UI
-                        throwBtn.disabled = false;
-                        nextTurnBtn.disabled = true;
-                    } else {
-                        showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-                        // stats
-                        TabStats.onDice(currentPlayer, result);
-                        // UI
-                        throwBtn.disabled = true;
-                        nextTurnBtn.disabled = false;
-                    }
-                    return; // nada mais a fazer neste lançamento
-                }
-
-                // Há jogadas válidas — se existir pelo menos uma captura, avisa JÁ
-                if (captureMoves.length > 0) {
-                    showMessage({
-                        who: 'player',
-                        player: currentPlayer,
-                        key: 'msg_capture',
-                        params: { n: captureMoves.length }
-                    });
-                } else {
-                    showMessage({ who: 'system', key: 'msg_player_can_move' });
-                }
-
-                // Mantém o teu comportamento: com jogada válida, bloqueia botões até mover
-                nextTurnBtn.disabled = true;
-                throwBtn.disabled = true;
-
-                // Se for 1/4/6, informa que terá novo lançamento (após o movimento)
-                if (result === 4 || result === 6 || result === 1) {
-                    if(result===1){
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_one'});
-                    }
-                    showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                    // Regista stats agora para não perder o evento
-                    TabStats.onDice(currentPlayer, result);
-                    TabStats.onExtraRoll(currentPlayer, result);
-                } else {
-                    // 2/3 — apenas regista o lançamento; a passagem de turno será decidida após mover
-                    TabStats.onDice(currentPlayer, result);
-                }
-
-            } catch (err) {
-                console.warn('Erro ao lançar dados:', err);
-            }
+if (throwBtn) {
+    throwBtn.addEventListener('click', async (e) => {
+      if (vsAI && currentPlayer === aiPlayerNum) {
+        e.preventDefault();
+        return;
+      }
+      if (!gameActive) return;
+  
+      try {
+        const result = await window.tabGame.spawnAndLaunch();
+  
+        // guarda para getValidMoves/handleCellClick
+        lastDiceValue = result;
+  
+        // 1) valor do dado
+        showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
+  
+        const isExtra = (result === 1 || result === 4 || result === 6);
+        const isTab   = (result === 1);
+  
+        // calcula jogadas e capturas
+        const playerColor  = getColorForPlayerNum(currentPlayer);
+        const legalMoves   = enumerateLegalMovesDOM(currentPlayer, result);
+        const captureMoves = legalMoves.filter(m => {
+          const occ = m.destCell.querySelector('.piece');
+          return occ && !occ.classList.contains(playerColor);
         });
-    }
+  
+        // 2) sem jogadas
+        if (legalMoves.length === 0) {
+          if (isExtra) {
+            // primeiro o “double”, depois o aviso de sem jogadas extra
+            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
+  
+            TabStats.onDice(currentPlayer, result);
+            TabStats.onExtraRoll(currentPlayer, result);
+  
+            // volta a lançar
+            throwBtn.disabled = false;
+            nextTurnBtn.disabled = true;
+          } else {
+            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+  
+            TabStats.onDice(currentPlayer, result);
+  
+            throwBtn.disabled = true;
+            nextTurnBtn.disabled = false;
+          }
+          return; // termina este lançamento
+        }
+  
+        // 3) há jogadas
+        if (isTab) {
+          // Tâb: prioriza captura; senão, conversão vem antes do "double"
+          const convertibleCount = countConvertiblePieces(currentPlayer);
+  
+          if (captureMoves.length > 0) {
+            // captura primeiro, depois "double"
+            showMessage({
+              who: 'player',
+              player: currentPlayer,
+              key: 'msg_capture',
+              params: { n: captureMoves.length }
+            });
+            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+          } else if (convertibleCount > 0) {
+            // conversão antes do "double"
+            showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
+            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+          } else {
+            // nada a converter (tudo convertido): mantém "double" antes do aviso de movimento
+            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+            showMessage({ who: 'system', key: 'msg_player_can_move' });
+          }
+        } else {
+          // 4 ou 6: “double” antes; 2/3: sem double
+          if (isExtra) {
+            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+          }
+          if (captureMoves.length > 0) {
+            showMessage({
+              who: 'player',
+              player: currentPlayer,
+              key: 'msg_capture',
+              params: { n: captureMoves.length }
+            });
+          } else {
+            showMessage({ who: 'system', key: 'msg_player_can_move' });
+          }
+        }
+  
+        // UI e stats
+        nextTurnBtn.disabled = true;
+        throwBtn.disabled    = true;
+  
+        TabStats.onDice(currentPlayer, result);
+        if (isExtra) TabStats.onExtraRoll(currentPlayer, result);
+  
+      } catch (err) {
+        console.warn('Erro ao lançar dados:', err);
+      }
+    });
+  }
 
     // há jogada válida?
     function hasValidMove(player = currentPlayer, diceValue = lastDiceValue) {
@@ -739,6 +763,11 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     }
+    function countConvertiblePieces(playerNum) {
+        const color = getColorForPlayerNum(playerNum);
+        return Array.from(gameBoard.querySelectorAll('.piece.' + color))
+          .filter(p => p.getAttribute('move-state') === 'not-moved').length;
+      }
 
     // =============== TURNO DA IA ===============
     async function runAiTurnLoop() {
@@ -772,12 +801,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (domMoves.length === 0) {
                 // sem jogada possível
                 if (result === 1 || result === 4 || result === 6) {
-                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_extra' });
+                    showMessage({ who: 'system', key: 'msg_ai_no_moves_extra' });
                     TabStats.onExtraRoll(currentPlayer, result);
                     lastDiceValue = null;
                     continue; // IA volta a lançar
                 } else {
-                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_pass' });
+                    showMessage({ who: 'system',  key: 'msg_ai_no_moves_pass' });
                     lastDiceValue = null;
                     TabStats.onPass(currentPlayer);
                     nextTurn();
@@ -825,11 +854,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     // extremamente improvável, mas protege
                     console.warn('Sem fallback de jogada, embora domMoves > 0 — a passar a vez.');
                     if (result === 1 || result === 4 || result === 6) {
-                        showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_extra' });
+                        showMessage({ who: 'system', key: 'msg_ai_no_moves_extra' });
                         lastDiceValue = null;
                         continue;
                     } else {
-                        showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_no_moves_pass' });
+                        showMessage({ who: 'system',key: 'msg_ai_no_moves_pass' });
                         lastDiceValue = null;
                         nextTurn();
                         break;
@@ -858,7 +887,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // regra dos lançamentos extra
             if (result === 1 || result === 4 || result === 6) {
-                showMessage({ who: 'player', player: currentPlayer, key: 'msg_ai_extra_roll' });
+                showMessage({ who: 'system', key: 'msg_ai_extra_roll' });
                 lastDiceValue = null;
                 continue; // IA volta a lançar
             } else {
