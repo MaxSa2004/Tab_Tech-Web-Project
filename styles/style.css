@@ -1186,3 +1186,136 @@ chat {
     z-index: 5;
     cursor: pointer;
 }
+
+.scrims-ladder {
+  margin: 40px auto;
+  max-width: 700px;
+  background: #07202b;
+  border-radius: 25px;
+  padding: 20px;
+  color: #f1f1f1;
+}
+
+/* Leaderboard grid layout */
+.ladder-nav--results,
+.ladder-nav--results-players {
+  display: grid;
+  grid-template-columns: 60px 1.5fr 1fr 1fr 1fr; /* Rank | User | GP | GW | Ratio */
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #2e2e2e;
+  text-align: center; /* default center alignment */
+}
+
+/* Column headers */
+.ladder-nav--results-col label {
+  color: #888dff;
+  font-weight: 600;
+}
+
+/* Usernames left-aligned */
+.ladder-nav--results-col:nth-child(2),
+.ladder-nav--results-players .results-user {
+  text-align: left;
+  justify-self: start;
+}
+
+/* Numeric columns centered */
+.ladder-nav--results-players .results-gp,
+.ladder-nav--results-players .results-gw,
+.ladder-nav--results-players .results-ratio,
+.ladder-nav--results-players .positions {
+  text-align: center;
+  justify-self: center;
+}
+
+/* Rank style */
+.results-rank .positions {
+  font-weight: bold;
+  color: #686ef9;
+}
+
+/* Search input */
+.ladder-search {
+  padding: 10px 15px;
+  width: 35%;
+  font-size: 14px;
+  color: #fff;
+  background-color: rgba(255,255,255,0.1);
+  border: 2px solid transparent;
+  border-radius: 25px; 
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.ladder-search:focus {
+  border-color: #686ef9;
+  background-color: rgba(255,255,255,0.15);
+  box-shadow: 0 0 8px rgba(104, 110, 249, 0.4);
+}
+
+/* Sort button */
+#sort-btn {
+  background: #686ef9;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 15px 0;
+  transition: background 0.3s ease;
+}
+
+#sort-btn:hover {
+  background: #575eea;
+}
+
+/* Glow & dim effects */
+.ladder-nav--results-players.glow {
+  background-color: rgba(104, 110, 249, 0.5);
+  box-shadow: 0 0 20px rgba(104, 110, 249, 0.7);
+  border-left: 4px solid #686ef9;
+  transition: all 0.3s ease;
+}
+
+.ladder-nav--results-players.dim {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+/* Row hover effect */
+.ladder-nav--results-players:hover {
+  background-color: rgba(104, 110, 249, 0.1);
+}
+
+/* Leaderboard grid layout */
+.ladder-nav--results,
+.ladder-nav--results-players {
+  display: grid;
+  grid-template-columns: 60px 2fr 1fr 1fr 1fr; /* Rank | User | GP | GW | Ratio */
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #2e2e2e;
+  text-align: center; /* default center alignment */
+}
+
+/* Center all columns including User */
+.ladder-nav--results-players .results-user,
+.ladder-nav--results-col:nth-child(2) {
+  text-align: center;
+  justify-self: center;
+}
+
+/* Numeric columns centered */
+.ladder-nav--results-players .results-gp,
+.ladder-nav--results-players .results-gw,
+.ladder-nav--results-players .results-ratio,
+.ladder-nav--results-players .positions {
+  text-align: center;
+  justify-self: center;
+}
+
+.scrims-ladder .ladder-title h1 {
+  color: #fff; /* make only the title white */
+}

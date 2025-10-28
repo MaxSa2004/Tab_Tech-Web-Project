@@ -11,6 +11,7 @@
   <script src="scripts/statsScript.js"></script> <!--stats script-->
   <script src="scripts/gameScript.js"></script> <!--game script-->
   <script src="scripts/ai.js"></script> <!--AI script-->
+  <script src="leaderBoard.js"></script> <!--leaderboard script-->
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
   <!--Montserrat-->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap"
@@ -96,10 +97,68 @@
       <div id="myModalClassifications" class="modal" aria-hidden="true">
         <!-- Modal content -->
         <div class="modal-content" role="document">
+          <section id="leaderboard-container" class="scrims-ladder">
+              <div class="ladder-nav">
+                <div class="ladder-nav--col ladder-title">
+                  <h1>Leaderboard</h1>
+                  <br><br>
+                </div>
+                <div class="ladder-nav--col">
+                  <input type="text" class="ladder-search" placeholder="Search User..." />
+                  <br> <br>
+                </div>
+              </div>
+              <button id="sort-btn">Sort: Descending ⬇️</button>
+
+              <!-- Cabeçalhos -->
+              <div class="ladder-nav--results">
+                <div class="ladder-nav--results-col"><label>Rank</label></div>
+                <div class="ladder-nav--results-col"><label>User</label></div>
+                <div class="ladder-nav--results-col"><label>Games Played</label></div>
+                <div class="ladder-nav--results-col"><label>Games Won</label></div>
+                <div class="ladder-nav--results-col"><label>Win Ratio %</label></div>
+              </div>
+
+              <!-- Jogador 1 -->
+              <div class="ladder-nav--results-players">
+                <div class="results-col"><span class="results-rank"><span class="positions">1</span></span></div>
+                <div class="results-col"><span class="results-user">Jogador 1</span></div>
+                <div class="results-col"><span class="results-gp">15</span></div>
+                <div class="results-col"><span class="results-gw">12</span></div>
+                <div class="results-col"><span class="results-ratio">0%</span></div>
+              </div>
+
+              <!-- IA (easy) -->
+              <div class="ladder-nav--results-players">
+                <div class="results-col"><span class="results-rank"><span class="positions">2</span></span></div>
+                <div class="results-col"><span class="results-user">IA (easy)</span></div>
+                <div class="results-col"><span class="results-gp">20</span></div>
+                <div class="results-col"><span class="results-gw">9</span></div>
+                <div class="results-col"><span class="results-ratio">0%</span></div>
+              </div>
+
+              <!-- IA (normal) -->
+              <div class="ladder-nav--results-players">
+                <div class="results-col"><span class="results-rank"><span class="positions">3</span></span></div>
+                <div class="results-col"><span class="results-user">IA (normal)</span></div>
+                <div class="results-col"><span class="results-gp">18</span></div>
+                <div class="results-col"><span class="results-gw">7</span></div>
+                <div class="results-col"><span class="results-ratio">0%</span></div>
+              </div>
+
+              <!-- IA (hard) -->
+              <div class="ladder-nav--results-players">
+                <div class="results-col"><span class="results-rank"><span class="positions">4</span></span></div>
+                <div class="results-col"><span class="results-user">IA (hard)</span></div>
+                <div class="results-col"><span class="results-gp">25</span></div>
+                <div class="results-col"><span class="results-gw">6</span></div>
+                <div class="results-col"><span class="results-ratio">0%</span></div>
+              </div>
+
+            </section>
           <button class="close" aria-label="Fechar">&times;</button>
           <div id="modalContentClassifications">
-            <h3>Classifications</h3>
-            <p>Table with rank, user and number of wins (IA included)</p>
+
           </div>
         </div>
       </div>
@@ -262,7 +321,6 @@
       </div>
     </aside>
   </main>
-
 
 </body>
 
