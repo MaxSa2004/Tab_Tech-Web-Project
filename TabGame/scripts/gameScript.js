@@ -918,11 +918,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 piece.setAttribute('move-state', 'moved');
             }
 
-            // efeito visual opcional (comentado; podes ativar se quiseres feedback)
-            // piece.classList.add('selected');
-            // destCell.classList.add('green-glow');
-            // setTimeout(() => { piece.classList.remove('selected'); destCell.classList.remove('green-glow'); }, 500);
-
             movePieceTo(piece, destCell);
 
             if (checkWinCondition()) return;
