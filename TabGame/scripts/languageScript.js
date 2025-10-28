@@ -37,7 +37,7 @@ const i18n = {
         <p>Se uma peça em movimento cair numa ou mais peças inimigas, essas peças inimigas são removidas do tabuleiro e vão para o lado do oponente.</p>
         <hr>
         <h4>Restrições</h4>
-        <p>Nenhuma peça pode regressar à sua posição inicial depois de a ter abandonado.</p>
+        <p>Nenhuma peça pode regressar à sua posição inicial depois de a ter abandonado nem à quarta fila se a peça já lá tiver entrado uma vez. Uma peça só pode entrar na quarta fila se o jogador não tiver nehuma peça dele na primeira fila.</p>
         <p></p>
         <hr>
         <h4>Fim do jogo</h4>
@@ -198,7 +198,7 @@ const i18n = {
           the oponent's side.</p>
         <hr>
         <h4>Restrictions</h4>
-        <p>No piece may return to its original home once it has left it.</p>
+        <p>No piece may return to its original home once it has left it, nor the fourth row if it has entered it once already. A piece can only enter the fourth row if there are no pieces on the player's original/first row.</p>
         <p></p>
         <hr>
         <h4>End of game</h4>
