@@ -93,16 +93,69 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Se quiseres, podemos também filtrar (esconder linhas não correspondentes) em vez de apenas "dim"
-  // EXEMPLO (descomenta se quiseres isto):
-  // function filterPlayers(term) {
-  //   const s = term.toLowerCase().trim();
-  //   getPlayers().forEach(p => {
-  //     const name = (p.querySelector('.results-user')?.textContent || '').toLowerCase();
-  //     p.style.display = s === '' || name.includes(s) ? '' : 'none';
-  //   });
-  // }
 
   // Inicial: calcula ratios e ordena
   sortLeaderboard();
+  // Restore leaderboard from localStorage if available
+  const savedData = JSON.parse(localStorage.getItem("leaderboardData") || "[]");
+  if (savedData.length > 0) {
+    const rows = getPlayers();
+    savedData.forEach(data => {
+      const player = rows.find(
+        p => p.querySelector(".results-user").textContent.trim() === data.name
+      );
+      if (player) {
+        player.querySelector(".results-gp").textContent = data.gp;
+        player.querySelector(".results-gw").textContent = data.gw;
+      }
+    });
+    updateRatios();
+    sortLeaderboard();
+  }
+
+
+  // Update leaderboard dynamically from game results
+  window.updateLeaderboard = function (winnerName, loserName) {
+    const container = document.querySelector("#leaderboard-container");
+    if (!container) return;
+
+    const rows = container.querySelectorAll(".ladder-nav--results-players");
+
+    rows.forEach(player => {
+      const username = player.querySelector(".results-user").textContent.trim();
+      const gpEl = player.querySelector(".results-gp");
+      const gwEl = player.querySelector(".results-gw");
+      const ratioEl = player.querySelector(".results-ratio");
+
+      let gp = parseInt(gpEl.textContent) || 0;
+      let gw = parseInt(gwEl.textContent) || 0;
+
+      if (username === winnerName) {
+        gp++;
+        gw++;
+      } else if (username === loserName) {
+        gp++;
+      }
+
+      gpEl.textContent = gp;
+      gwEl.textContent = gw;
+
+      // 🔹 Calculate win ratio safely
+      const ratio = gp > 0 ? Math.round((gw / gp) * 100) : 0;
+      ratioEl.textContent = ratio + "%";
+    });
+
+    // 🔸 Save leaderboard to localStorage
+    const leaderboardData = Array.from(rows).map(p => ({
+      name: p.querySelector(".results-user").textContent.trim(),
+      gp: parseInt(p.querySelector(".results-gp").textContent.trim()),
+      gw: parseInt(p.querySelector(".results-gw").textContent.trim())
+    }));
+    localStorage.setItem("leaderboardData", JSON.stringify(leaderboardData));
+
+    // 🔸 Refresh ratios & sorting
+    if (typeof sortLeaderboard === "function") sortLeaderboard();
+  };
+
+
 });

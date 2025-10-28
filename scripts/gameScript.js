@@ -69,28 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
             leaveButton.disabled = !gameActive;
         }
     }
-    // --- helper títulos das capturas (dinâmico consoante humano P1/P2) ---
-    function updateCapturedTitles() {
-        const title1El = document.getElementById('captured_one'); // título da coluna do capturedP1 (esquerda)
-        const title2El = document.getElementById('captured_two'); // título da coluna do capturedP2 (direita)
-        if (!title1El || !title2El) return;
-
-        // usar i18n para obter os textos
-        const your = t('captured_one');   // "Your pieces" / "Suas peças"
-        const opp  = t('captured_two');   // "Opponent's pieces" / "Peças do oponente"
-
-        // se humano é P1, esquerda=Your; se humano é P2, inverter
-        if (humanPlayerNum === 1) {
-            title1El.textContent = your;
-            title2El.textContent = opp;
-        } else {
-            title1El.textContent = opp;
-            title2El.textContent = your;
-        }
-    }
-
-    // expor para o languageScript voltar a aplicar após troca de idioma
-    window.__refreshCaptured = updateCapturedTitles;
     if (leaveButton) {
         leaveButton.addEventListener('click', () => {
             if (!gameActive) return;
@@ -109,6 +87,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // Mensagem neutra e terminar sem vencedor
             showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
 
+            // Não definir vencedor; não mostrar summary (ou mostra se preferires)
+            // TabStats.setWinner(null); // se adaptares o summary para “Sem vencedor”
+            // TabStats.showSummary();   // opcional
+
             // Finalização “limpa” como endGame, mas sem vencedor
             gameActive = false;
             currentPlayer = 1;
@@ -116,7 +98,6 @@ document.addEventListener("DOMContentLoaded", () => {
             lastDiceValue = null;
             aiPlayerNum = null;
             humanPlayerNum = 1;
-            updateCapturedTitles();
 
             // limpar capturas
             if (capturedP1) capturedP1.innerHTML = '';
@@ -444,18 +425,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function checkWinCondition() {
         if (redPieces == 0) {
+            // 🔸 Player 2 (Yellow) wins
             showMessage({ who: 'system', key: 'msg_player_won', params: { player: 2 } });
             TabStats.setWinner(2);
             endGame();
+
+            if (vsAI) {
+                // Player (you) wins
+                updateLeaderboard("Jogador 1", "IA (" + aiDifficulty + ")");
+            } else {
+                updateLeaderboard("Jogador 2", "Player 1");
+            }
             return true;
         } else if (yellowPieces == 0) {
+            // 🔸 Player 1 (Red) wins
             showMessage({ who: 'system', key: 'msg_player_won', params: { player: 1 } });
             TabStats.setWinner(1);
             endGame();
+
+            if (vsAI) {
+                // AI wins this time
+                updateLeaderboard("IA (" + aiDifficulty + ")", "Jogador 1");
+            } else {
+                updateLeaderboard("Jogador 1", "Jogador 2");
+            }
             return true;
         }
         return false;
     }
+
 
     function endGame() {
         TabStats.showSummary();
@@ -470,7 +468,6 @@ document.addEventListener("DOMContentLoaded", () => {
         vsAI = false;
         aiPlayerNum = null;
         humanPlayerNum = 1;
-        updateCapturedTitles();
 
         lastDiceValue = null;
         if (capturedP1) capturedP1.innerHTML = '';
@@ -567,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const modeVal = modeSelect.value;
         const diffSel = (modeVal === 'ia') ? iaLevelSelect.value : 'normal';
-        const humanFirst = !!document.getElementById('first_to_play')?.checked;
+        const humanFirst = firstToPlayCheckbox ? !!firstToPlayCheckbox.checked : true;
 
         gameMode = modeVal;
         vsAI = (modeVal === 'ia');
@@ -575,7 +572,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         humanPlayerNum = humanFirst ? 1 : 2;
         aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null;
-        updateCapturedTitles();
 
         currentPlayer = 1;
         currentPlayerEl.textContent = currentPlayer;
@@ -584,8 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
             mode: gameMode,
             aiDifficulty,
             cols: parseInt(widthSelect.value, 10),
-            firstPlayer: 1,
-            firstStarterRole: vsAI ? (humanFirst ? 'human' : 'ai') : null
+            firstPlayer: vsAI ? (humanFirst ? "Human" : "Ai") : null
         });
         TabStats.onTurnAdvance();
         showMessage({ who: 'system', key: 'msg_game_started' });
@@ -610,109 +605,109 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // botão de dados
-if (throwBtn) {
-    throwBtn.addEventListener('click', async (e) => {
-      if (vsAI && currentPlayer === aiPlayerNum) {
-        e.preventDefault();
-        return;
-      }
-      if (!gameActive) return;
-  
-      try {
-        const result = await window.tabGame.spawnAndLaunch();
-  
-        // guarda para getValidMoves/handleCellClick
-        lastDiceValue = result;
-  
-        // 1) valor do dado
-        showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
-  
-        const isExtra = (result === 1 || result === 4 || result === 6);
-        const isTab   = (result === 1);
-  
-        // calcula jogadas e capturas
-        const playerColor  = getColorForPlayerNum(currentPlayer);
-        const legalMoves   = enumerateLegalMovesDOM(currentPlayer, result);
-        const captureMoves = legalMoves.filter(m => {
-          const occ = m.destCell.querySelector('.piece');
-          return occ && !occ.classList.contains(playerColor);
+    if (throwBtn) {
+        throwBtn.addEventListener('click', async (e) => {
+            if (vsAI && currentPlayer === aiPlayerNum) {
+                e.preventDefault();
+                return;
+            }
+            if (!gameActive) return;
+
+            try {
+                const result = await window.tabGame.spawnAndLaunch();
+
+                // guarda para getValidMoves/handleCellClick
+                lastDiceValue = result;
+
+                // 1) valor do dado
+                showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
+
+                const isExtra = (result === 1 || result === 4 || result === 6);
+                const isTab = (result === 1);
+
+                // calcula jogadas e capturas
+                const playerColor = getColorForPlayerNum(currentPlayer);
+                const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
+                const captureMoves = legalMoves.filter(m => {
+                    const occ = m.destCell.querySelector('.piece');
+                    return occ && !occ.classList.contains(playerColor);
+                });
+
+                // 2) sem jogadas
+                if (legalMoves.length === 0) {
+                    if (isExtra) {
+                        // primeiro o “double”, depois o aviso de sem jogadas extra
+                        showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
+
+                        TabStats.onDice(currentPlayer, result);
+                        TabStats.onExtraRoll(currentPlayer, result);
+
+                        // volta a lançar
+                        throwBtn.disabled = false;
+                        nextTurnBtn.disabled = true;
+                    } else {
+                        showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+
+                        TabStats.onDice(currentPlayer, result);
+
+                        throwBtn.disabled = true;
+                        nextTurnBtn.disabled = false;
+                    }
+                    return; // termina este lançamento
+                }
+
+                // 3) há jogadas
+                if (isTab) {
+                    // Tâb: prioriza captura; senão, conversão vem antes do "double"
+                    const convertibleCount = countConvertiblePieces(currentPlayer);
+
+                    if (captureMoves.length > 0) {
+                        // captura primeiro, depois "double"
+                        showMessage({
+                            who: 'player',
+                            player: currentPlayer,
+                            key: 'msg_capture',
+                            params: { n: captureMoves.length }
+                        });
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                    } else if (convertibleCount > 0) {
+                        // conversão antes do "double"
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                    } else {
+                        // nada a converter (tudo convertido): mantém "double" antes do aviso de movimento
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                        showMessage({ who: 'system', key: 'msg_player_can_move' });
+                    }
+                } else {
+                    // 4 ou 6: “double” antes; 2/3: sem double
+                    if (isExtra) {
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                    }
+                    if (captureMoves.length > 0) {
+                        showMessage({
+                            who: 'player',
+                            player: currentPlayer,
+                            key: 'msg_capture',
+                            params: { n: captureMoves.length }
+                        });
+                    } else {
+                        showMessage({ who: 'system', key: 'msg_player_can_move' });
+                    }
+                }
+
+                // UI e stats
+                nextTurnBtn.disabled = true;
+                throwBtn.disabled = true;
+
+                TabStats.onDice(currentPlayer, result);
+                if (isExtra) TabStats.onExtraRoll(currentPlayer, result);
+
+            } catch (err) {
+                console.warn('Erro ao lançar dados:', err);
+            }
         });
-  
-        // 2) sem jogadas
-        if (legalMoves.length === 0) {
-          if (isExtra) {
-            // primeiro o “double”, depois o aviso de sem jogadas extra
-            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
-  
-            TabStats.onDice(currentPlayer, result);
-            TabStats.onExtraRoll(currentPlayer, result);
-  
-            // volta a lançar
-            throwBtn.disabled = false;
-            nextTurnBtn.disabled = true;
-          } else {
-            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-  
-            TabStats.onDice(currentPlayer, result);
-  
-            throwBtn.disabled = true;
-            nextTurnBtn.disabled = false;
-          }
-          return; // termina este lançamento
-        }
-  
-        // 3) há jogadas
-        if (isTab) {
-          // Tâb: prioriza captura; senão, conversão vem antes do "double"
-          const convertibleCount = countConvertiblePieces(currentPlayer);
-  
-          if (captureMoves.length > 0) {
-            // captura primeiro, depois "double"
-            showMessage({
-              who: 'player',
-              player: currentPlayer,
-              key: 'msg_capture',
-              params: { n: captureMoves.length }
-            });
-            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-          } else if (convertibleCount > 0) {
-            // conversão antes do "double"
-            showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
-            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-          } else {
-            // nada a converter (tudo convertido): mantém "double" antes do aviso de movimento
-            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-            showMessage({ who: 'system', key: 'msg_player_can_move' });
-          }
-        } else {
-          // 4 ou 6: “double” antes; 2/3: sem double
-          if (isExtra) {
-            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-          }
-          if (captureMoves.length > 0) {
-            showMessage({
-              who: 'player',
-              player: currentPlayer,
-              key: 'msg_capture',
-              params: { n: captureMoves.length }
-            });
-          } else {
-            showMessage({ who: 'system', key: 'msg_player_can_move' });
-          }
-        }
-  
-        // UI e stats
-        nextTurnBtn.disabled = true;
-        throwBtn.disabled    = true;
-  
-        TabStats.onDice(currentPlayer, result);
-        if (isExtra) TabStats.onExtraRoll(currentPlayer, result);
-  
-      } catch (err) {
-        console.warn('Erro ao lançar dados:', err);
-      }
-    });
-  }
+    }
 
     // há jogada válida?
     function hasValidMove(player = currentPlayer, diceValue = lastDiceValue) {
@@ -788,8 +783,8 @@ if (throwBtn) {
     function countConvertiblePieces(playerNum) {
         const color = getColorForPlayerNum(playerNum);
         return Array.from(gameBoard.querySelectorAll('.piece.' + color))
-          .filter(p => p.getAttribute('move-state') === 'not-moved').length;
-      }
+            .filter(p => p.getAttribute('move-state') === 'not-moved').length;
+    }
 
     // =============== TURNO DA IA ===============
     async function runAiTurnLoop() {
@@ -828,7 +823,7 @@ if (throwBtn) {
                     lastDiceValue = null;
                     continue; // IA volta a lançar
                 } else {
-                    showMessage({ who: 'system',  key: 'msg_ai_no_moves_pass' });
+                    showMessage({ who: 'system', key: 'msg_ai_no_moves_pass' });
                     lastDiceValue = null;
                     TabStats.onPass(currentPlayer);
                     nextTurn();
@@ -880,7 +875,7 @@ if (throwBtn) {
                         lastDiceValue = null;
                         continue;
                     } else {
-                        showMessage({ who: 'system',key: 'msg_ai_no_moves_pass' });
+                        showMessage({ who: 'system', key: 'msg_ai_no_moves_pass' });
                         lastDiceValue = null;
                         nextTurn();
                         break;
@@ -1165,7 +1160,6 @@ if (throwBtn) {
     const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
     renderBoard(initialCols);
     showMessage({ who: 'system', key: 'select_mode' });
-    updateCapturedTitles();
 
     if (nextTurnBtn) nextTurnBtn.disabled = true;
     if (throwBtn) throwBtn.disabled = true;
