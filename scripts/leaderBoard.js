@@ -11,8 +11,43 @@ document.addEventListener("DOMContentLoaded", () => {
   const parentForRows = rowsContainer || container;
 
   const searchInput = container.querySelector(".ladder-search");
-  const sortButton = container.querySelector("#sort-btn");
+  const sortButton = container.querySelector("#sortbtn");
   let descending = true;
+
+  function tLB(key) {
+    const lang = window.currentLang || 'en';
+    const root = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
+    return (root[lang] && root[lang][key])
+      || (root.en && root.en[key])
+      || (lang === 'pt' ? DEFAULT_PT[key] : DEFAULT_EN[key])
+      || key;
+  }
+  const DEFAULT_PT = {
+    leaderboardTitle: "Classificações",
+    leaderSearch: "Procurar utilizador...",
+    rank: "Posição",
+    user: "Utilizador",
+    games_played: "Jogos",
+    games_won: "Vitórias",
+    win_ratio: "Taxa de vitória %",
+    easyIA: "IA (Fácil)", normalIA: " IA (Normal)", hardIA: "IA (Difícil)",
+    leader_sort_desc: "Ordenar: Descendente ⬇️",
+    leader_sort_asc: "Ordenar: Ascendente ⬆️",
+    player1: "Jogador 1"
+  };
+  const DEFAULT_EN = {
+    leaderboardTitle: "Leaderboard",
+    leaderSearch: "Search User...",
+    rank: "Rank",
+    user: "User",
+    games_played: "Games Played",
+    games_won: "Games Won",
+    win_ratio: "Win Ratio %",
+    easyIA: "AI (Easy)", normalIA: "AI (Normal)", hardIA: "AI (Hard)",
+    leader_sort_desc: "Sort: Descending ⬇️",
+    leader_sort_asc: "Sort: Ascending ⬆️",
+    player1: "Player 1"
+  };
 
   // Obter todos os "player rows" — selector adaptado ao teu HTML
   function getPlayers() {
@@ -61,58 +96,92 @@ document.addEventListener("DOMContentLoaded", () => {
       // appendChild move o nó para o fim; assim reordenamos
       parentForRows.appendChild(player);
     });
+    // Atualiza o rótulo do botão sort de acordo com o estado e língua
+    if (sortButton) {
+      sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
+    }
   }
 
-  // Inicializa texto do botão corretamente
+  /// Atualiza textos (tradução) do Leaderboard
+  function refreshUI() {
+    // Título
+    const lbTitle = document.getElementById('leaderboardTitle');
+    if (lbTitle) lbTitle.textContent = tLB('leaderboardTitle');
+
+    // Cabeçalhos (divs com id e um <label> dentro)
+    const setLabel = (sel, key) => {
+      const el = document.querySelector(sel);
+      if (el) {
+        const label = el.querySelector('label') || el;
+        label.textContent = tLB(key);
+      }
+    };
+    setLabel('#rank', 'rank');
+    setLabel('#user', 'user');
+    setLabel('#games_played', 'games_played');
+    setLabel('#games_won', 'games_won');
+    setLabel('#win_ratio', 'win_ratio');
+
+    // Placeholder pesquisa
+    if (searchInput && 'placeholder' in searchInput) {
+      searchInput.placeholder = tLB('leaderSearch');
+    }
+
+    // Nomes nas linhas
+    const p1 = document.getElementById('player1');
+    if (p1) p1.textContent = tLB('player1');
+
+    const easyIA = document.getElementById('easyIA');
+    if (easyIA) easyIA.textContent = tLB('easyIA');
+
+    const normalIA = document.getElementById('normalIA');
+    if (normalIA) normalIA.textContent = tLB('normalIA');
+
+    const hardIA = document.getElementById('hardIA');
+    if (hardIA) hardIA.textContent = tLB('hardIA');
+
+    // Botão Sort (texto coerente com estado atual)
+    if (sortButton) {
+      sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
+    }
+  }
+
   if (sortButton) {
-    sortButton.textContent = `Sort: ${descending ? "Descending ⬇️" : "Ascending ⬆️"}`;
     sortButton.addEventListener("click", () => {
       descending = !descending;
-      sortButton.textContent = `Sort: ${descending ? "Descending ⬇️" : "Ascending ⬆️"}`;
       sortLeaderboard();
     });
   }
 
-  // Pesquisa — destaca (glow) ou esconde (dim) conforme valor
-  if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      const searchValue = searchInput.value.toLowerCase().trim();
-      getPlayers().forEach(player => {
-        const userEl = player.querySelector(".results-user");
-        const username = userEl ? userEl.textContent.toLowerCase().trim() : "";
-        if (searchValue === "") {
-          player.classList.remove("glow", "dim");
-        } else if (username.includes(searchValue)) {
-          player.classList.add("glow");
-          player.classList.remove("dim");
-        } else {
-          player.classList.remove("glow");
-          player.classList.add("dim");
-        }
-      });
-    });
-  }
-
-
-  // Inicial: calcula ratios e ordena
-  sortLeaderboard();
-  // Restore leaderboard from localStorage if available
+  // Restauro de dados guardados (legacy por nome)
   const savedData = JSON.parse(localStorage.getItem("leaderboardData") || "[]");
   if (savedData.length > 0) {
     const rows = getPlayers();
     savedData.forEach(data => {
       const player = rows.find(
-        p => p.querySelector(".results-user").textContent.trim() === data.name
+        p => p.querySelector(".results-user")?.textContent.trim() === data.name
       );
       if (player) {
-        player.querySelector(".results-gp").textContent = data.gp;
-        player.querySelector(".results-gw").textContent = data.gw;
+        const gpEl = player.querySelector(".results-gp");
+        const gwEl = player.querySelector(".results-gw");
+        if (gpEl) gpEl.textContent = String(parseInt(data.gp, 10) || 0);
+        if (gwEl) gwEl.textContent = String(parseInt(data.gw, 10) || 0);
       }
     });
-    updateRatios();
-    sortLeaderboard();
   }
 
+  // Inicialização
+  refreshUI();
+  sortLeaderboard();
+
+  // Expor para o languageScript chamar após mudar de língua
+  window.__refreshLeaderboard = () => {
+    refreshUI();
+    // garantir label do botão coerente
+    if (sortButton) {
+      sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
+    }
+  };
 
   // Update leaderboard dynamically from game results
   window.updateLeaderboard = function (winnerName, loserName) {
@@ -153,9 +222,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }));
     localStorage.setItem("leaderboardData", JSON.stringify(leaderboardData));
 
-    // 🔸 Refresh ratios & sorting
-    if (typeof sortLeaderboard === "function") sortLeaderboard();
+    // Inicial: calcula ratios e ordena
+    sortLeaderboard();
   };
+  });
 
 
-});
+
+
+
+
