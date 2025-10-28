@@ -62,61 +62,68 @@ document.addEventListener("DOMContentLoaded", () => {
         if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = !enabled;
     }
 
-    function updatePlayButtonState() {
-        if (!playButton) return;
-        playButton.disabled = !isConfigValid() || gameActive == true;
-        if (leaveButton) {
-            leaveButton.disabled = !gameActive;
-        }
-    }
-    if (leaveButton) {
-        leaveButton.addEventListener('click', () => {
-            if (!gameActive) return;
-            TabStats.setWinner(null);
-            TabStats.showSummary();
-            // Fechar overlay dos dados se estiver aberto (evita “ficar pendurado”)
-            const prev = document.body.querySelector('.dice-overlay');
-            if (prev) {
-                try {
-                    if (prev._countdownInterval) { clearInterval(prev._countdownInterval); prev._countdownInterval = null; }
-                    if (prev._autoCloseTimer) { clearTimeout(prev._autoCloseTimer); prev._autoCloseTimer = null; }
-                } catch (e) { }
-                prev.remove();
+    leaveButton.addEventListener('click', () => {
+        if (!gameActive) return;
+
+        let winnerName = '';
+        let loserName = '';
+        let winnerNum = null;
+
+        if (vsAI) {
+            if (currentPlayer === aiPlayerNum) {
+                // AI leaves → Player wins
+                winnerName = "Jogador 1";
+                loserName = "IA (" + aiDifficulty + ")";
+                winnerNum = humanPlayerNum;
+            } else {
+                // Player leaves → AI wins
+                winnerName = "IA (" + aiDifficulty + ")";
+                loserName = "Jogador 1";
+                winnerNum = aiPlayerNum;
             }
+        } else {
+            if (currentPlayer === 1) {
+                winnerName = "Jogador 2";
+                loserName = "Jogador 1";
+                winnerNum = 2;
+            } else {
+                winnerName = "Jogador 1";
+                loserName = "Jogador 2";
+                winnerNum = 1;
+            }
+        }
 
-            // Mensagem neutra e terminar sem vencedor
-            showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
+        // Update leaderboard (winner GW+GP, loser GP)
+        updateLeaderboard(winnerName, loserName);
 
-            // Não definir vencedor; não mostrar summary (ou mostra se preferires)
-            // TabStats.setWinner(null); // se adaptares o summary para “Sem vencedor”
-            // TabStats.showSummary();   // opcional
+        // Update TabStats
+        TabStats.setWinner(winnerNum);
+        TabStats.showSummary();
 
-            // Finalização “limpa” como endGame, mas sem vencedor
-            gameActive = false;
-            currentPlayer = 1;
-            selectedPiece = null;
-            lastDiceValue = null;
-            aiPlayerNum = null;
-            humanPlayerNum = 1;
+        // Message
+        showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
 
-            // limpar capturas
-            if (capturedP1) capturedP1.innerHTML = '';
-            if (capturedP2) capturedP2.innerHTML = '';
+        // Reset game state & UI
+        gameActive = false;
+        currentPlayer = 1;
+        selectedPiece = null;
+        lastDiceValue = null;
+        aiPlayerNum = null;
+        humanPlayerNum = 1;
 
-            // UI de turno/botões
-            if (nextTurnBtn) nextTurnBtn.disabled = true;
-            if (throwBtn) throwBtn.disabled = true;
+        if (capturedP1) capturedP1.innerHTML = '';
+        if (capturedP2) capturedP2.innerHTML = '';
 
-            // reativar configs e botões
-            setConfigEnabled(true);
-            if (playButton) playButton.disabled = !isConfigValid();
-            if (leaveButton) leaveButton.disabled = true;
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
+        if (throwBtn) throwBtn.disabled = true;
 
-            // re-render board conforme a largura selecionada
-            renderBoard(parseInt(widthSelect.value, 10));
-            updatePlayButtonState();
-        });
-    }
+        setConfigEnabled(true);
+        playButton.disabled = !isConfigValid();
+        leaveButton.disabled = true;
+
+        renderBoard(parseInt(widthSelect.value, 10));
+    });
+
     if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState);
     if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState);
     updatePlayButtonState(); // estado inicial
