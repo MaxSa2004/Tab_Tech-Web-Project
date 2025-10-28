@@ -46,7 +46,6 @@ const i18n = {
     // div id para modal-content dentro de classifications
     modalContentClassifications: `<h3>Classificações</h3>`,
     leaderboardTitle: "Classificações",
-    sortbtn: "Ordenar: Decrescente",
     rank: "Posição",
     user: "Utilizador",
     games_played: "Jogos Jogados",
@@ -146,7 +145,9 @@ const i18n = {
     summary_dice_distribution: "Distribuição dos dados",
     summary_no_winner: "Sem vencedor",
     summary_first_player_human: "Humano",
-    summary_first_player_ai: "IA"
+    summary_first_player_ai: "IA",
+    leader_sort_desc: "Ordenar: Descendente ⬇️",
+    leader_sort_asc: "Ordenar: Ascendente ⬆️",
   },
   en: {
     title: 'Tâb Game',
@@ -206,7 +207,6 @@ const i18n = {
     // div id para modal-content dentro de classifications
     modalContentClassifications: `<h3>Classifications</h3>`,
     leaderboardTitle: "Leaderboard",
-    sortbtn: "Sort: Descending",
     rank: "Rank",
     user: "User",
     games_played: "Games Played",
@@ -330,7 +330,9 @@ const i18n = {
     summary_dice_distribution: "Dice distribution",
     summary_no_winner: "No winner",
     summary_first_player_human: "Human",
-    summary_first_player_ai: "AI"
+    summary_first_player_ai: "AI",
+    leader_sort_desc: "Sort: Descending ⬇️",
+    leader_sort_asc: "Sort: Ascending ⬆️",
 
   }
 };
@@ -489,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.__refreshChat) window.__refreshChat();
     if (window.__refreshDice) window.__refreshDice();
     if (window.__refreshCaptured) window.__refreshCaptured();
+    if (window.__refreshLeaderboard) window.__refreshLeaderboard();
 
   };
 

@@ -4,7 +4,9 @@ Here’s a clean, engaging structure you can use for your README, with topic ide
 Title and tagline
 - Project name + one-sentence pitch (traditional board game, modern UI, AI opponent, bilingual)
 - A compact badges row (Live Demo, License, Languages: PT/EN, Accessibility, Tech stack)
-
+![Html5](https://img.shields.io/badge/HTML5-E34F26.svg?style=for-the-badge&logo=HTML5&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-663399.svg?style=for-the-badge&logo=CSS&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E.svg?style=for-the-badge&logo=JavaScript&logoColor=black)
 Hero section
 - Short looping GIF or screenshot of gameplay (board + dice overlay)
 - “Play now” link (if hosted) and “Quick start” (local run in a browser)
