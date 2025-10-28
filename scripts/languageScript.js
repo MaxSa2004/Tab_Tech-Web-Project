@@ -44,8 +44,18 @@ const i18n = {
         <p>O jogo termina quando um jogador fica sem peças no tabuleiro; o outro jogador é o vencedor.</p> `,
     myBtnClassifications: 'Ver Classificações',
     // div id para modal-content dentro de classifications
-    modalContentClassifications: `<h3>Classificações</h3>
-        <p>Tabela com classificações, usuário e número de vitórias.</p>`,
+    modalContentClassifications: `<h3>Classificações</h3>`,
+    leaderboardTitle: "Classificações",
+    sortbtn: "Ordenar: Decrescente",
+    rank: "Posição",
+    user: "Utilizador",
+    games_played: "Jogos Jogados",
+    games_won: "Jogos Ganhos",
+    win_ratio: "Percentagem de Vitórias",
+    player1: "Jogador 1",
+    easyIA: "IA (Fácil)",
+    normalIA: "IA (Normal)",
+    hardIA: "IA (Difícil)",
     myBtnExtra: 'Mais sobre o Tâb',
     modalContentExtra: `<h3>História do Tâb</h3>
         <h4>Origens e Distribuição Geográfica</h4>
@@ -76,6 +86,7 @@ const i18n = {
     ia: "vs IA",
     lvl: "Escolha o nível de dificuldade",
     easy: "Fácil",
+    normal: "Normal",
     hard: "Difícil",
     first_to_play: "Primeiro a jogar",
     playButton: "Iniciar Jogo",
@@ -192,8 +203,18 @@ const i18n = {
         <p>The game ends when one player has no pieces left on the board; the other player is the winner.</p>`,
     myBtnClassifications: 'See Classifications',
     // div id para modal-content dentro de classifications
-    modalContentClassifications: `<h3>Classifications</h3>
-        <p>Table with rank, user and number of wins (IA included)</p>`,
+    modalContentClassifications: `<h3>Classifications</h3>`,
+    leaderboardTitle: "Leaderboard",
+    sortbtn: "Sort: Descending",
+    rank: "Rank",
+    user: "User",
+    games_played: "Games Played",
+    games_won: "Games Won",
+    win_ratio: "Win Ratio",
+    player1: "Player 1",
+    easyIA: "AI (Easy)",
+    normalIA: "AI (Normal)",
+    hardIA: "AI (Hard)",
     myBtnExtra: 'More about Tâb',
     modalContentExtra: `<h3>Tâb's History</h3>
         <h4>Origins and Geographic Spread</h4>
@@ -248,6 +269,7 @@ const i18n = {
     ia: "vs AI",
     lvl: "Choose a level of difficulty",
     easy: "Easy",
+    normal: "Normal",
     hard: "Hard",
     first_to_play: "First to Play",
     playButton: "Start Game",
@@ -464,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.__refreshChat) window.__refreshChat();
     if (window.__refreshDice) window.__refreshDice();
+    if (window.__refreshCaptured) window.__refreshCaptured();
 
   };
 

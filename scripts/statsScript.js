@@ -19,7 +19,10 @@
       summary_passes: "Passes",
       summary_extra_rolls: "Lançamentos extra",
       summary_dice_distribution: "Distribuição dos dados",
-      summary_no_winner: "Sem vencedor"
+      summary_no_winner: "Sem vencedor",
+      easy: "Fácil",
+      normal: "Normal",
+      hard: "Difícil"
     },
     en: {
       summary_title: "Game summary",
@@ -39,7 +42,10 @@
       summary_passes: "Passes",
       summary_extra_rolls: "Extra throws",
       summary_dice_distribution: "Dice distribution",
-      summary_no_winner: "No winner"
+      summary_no_winner: "No winner",
+      easy: "Easy",
+      normal: "Normal",
+      hard: "Hard"
     }
   };
 
@@ -188,9 +194,12 @@
 
       const title = document.createElement('h3');
       title.textContent = tLocal('summary_title');
+      
+      const diffKey = (md.aiDifficulty || '').toLowerCase();
+      const diffLabel = diffKey ? tLocal(diffKey) : '';
 
       const modeLabel = md.mode === 'ia'
-        ? `${tLocal('summary_mode_vs_ai')} (${md.aiDifficulty})`
+        ? `${tLocal('summary_mode_vs_ai')} (${diffLabel ? `${diffLabel}` : ''})`
         : tLocal('summary_mode_vs_player');
 
       const winnerText = (md.winner === 1 || md.winner === 2)

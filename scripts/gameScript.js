@@ -69,6 +69,28 @@ document.addEventListener("DOMContentLoaded", () => {
             leaveButton.disabled = !gameActive;
         }
     }
+    // --- helper títulos das capturas (dinâmico consoante humano P1/P2) ---
+    function updateCapturedTitles() {
+        const title1El = document.getElementById('captured_one'); // título da coluna do capturedP1 (esquerda)
+        const title2El = document.getElementById('captured_two'); // título da coluna do capturedP2 (direita)
+        if (!title1El || !title2El) return;
+
+        // usar i18n para obter os textos
+        const your = t('captured_one');   // "Your pieces" / "Suas peças"
+        const opp  = t('captured_two');   // "Opponent's pieces" / "Peças do oponente"
+
+        // se humano é P1, esquerda=Your; se humano é P2, inverter
+        if (humanPlayerNum === 1) {
+            title1El.textContent = your;
+            title2El.textContent = opp;
+        } else {
+            title1El.textContent = opp;
+            title2El.textContent = your;
+        }
+    }
+
+    // expor para o languageScript voltar a aplicar após troca de idioma
+    window.__refreshCaptured = updateCapturedTitles;
     if (leaveButton) {
         leaveButton.addEventListener('click', () => {
             if (!gameActive) return;
@@ -94,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
             lastDiceValue = null;
             aiPlayerNum = null;
             humanPlayerNum = 1;
+            updateCapturedTitles();
 
             // limpar capturas
             if (capturedP1) capturedP1.innerHTML = '';
@@ -447,6 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
         vsAI = false;
         aiPlayerNum = null;
         humanPlayerNum = 1;
+        updateCapturedTitles();
 
         lastDiceValue = null;
         if (capturedP1) capturedP1.innerHTML = '';
@@ -551,6 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         humanPlayerNum = humanFirst ? 1 : 2;
         aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null;
+        updateCapturedTitles();
 
         currentPlayer = 1;
         currentPlayerEl.textContent = currentPlayer;
@@ -1140,6 +1165,7 @@ if (throwBtn) {
     const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
     renderBoard(initialCols);
     showMessage({ who: 'system', key: 'select_mode' });
+    updateCapturedTitles();
 
     if (nextTurnBtn) nextTurnBtn.disabled = true;
     if (throwBtn) throwBtn.disabled = true;
