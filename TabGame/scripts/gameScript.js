@@ -62,33 +62,50 @@ document.addEventListener("DOMContentLoaded", () => {
         if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = !enabled;
     }
 
+    function updatePlayButtonState() {
+        if (!playButton) return;
+        playButton.disabled = !isConfigValid() || gameActive === true;
+        if (leaveButton) leaveButton.disabled = !gameActive;
+    }
+
     leaveButton.addEventListener('click', () => {
         if (!gameActive) return;
+
+        // Helpers para obter os rótulos exatamente como estão no Leaderboard
+        const lang = window.currentLang || 'pt';
+        const dict = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
+        const L = dict[lang] || dict.en || {};
+
+        const player1Label = L.player1 || (lang === 'pt' ? 'Jogador 1' : 'Player 1');
+        const aiLabel = (() => {
+            const key = aiDifficulty === 'easy' ? 'easyIA'
+                      : aiDifficulty === 'hard' ? 'hardIA'
+                      : 'normalIA';
+            return L[key] || // IA (Fácil)/AI (Easy) etc.
+                   (lang === 'pt'
+                      ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})`
+                      : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`);
+        })();
 
         let winnerName = '';
         let loserName = '';
         let winnerNum = null;
 
         if (vsAI) {
-            if (currentPlayer === aiPlayerNum) {
-                // AI leaves → Player wins
-                winnerName = "Jogador 1";
-                loserName = "IA (" + aiDifficulty + ")";
-                winnerNum = humanPlayerNum;
-            } else {
-                // Player leaves → AI wins
-                winnerName = "IA (" + aiDifficulty + ")";
-                loserName = "Jogador 1";
-                winnerNum = aiPlayerNum;
-            }
+            // Quem clicou Leave foste tu (humano) → IA vence sempre
+            winnerName = aiLabel;
+            loserName = player1Label;
+            winnerNum = aiPlayerNum || 2;
         } else {
+            // PvP local: quem não está a abandonar deve ganhar.
+            // Mantém a tua lógica original usando currentPlayer como referência simples:
             if (currentPlayer === 1) {
-                winnerName = "Jogador 2";
-                loserName = "Jogador 1";
+                winnerName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
+                loserName = lang === 'pt' ? 'Jogador 1' : 'Player 1';
                 winnerNum = 2;
             } else {
-                winnerName = "Jogador 1";
-                loserName = "Jogador 2";
+                winnerName = lang === 'pt' ? 'Jogador 1' : 'Player 1';
+                loserName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
                 winnerNum = 1;
             }
         }
@@ -122,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
         leaveButton.disabled = true;
 
         renderBoard(parseInt(widthSelect.value, 10));
+        updatePlayButtonState();
     });
 
     if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState);

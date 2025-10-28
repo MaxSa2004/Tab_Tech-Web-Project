@@ -78,6 +78,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return isNaN(v) ? 0 : v;
   }
 
+  // Ler inteiros de uma célula
+  function readIntFrom(player, selector) {
+    const el = player.querySelector(selector);
+    return el ? (parseInt(el.textContent.trim(), 10) || 0) : 0;
+  }
+  // Nome (para desempate final)
+  function readName(player) {
+    return (player.querySelector('.results-user')?.textContent || '').trim().toLowerCase();
+  }
+
   // Ordena e re-inserir as linhas no container correto
   function sortLeaderboard() {
     updateRatios();
@@ -86,7 +96,21 @@ document.addEventListener("DOMContentLoaded", () => {
     players.sort((a, b) => {
       const ra = readRatio(a);
       const rb = readRatio(b);
-      return descending ? rb - ra : ra - rb;
+      // 1) Win ratio
+      if (ra !== rb) return descending ? (rb - ra) : (ra - rb);
+
+      // 2) Nº de vitórias (sempre DESC para privilegiar quem venceu mais)
+      const gwa = readIntFrom(a, '.results-gw');
+      const gwb = readIntFrom(b, '.results-gw');
+      if (gwa !== gwb) return gwb - gwa;
+
+      // 3) Jogos jogados (DESC)
+      const gpa = readIntFrom(a, '.results-gp');
+      const gpb = readIntFrom(b, '.results-gp');
+      if (gpa !== gpb) return gpb - gpa;
+
+      // 4) Nome (ASC) como último critério estável
+      return readName(a).localeCompare(readName(b));
     });
 
     // Reatribuir posições e anexar na ordem ao parentForRows
@@ -225,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Inicial: calcula ratios e ordena
     sortLeaderboard();
   };
-  });
+});
 
 
 
