@@ -1,7 +1,7 @@
 
 # Tâb Game
 
-Tâb is a two player running-fight board game played across the Middle East and North Africa. This project implements that gaming experience against Artificial Intelligence, that comes with three different levels of difficulty. Included in its features presented below is the website's bilingual capacity.
+Tâb is a two player running-fight board game played across the Middle East and North Africa. This project implements that gaming experience against Artificial Intelligence, that comes with three different levels of difficulty. Included in its features presented below is the website's bilingual capacity. 
 
 
 ![Html5](https://img.shields.io/badge/HTML5-E34F26.svg?style=for-the-badge&logo=HTML5&logoColor=white)
@@ -41,6 +41,7 @@ TabGame/
 - Leaderboard
 - Configuration and UI elements
 - Architecture of scripts
+- Improvement Ideas
 - Acknowledgements
 - Authorship
 
@@ -73,16 +74,42 @@ No piece may re-enter its original row once it has left it, and cannot return to
 
 The game ends when one player has no pieces left on the board or when one player leaves the game; the other player is the winner.
 
+In general, this is more a game of pure luck that it is of strategy.
 
 ## AI overview
-- Algorithm: Expectiminimax with alpha-beta (brief)
+The AI uses Expectminimax, with alpha-beta pruning on decision nodes only. It extends Minimax to handle randomness by adding chance nodes (dice).
+
+A decision node (MAX/MIN) is where players choose moves. Alpha-beta pruning cuts branches that  cannot improve the current best result.
+A chance node is randomness from the next dice throw. The value of the position is the expected average over possible dice results.
+
+At the root, it used the current dice value. But for future plies, we use a chance node with the real stick-dice distribution (1,2,3,4,6) and their probabilities.
+
+Heuristics used:
+- Piece count leaad: Capturing increases score, and being captured decreases it;
+- Progress along the path: Pieces that are further along the track are better;
+- Safety lanes: Squares with only up/down arrows are considered safer.
+
+
+The tree uses the dice value only on its root, after that it assumes a uniform distribution on the dice. Something not well thought of is the extra roll, because that is not antecipated inside the search tree. 
+
+```text
+Root: MAX (AI with known dice value) -> enumerates legal moves 
+├── m1 -> Chance = weighted average over die ∈ {1,2,3,4,6}
+├   ├─── dice = 1 -> MIN (opponent) -> enumerate opponent moves -> pick one that minimizes the AI's score -> depth -=1 until depth = 0
+├   ├─── dice = 2 MIN -> (opponent) -> ...
+├   ...
+├   ├─── dice = 6 MIN -> (opponent) -> ...
+├── m2 -> Chance = ...
+...
+Chooses MAX from the averages of each branch.
+```
+
 
 Differences by difficulty:
-- Easy: shallow search, more randomness;
-- Normal: medium search, small randomness;
-- Hard: deeper search, capture prioritization, no randomness.
+- Easy: Doesn't search the tree. Just filters capture moves. If ther aern't any captures to make, it chooses a random move. It's quick and unpredictable, but can lead to bad results;
+- Normal: Uses expectminimax with DEPTH=2 (shallow depth). It used the newest dice value on the root level, and for the levels beyond, models new dices with the average of the 6 possible values. It's reasonable, with some variety and low cost;
+- Hard: Uses expectminimax with DEPTH=4 (deeper search). It doesn't't use any randomness on the final move choice. It's a lot more cosnsitent and strong.
 
-It uses heuristics to favor captures, advancing converted pieces and avoiding blocking their own moves.
 
 ## Internationalization (i18n)
 All UI strings are translated (prompts, buttons, summary, leaderboard, dice overlay). 
@@ -124,6 +151,8 @@ At this point, there is only one game mode available: vs. AI, with three levels 
 For example, to throw a dice, the data flows in this order:
 dice overlay -> lastDiceValue -> valid moves -> move -> stats/log -> summary/leaderboard
 
+## Improvement Ideas
+A good idea would be to actually see the AI making the move. Because the dice goes in front of the board, and AI uses the dice in a more automatic way than the player, the player just sees the final move and may get lost at where he got captured etc. 
 
 ## Acknowledgments
 [Cyningstan](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=http://www.cyningstan.com/game/937/tb&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQFnoECB0QAQ&usg=AOvVaw3K2Qgo-Zjw-BQ99W3sxvn3)
