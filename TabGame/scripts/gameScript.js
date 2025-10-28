@@ -930,6 +930,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // regra dos lançamentos extra
             if (result === 1 || result === 4 || result === 6) {
                 showMessage({ who: 'system', key: 'msg_ai_extra_roll' });
+                TabStats.onExtraRoll(currentPlayer, result);
                 lastDiceValue = null;
                 continue; // IA volta a lançar
             } else {
