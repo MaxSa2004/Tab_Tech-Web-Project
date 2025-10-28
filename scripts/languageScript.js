@@ -56,6 +56,7 @@ const i18n = {
     easyIA: "IA (Fácil)",
     normalIA: "IA (Normal)",
     hardIA: "IA (Difícil)",
+    leaderSearch: "Procurar utilizador...",
     myBtnExtra: 'Mais sobre o Tâb',
     modalContentExtra: `<h3>História do Tâb</h3>
         <h4>Origens e Distribuição Geográfica</h4>
@@ -215,6 +216,7 @@ const i18n = {
     easyIA: "AI (Easy)",
     normalIA: "AI (Normal)",
     hardIA: "AI (Hard)",
+    leaderSearch: "Search user...",
     myBtnExtra: 'More about Tâb',
     modalContentExtra: `<h3>Tâb's History</h3>
         <h4>Origins and Geographic Spread</h4>
