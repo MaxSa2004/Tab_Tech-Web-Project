@@ -100,11 +100,11 @@
           <section id="leaderboard-container" class="scrims-ladder">
               <div class="ladder-nav">
                 <div class="ladder-nav--col ladder-title">
-                  <h1>Leaderboard</h1>
+                  <h1 id="leaderboardTitle">Leaderboard</h1>
                   <br><br>
                 </div>
                 <div class="ladder-nav--col">
-                  <input type="text" class="ladder-search" placeholder="Search User..." />
+                  <input type="text" id="leaderSearch" class="ladder-search" placeholder="Search User..." />
                   <br> <br>
                 </div>
               </div>
@@ -112,17 +112,17 @@
 
               <!-- Cabeçalhos -->
               <div class="ladder-nav--results">
-                <div class="ladder-nav--results-col"><label>Rank</label></div>
-                <div class="ladder-nav--results-col"><label>User</label></div>
-                <div class="ladder-nav--results-col"><label>Games Played</label></div>
-                <div class="ladder-nav--results-col"><label>Games Won</label></div>
-                <div class="ladder-nav--results-col"><label>Win Ratio %</label></div>
+                <div class="ladder-nav--results-col" id="rank"><label>Rank</label></div>
+                <div class="ladder-nav--results-col" id="user"><label>User</label></div>
+                <div class="ladder-nav--results-col" id="games_played"><label>Games Played</label></div>
+                <div class="ladder-nav--results-col" id="games_won"><label>Games Won</label></div>
+                <div class="ladder-nav--results-col" id="win_ratio"><label>Win Ratio %</label></div>
               </div>
 
               <!-- Jogador 1 -->
               <div class="ladder-nav--results-players">
                 <div class="results-col"><span class="results-rank"><span class="positions">1</span></span></div>
-                <div class="results-col"><span class="results-user">Jogador 1</span></div>
+                <div class="results-col"><span class="results-user" id="player1">Jogador 1</span></div>
                 <div class="results-col"><span class="results-gp">15</span></div>
                 <div class="results-col"><span class="results-gw">12</span></div>
                 <div class="results-col"><span class="results-ratio">0%</span></div>
@@ -131,7 +131,7 @@
               <!-- IA (easy) -->
               <div class="ladder-nav--results-players">
                 <div class="results-col"><span class="results-rank"><span class="positions">2</span></span></div>
-                <div class="results-col"><span class="results-user">IA (easy)</span></div>
+                <div class="results-col"><span class="results-user" id="easyIA">IA (easy)</span></div>
                 <div class="results-col"><span class="results-gp">20</span></div>
                 <div class="results-col"><span class="results-gw">9</span></div>
                 <div class="results-col"><span class="results-ratio">0%</span></div>
@@ -140,7 +140,7 @@
               <!-- IA (normal) -->
               <div class="ladder-nav--results-players">
                 <div class="results-col"><span class="results-rank"><span class="positions">3</span></span></div>
-                <div class="results-col"><span class="results-user">IA (normal)</span></div>
+                <div class="results-col"><span class="results-user" id="normalIA">IA (normal)</span></div>
                 <div class="results-col"><span class="results-gp">18</span></div>
                 <div class="results-col"><span class="results-gw">7</span></div>
                 <div class="results-col"><span class="results-ratio">0%</span></div>
@@ -149,7 +149,7 @@
               <!-- IA (hard) -->
               <div class="ladder-nav--results-players">
                 <div class="results-col"><span class="results-rank"><span class="positions">4</span></span></div>
-                <div class="results-col"><span class="results-user">IA (hard)</span></div>
+                <div class="results-col"><span class="results-user" id="hardIA">IA (hard)</span></div>
                 <div class="results-col"><span class="results-gp">25</span></div>
                 <div class="results-col"><span class="results-gw">6</span></div>
                 <div class="results-col"><span class="results-ratio">0%</span></div>
@@ -260,14 +260,14 @@
 
           <label for="game_mode" id="mode">Mode:</label>
           <select id="game_mode">
-            <option disabled selected value> select an option </option>
-            <option value="player">vs Player</option>
-            <option value="ia">vs IA</option>
+            <option disabled selected value id="optionMode"> select an option </option>
+            <option value="player" id="player">vs Player</option>
+            <option value="ia" id="ia">vs IA</option>
           </select>
 
           <label for="ia_lvl" id="lvl"> Choose a level of difficulty: </label>
           <select name="ia_lvl" id="ia_lvl">
-            <option disabled selected value> select an option </option>
+            <option disabled selected value id="optionIA"> select an option </option>
             <option value="easy" id="easy"> Easy </option>
             <option value="normal"> Normal</option>
             <option value="hard" id="hard"> Hard</option>

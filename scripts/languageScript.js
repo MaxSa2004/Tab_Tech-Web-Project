@@ -70,6 +70,10 @@ const i18n = {
     configTitle: "Configuração",
     width1: "Largura",
     mode: "Modo",
+    optionMode: "seleciona uma opção",
+    optionIA: "seleciona uma opção",
+    player: "vs Jogador",
+    ia: "vs IA",
     lvl: "Escolha o nível de dificuldade",
     easy: "Fácil",
     hard: "Difícil",
@@ -128,7 +132,9 @@ const i18n = {
     summary_passes: "Passes",
     summary_extra_rolls: "Lançamentos extra",
     summary_dice_distribution: "Distribuição dos dados",
-    summary_no_winner: "Sem vencedor"
+    summary_no_winner: "Sem vencedor",
+    summary_first_player_human: "Humano",
+    summary_first_player_ai: "IA"
   },
   en: {
     title: 'Tâb Game',
@@ -236,6 +242,10 @@ const i18n = {
     configTitle: "Configuration",
     width1: "Width",
     mode: "Mode",
+    optionMode: "select an option",
+    optionIA: "select an option",
+    player: "vs Player",
+    ia: "vs AI",
     lvl: "Choose a level of difficulty",
     easy: "Easy",
     hard: "Hard",
@@ -294,7 +304,9 @@ const i18n = {
     summary_passes: "Passes",
     summary_extra_rolls: "Extra throws",
     summary_dice_distribution: "Dice distribution",
-    summary_no_winner: "No winner"
+    summary_no_winner: "No winner",
+    summary_first_player_human: "Human",
+    summary_first_player_ai: "AI"
 
   }
 };
@@ -312,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // keys de texto que queremos atualizar (conforme o teu i18n)
   const textKeys = [
     'title', 'myBtnInstructions', 'myBtnClassifications', 'myBtnExtra',
-    'configTitle', 'width1', 'mode', 'lvl', 'easy', 'normal', 'hard',
+    'configTitle', 'width1', 'mode', 'lvl', 'easy', 'normal', 'hard', 'optionMode', 'optionIA', 'player', 'ia',
     'first_to_play', 'playButton', 'captured_one', 'captured_two',
     'toggleMute', 'throwDiceBtn', 'current', 'nextTurn', 'prompts', 'leaveButton'
   ];
@@ -356,9 +368,20 @@ document.addEventListener('DOMContentLoaded', () => {
           // procura label que envolva o input (ex: <label><input> Text</label>)
           const wrappingLabel = el.closest('label');
           if (wrappingLabel) {
-            // preserva o input e re-inserir com o novo texto
-            // usa outerHTML do input para não perder atributos
-            wrappingLabel.innerHTML = el.outerHTML + ' ' + value;
+            // 1) remover nós de texto antigos (evita duplicação)
+            Array.from(wrappingLabel.childNodes).forEach(node => {
+              if (node.nodeType === Node.TEXT_NODE) node.remove();
+            });
+
+            // 2) criar/atualizar um único span para o texto da label
+            let textSpan = wrappingLabel.querySelector('.i18n-label-text');
+            if (!textSpan) {
+              textSpan = document.createElement('span');
+              textSpan.className = 'i18n-label-text';
+              wrappingLabel.appendChild(textSpan);
+            }
+            // adiciona um espaço inicial para separar do input
+            textSpan.textContent = ' ' + value;
             return;
           }
           // se houver label[for], atualiza
@@ -409,8 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // caso não encontrado: ignora silenciosamente (podes descomentar o log para debug)
-      // console.log(`(i18n) elemento para "${key}" não encontrado no DOM.`);
+    // caso não encontrado: ignora silenciosamente (podes descomentar o log para debug)
+    // console.log(`(i18n) elemento para "${key}" não encontrado no DOM.`);
     });
 
     // 2) actualizar blocos HTML (modais, conteúdos com tags)
@@ -426,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 3) traduzir opções específicas (caso tenhas <option id="easy"> etc.)
-    ['easy', 'normal', 'hard'].forEach(optId => {
+    ['easy', 'normal', 'hard', 'player', 'ia', 'optionMode', 'optionIA'].forEach(optId => {
       const text = i18n[lang][optId];
       if (text === undefined) return;
       const optEl = document.getElementById(optId);
@@ -444,14 +467,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   };
 
-  // listeners com guard (se os elementos não existirem, nada falha)
-  const elPt = document.getElementById('langPT');
-  const elEn = document.getElementById('langEN');
-  if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); });
-  if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); });
+// listeners com guard (se os elementos não existirem, nada falha)
+const elPt = document.getElementById('langPT');
+const elEn = document.getElementById('langEN');
+if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); });
+if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); });
 
-  // inicializar (fallback para en conforme preferes)
-  setLang(localStorage.getItem('siteLang') || 'en');
+// inicializar (fallback para en conforme preferes)
+setLang(localStorage.getItem('siteLang') || 'en');
 
   // debug helper (descomenta se precisares)
   // window.__i18n = i18n;

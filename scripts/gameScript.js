@@ -87,10 +87,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Mensagem neutra e terminar sem vencedor
             showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
 
-            // Não definir vencedor; não mostrar summary (ou mostra se preferires)
-            // TabStats.setWinner(null); // se adaptares o summary para “Sem vencedor”
-            // TabStats.showSummary();   // opcional
-
             // Finalização “limpa” como endGame, mas sem vencedor
             gameActive = false;
             currentPlayer = 1;
@@ -547,7 +543,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const modeVal = modeSelect.value;
         const diffSel = (modeVal === 'ia') ? iaLevelSelect.value : 'normal';
-        const humanFirst = firstToPlayCheckbox ? !!firstToPlayCheckbox.checked : true;
+        const humanFirst = !!document.getElementById('first_to_play')?.checked;
 
         gameMode = modeVal;
         vsAI = (modeVal === 'ia');
@@ -563,7 +559,8 @@ document.addEventListener("DOMContentLoaded", () => {
             mode: gameMode,
             aiDifficulty,
             cols: parseInt(widthSelect.value, 10),
-            firstPlayer: vsAI ? (humanFirst ? "Human" : "Ai") : null
+            firstPlayer: 1,
+            firstStarterRole: vsAI ? (humanFirst ? 'human' : 'ai') : null
         });
         TabStats.onTurnAdvance();
         showMessage({ who: 'system', key: 'msg_game_started' });

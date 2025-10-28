@@ -11,6 +11,8 @@
       summary_difficulty: "Dificuldade",
       summary_board_cols: "Tabuleiro (colunas)",
       summary_first_player: "Quem começou",
+      summary_first_player_human: "Humano",
+      summary_first_player_ai: "IA",
       summary_turns: "Turnos",
       summary_moves: "Jogadas",
       summary_captures: "Capturas",
@@ -29,6 +31,8 @@
       summary_difficulty: "Difficulty",
       summary_board_cols: "Board (columns)",
       summary_first_player: "First to play",
+      summary_first_player_human: "Human",
+      summary_first_player_ai: "AI",
       summary_turns: "Turns",
       summary_moves: "Moves",
       summary_captures: "Captures",
@@ -59,7 +63,10 @@
         mode: null,           // 'player' | 'ia'
         aiDifficulty: null,   // 'easy' | 'normal' | 'hard' | null
         cols: null,           // nº colunas
+
+        firstStarterRole: null, // 'human' | 'ai' | null
         firstPlayer: 1,       // 1 | 2 (P1 começa nas tuas regras)
+
         winner: null,         // 1 | 2 | null
 
         turns: 0,
@@ -73,12 +80,13 @@
       };
     },
 
-    start({ mode, aiDifficulty, cols, firstPlayer = 1 }) {
+    start({ mode, aiDifficulty, cols, firstPlayer = 1, firstStarterRole = null }) {
       this.reset();
       this.data.mode = mode;
       this.data.aiDifficulty = mode === 'ia' ? (aiDifficulty || 'normal') : null;
       this.data.cols = cols;
       this.data.firstPlayer = firstPlayer;
+      this.data.firstStarterRole = firstStarterRole;
     },
 
     onTurnAdvance() {
@@ -132,6 +140,29 @@
       const secs = Math.floor((this.data.durationMs % 60000) / 1000);
       const durationText = `${mins}m ${secs}s`;
 
+      let firstLabel = '';
+      const md = this.data;
+      if (typeof md.firstStarterRole === 'string') {
+        const role = md.firstStarterRole.toLowerCase();
+        if (role === 'human' || role=== 'humano') firstLabel = tLocal('summary_first_player_human');
+        else if (role === 'ai' || role === 'ia') firstLabel = tLocal('summary_first_player_ai');
+      }
+
+      // Back-compat: se não houver role, tenta interpretar firstPlayer string
+      if (!firstLabel) {
+        if (typeof md.firstPlayer === 'string') {
+          const v = md.firstPlayer.toLowerCase();
+          if (v === 'human' || v === 'humano') firstLabel = tLocal('summary_first_player_human');
+          else if (v === 'ai' || v === 'ia') firstLabel = tLocal('summary_first_player_ai');
+        } else if (md.firstPlayer === 1 || md.firstPlayer === 2) {
+          firstLabel = `P${md.firstPlayer}`;
+        }
+      }
+      if (!firstLabel) {
+        // fallback
+        firstLabel = '-';
+      }
+
       // remove modal anterior se existir
       const prev = document.getElementById('gameSummaryModal');
       if (prev) prev.remove();
@@ -158,7 +189,6 @@
       const title = document.createElement('h3');
       title.textContent = tLocal('summary_title');
 
-      const md = this.data;
       const modeLabel = md.mode === 'ia'
         ? `${tLocal('summary_mode_vs_ai')} (${md.aiDifficulty})`
         : tLocal('summary_mode_vs_player');
@@ -175,7 +205,7 @@
         ${p('summary_duration', durationText)}
         ${p('summary_mode', modeLabel)}
         ${p('summary_board_cols', md.cols)}
-        ${p('summary_first_player', `${md.firstPlayer}`)}
+        ${p('summary_first_player', firstLabel)}
         <hr>
         ${p('summary_turns', md.turns)}
         ${p('summary_moves', `P1: ${md.moves[1]} , P2: ${md.moves[2]}`)}
