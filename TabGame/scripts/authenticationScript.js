@@ -14,9 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.hidden = true;
         form.style.display = 'none';
         userBox.hidden = false;
-        userBox.style.display = 'inline-flex';
-        userBox.style.alignItems = 'center';
-        userBox.style.gap = '10px';
+        userBox.style.display = '';
     }
     // function to show logged out state
     function showLoggedOut() {
