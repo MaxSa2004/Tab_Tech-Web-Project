@@ -27,7 +27,6 @@ body {
 }
 
 .header {
-  color: #fafafa;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -76,7 +75,7 @@ body {
   text-shadow: 1px 1px 0 #ffffff, 3px 3px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* aparência base para todos */
+/* base appearance for all buttons */
 button {
   font-family: "Inter", sans-serif;
   font-size: 14px;
@@ -87,21 +86,11 @@ button {
   background: transparent;
 }
 
-/* PRIMARY — destaque (usar para Iniciar) */
-.btn-primary,
-.playButton {
-  background: var(--accent);
-  color: #fff;
-  border: 0;
-  box-shadow: 0 6px 18px rgba(11, 121, 247, 0.12);
-}
-
-/* Botão “Desistir” (ao lado do Iniciar Jogo) */
+/* leave game button - next to start game button*/
 .leaveButton {
   padding: 8px 10px;
   border-radius: 8px;
   background: linear-gradient(180deg, #ef4444, #dc2626);
-  /* vermelho */
   color: #fff;
   border: 1px solid rgba(0, 0, 0, 0.06);
   cursor: pointer;
@@ -114,8 +103,7 @@ button {
   box-shadow: none;
 }
 
-/* SECONDARY — caixa clara com borda (para os 3 botões) */
-.btn-secondary,
+/* buttons along top header */
 #myBtnInstructions,
 #myBtnClassifications,
 #myBtnExtra {
@@ -125,17 +113,6 @@ button {
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
 }
 
-/* LINK / ghost — sem caixa, com sublinhado (útil se preferires pareçam hyperlinks) */
-.btn-link,
-.link-button {
-  background: transparent;
-  color: var(--muted);
-  border: none;
-  text-decoration: underline;
-  padding: 6px 8px;
-}
-
-/* estados simples */
 button:hover {
   opacity: 0.95;
   transform: translateY(-1px);
@@ -159,13 +136,13 @@ button[disabled] {
   box-shadow: none;
 }
 
-/* auth form (compact) */
+/* auth form */
 .authForm {
   display: flex;
   gap: 8px;
   align-items: center;
   border-radius: 8px;
-  /* pequena borda externa leve para separar do header */
+  /* small border to separate from header */
   border: 1px solid rgba(16, 24, 40, 0.04);
   padding: 6px;
   background: transparent;
@@ -175,11 +152,9 @@ button[disabled] {
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid #c8ccd0;
-  /* borda visível */
-  background: #ffffff;
-  /* fundo branco */
-  color: #05202b;
-  /* texto escuro dentro do input */
+  /* visible border appears */
+  background: #ffffff; /* white background */
+  color: #05202b; /* input text colour */
   min-width: 120px;
   outline: none;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
@@ -187,6 +162,7 @@ button[disabled] {
     transform 0.06s ease;
 }
 
+/* highlights input box on selection */
 .authForm input:focus {
   border-color: #0b79f7;
   box-shadow: 0 6px 20px rgba(11, 121, 247, 0.12);
@@ -198,7 +174,6 @@ button[disabled] {
   border-radius: 6px;
   border: none;
   background: linear-gradient(180deg, #0b79f7, #066ed6);
-  /* azul agradável */
   color: #ffffff;
   cursor: pointer;
   font-weight: 600;
@@ -206,6 +181,7 @@ button[disabled] {
   transition: transform 0.08s ease, box-shadow 0.12s ease, opacity 0.12s ease;
 }
 
+/*button "jump" up effect*/
 .authBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 30px rgba(11, 121, 247, 0.14);
@@ -216,7 +192,7 @@ button[disabled] {
   opacity: 0.95;
 }
 
-/* se houver botão desabilitado */
+/* if auth button disabled */
 .authBtn[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
@@ -240,24 +216,6 @@ button[disabled] {
   justify-content: center; /* horizontal centering */
 }
 
-/* board wrapper */
-.board-wrapper {
-  background: linear-gradient(180deg, #071b2a, #05202b);
-  border-radius: 12px;
-  padding: 0 26px 26px 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 560px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-}
-
-/* config row */
-.config {
-  display: flex;
-  flex-direction: column;
-}
-
 .controls-row {
   display: flex;
   flex-wrap: wrap;
@@ -265,6 +223,7 @@ button[disabled] {
   align-items: center;
 }
 
+/* row of game settings */
 .controls-row select,
 .controls-row input[type="checkbox"] {
   padding: 6px;
@@ -279,67 +238,11 @@ button[disabled] {
   background: linear-gradient(180deg, #0b79f7, #066ed6);
   border: 1px solid rgba(255, 255, 255, 0.04);
   cursor: pointer;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(11, 121, 247, 0.12);
 }
 
-.game-board {
-  display: grid;
-  gap: 4px;
-  justify-content: center;
-  align-content: center;
-  margin: 1rem auto;
-  max-width: 760px;
-  width: 90%;
-  background: #222;
-  border: 4px solid #444;
-  border-radius: 12px;
-  padding: 6px;
-  grid-template-columns: repeat(var(--cols), minmax(36px, 1fr));
-}
-
-/* each cell keeps square ratio */
-.game-board .cell {
-  position: relative;
-  background: #fff;
-  border-radius: 6px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  aspect-ratio: 1 / 1;
-  /*forces cell to be square*/
-  line-height: 1;
-  overflow: hidden;
-  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
-}
-
-/* captured pieces area */
-.captured {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.captured-col {
-  flex: 1;
-  background: #ffffff;
-  /* white background */
-  padding: 8px;
-  border-radius: 8px;
-  min-height: 42px;
-  border: 1px solid rgba(7, 32, 43, 0.3);
-  /* subtle border to separate from board */
-}
-
-.captured-title {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-
-.captured-list {
-  min-height: 28px;
-}
-
+/* chat area */
 .chat {
   background: #ffffff;
   /* white chat background */
@@ -349,8 +252,11 @@ button[disabled] {
   padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 560px;
+  justify-content: space-between;
+  gap: 12px;
+  height: 100%;
+  align-self: flex-end;
+  min-height: 250px;
   box-shadow: 0 4px 16px rgba(7, 32, 43, 0.25);
   /* soft matching glow */
 }
@@ -369,22 +275,6 @@ button[disabled] {
   margin: 0;
 }
 
-.toggle {
-  font-size: 13px;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.messages {
-  max-height: 415px;
-  flex: 1;
-  overflow: auto;
-  padding-right: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 /* message styling */
 .message {
   max-width: 78%;
@@ -396,6 +286,7 @@ button[disabled] {
   animation: msgIn 0.24s forwards;
 }
 
+/* messages pops up */
 @keyframes msgIn {
   to {
     opacity: 1;
@@ -446,10 +337,10 @@ button[disabled] {
   border: 1px dashed rgba(148, 163, 184, 0.08);
 }
 
-/* === Avatar circular com anel === */
+/* circular ringed avatar */
 .message .avatar {
   position: relative;
-  width: 26px; /* ajusta se quiseres maior/menor */
+  width: 26px;
   height: 26px;
   border-radius: 50%;
   display: grid;
@@ -458,36 +349,27 @@ button[disabled] {
   font-size: 12px;
   line-height: 1;
   background: #fff;
-  border: 2px solid transparent; /* a cor vem por jogador abaixo */
+  border: 2px solid transparent;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   margin-top: var(--bubble-pad-y);
 }
 
-/* Cores por jogador (usa as classes que já colocas na mensagem) */
+/* colours per player */
 .msg-player1 .avatar {
-  color: #b91c1c; /* vermelho escuro do texto */
-  border-color: #dc2626; /* vermelho do anel */
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); /* anel externo suave */
+  color: #b91c1c;
+  border-color: #dc2626; /* ring */
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); /* soft shadow behind avatar */
 }
 
 .msg-player2 .avatar {
-  color: #92400e; /* âmbar escuro do texto */
-  border-color: #f59e0b; /* âmbar do anel */
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18); /* anel externo suave */
+  color: #92400e;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
 }
 
-/* Opcional: efeito de foco/hover */
 .message .avatar:hover {
   transform: translateZ(0) scale(1.03);
   transition: transform 0.12s ease;
-}
-
-/* input area in chat */
-.input-area {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-left: 5px;
 }
 
 .link-button {
@@ -535,6 +417,7 @@ button[disabled] {
   overflow: hidden;
 }
 
+/* modal pop ups */
 .modal {
   position: fixed;
   inset: 0;
@@ -553,26 +436,21 @@ button[disabled] {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  /* escurece fundo */
   pointer-events: auto;
 }
 
 .modal-content {
   position: relative;
   z-index: 1201;
-  /* fica acima do overlay */
   background: #fafafa;
   border-color: var(--card);
   color: var(--card);
   padding: 20px;
   border-radius: 10px;
   width: 920px;
-  /* largura desejada, adapta se necessário */
   max-width: calc(100% - 40px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  /* torna o conteúdo rolável quando maior que a viewport */
   max-height: calc(100vh - 80px);
-  /* deixa alguma margem top/bottom */
   overflow: auto;
 }
 
@@ -650,11 +528,8 @@ body.modal-open {
   }
 }
 
-/* Keep your existing arrow styles from before */
-
 .arrow {
-  font-size: clamp(0.6rem, 1vw, 0.9rem);
-  /* adapta ao tamanho da célula */
+  font-size: clamp(0.6rem, 1vw, 0.9rem); /* change according to cell size */
   color: #000;
   opacity: 1;
   text-align: center;
@@ -673,7 +548,7 @@ body.modal-open {
   opacity: 1;
 }
 
-/* Direções únicas */
+/* unique directions */
 .arrow.up::before {
   content: "↑";
 }
@@ -690,7 +565,7 @@ body.modal-open {
   content: "→";
 }
 
-/* Combinações de setas (ex: up + down, left + right) */
+/* arrow combo */
 .arrow.up.down::before {
   content: "↑↓";
 }
@@ -742,7 +617,7 @@ body.modal-open {
   /* lighter yellow */
 }
 
-/* --- dice modal / arena (colar em style.css) --- */
+/* dice modal - dice rolls */
 .dice-overlay {
   position: fixed;
   inset: 0;
@@ -752,7 +627,6 @@ body.modal-open {
   pointer-events: auto;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.18);
-  /* opcional: escurece fundo */
 }
 
 .dice-arena {
@@ -876,8 +750,7 @@ body.modal-open {
   border-radius: 8px;
 }
 
-/**/
-/* ===== fixed-size cells, consistent across different column counts ===== */
+/* fixed-size cells, consistent across different column counts */
 .game-board {
   display: grid;
   gap: 4px;
@@ -892,11 +765,9 @@ body.modal-open {
   border-radius: 12px;
   padding: 6px;
   box-sizing: border-box;
-
-  /* set a fixed cell size (change --cell-size to taste) */
+  /* set a fixed cell size */
   --cell-size: 52px;
-
-  /* Keep using the JS-set --cols variable (must be a number) */
+  /* using the JS set --cols var */
   grid-template-columns: repeat(var(--cols), var(--cell-size));
 }
 
@@ -933,6 +804,7 @@ body.modal-open {
   }
 }
 
+/*flags for languages*/
 .flag-icon {
   width: 20px;
   height: 14px;
@@ -941,7 +813,6 @@ body.modal-open {
   border-radius: 2px;
 }
 
-/*1a mudanca*/
 .board-wrapper {
   background: linear-gradient(180deg, #071b2a, #05202b);
   border-radius: 12px;
@@ -961,112 +832,23 @@ body.modal-open {
   /* centers the wrapper itself */
 }
 
-.game-board {
-  display: grid;
-  gap: 4px;
-  justify-content: center;
-  align-content: center;
-  background: #222;
-  border: 4px solid #444;
-  border-radius: 12px;
-  padding: 6px;
-  box-sizing: border-box;
-  --cell-size: 52px;
-  grid-template-columns: repeat(var(--cols), var(--cell-size));
-  width: calc(var(--cols) * var(--cell-size) + (var(--cols) - 1) * 4px + 12px);
-  /* exact width math */
-}
-
-/*2a mudança*/
-
-.game-board {
-  display: grid;
-  gap: 4px;
-  justify-content: center;
-  align-content: center;
-  background: #222;
-  border: 4px solid #444;
-  border-radius: 12px;
-  padding: 6px;
-  box-sizing: border-box;
-
-  /* Fixed cell size */
-  --cell-size: 52px;
-
-  /* fixed columns using JS-set variable */
-  grid-template-columns: repeat(var(--cols), var(--cell-size));
-
-  /* exact width calculation: columns * cell size + gaps + padding */
-  width: calc(var(--cols) * var(--cell-size) + (var(--cols) - 1) * 4px + 12px);
-}
-
-.game-board .cell {
-  width: var(--cell-size);
-  height: var(--cell-size);
-}
-
-/*3a mudanca*/
+/* config row */
 .config {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  /* centraliza horizontalmente */
+  align-items: center; /*horiz*/
   gap: 12px;
   min-width: 700px;
-  /* tamanho fixo ou mínimo suficiente para 13-15 colunas */
   width: 100%;
-  /* opcional: se quiser que ocupe todo o wrapper */
   box-sizing: border-box;
 }
 
-.board-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* centraliza horizontalmente tudo dentro */
-  gap: 12px;
-  min-height: 560px;
-  padding: 26px;
-  width: fit-content;
-  /* wrapper só do tamanho do board */
-  margin: 0 auto;
-  /* centraliza o wrapper na página */
-  box-sizing: border-box;
-}
-
-.captured {
-  display: flex;
-  justify-content: space-between;
-  /* mantém as colunas nas extremidades */
-  width: 100%;
-  margin-top: 16px;
-  gap: 10px;
-}
-
-.captured-col {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  background: #ffffff;
-  border: 1px solid rgba(7, 32, 43, 0.3);
-  padding: 6px;
-  box-sizing: border-box;
-  border-radius: 0;
-  min-width: 200px;
-  min-height: 100px;
-
-  /* Alinhamento padrão: topo-esquerda */
-  justify-content: flex-start;
-  align-items: flex-start;
-}
-
-/* Coluna do oponente — também topo-esquerda */
 .captured-col:nth-child(2) {
   justify-content: flex-start;
   align-items: flex-start;
 }
 
-/* === capturadas — cantos arredondados e texto mais escuro === */
+/* captured pieces */
 .captured {
   display: flex;
   justify-content: space-between;
@@ -1078,22 +860,23 @@ body.modal-open {
 .captured-col {
   display: flex;
   flex-direction: column;
-  /* IMPORTANTE */
-  align-items: flex-start;
-  /* alinha à esquerda */
-  gap: 6px;
-  /* espaço entre título e lista */
+  align-items: flex-start; /* align to left */
+  gap: 6px; /* space between title and pieces */
+
+  flex: 1;
   background: #ffffff;
-  border: 1px solid rgba(7, 32, 43, 0.3);
-  padding: 10px 12px;
-  box-sizing: border-box;
-  border-radius: 14px;
+  /* white background */
+  padding: 8px;
+  min-height: 42px;
   min-width: 200px;
-  min-height: 100px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  border: 1px solid rgba(7, 32, 43, 0.3);
+  /* subtle border to separate from board */
   box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
 }
 
-/* títulos das áreas capturadas */
+/* capture area title */
 .captured-title {
   font-size: 13px;
   color: #1e293b;
@@ -1102,25 +885,21 @@ body.modal-open {
   letter-spacing: 0.3px;
 }
 
-/* Lista: fila única, começa à esquerda, ocupa a largura toda */
+/* list : left to right */
 .captured-list {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
-  /* tudo numa linha */
-  justify-content: flex-start;
-  /* começa à esquerda */
+  flex-wrap: nowrap; /*one line*/
+  justify-content: flex-start; /*start on left*/
   width: 100%;
-  /* fica por baixo do título */
   gap: 0;
   padding-top: 4px;
+  padding-bottom: 4px;
   overflow: hidden;
-  /* se exceder largura, recorta */
   min-height: 40px;
-  /* >= tamanho do token */
 }
 
-/* Token grande, com sobreposição de metade */
+/* half covered */
 .captured-list .captured-token {
   position: relative;
   /* não absoluto */
@@ -1131,16 +910,14 @@ body.modal-open {
   pointer-events: none;
   box-shadow: 0 0 0 2px rgba(7, 32, 43, 0.08) inset,
     0 1px 2px rgba(0, 0, 0, 0.12);
-  margin-left: -20px;
-  /* metade de 40px = 20px, dá o "meia-por-cima" */
+  margin-left: -20px; /* half 40px = 20px, half covered */
 }
 
-/* o primeiro token não entra para a esquerda */
 .captured-list .captured-token:first-child {
   margin-left: 0;
 }
 
-/* Cores fixas dos tokens */
+/*fixed piece colours*/
 .captured-list .captured-token.red {
   background: #c92c2c;
 }
@@ -1157,17 +934,13 @@ main {
   gap: 24px;
 }
 
-.chat {
+.chat .messages {
+  max-height: 415px;
+  flex: 1;
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  height: 100%;
-  min-height: 250px;
-  align-self: flex-end;
-  gap: 12px;
-}
-
-.chat .messages {
+  gap: 10px;
   flex-grow: 1;
   overflow-y: auto;
   margin: 0;
@@ -1177,28 +950,12 @@ main {
 
 .chat .input-area {
   display: flex;
-  justify-content: flex-start;
-  align-items: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(7, 32, 43, 0.15);
-}
-
-chat {
-  background: #fff;
-  border: 1px solid rgba(7, 32, 43, 0.3);
-  border-radius: 14px;
-  padding: 10px;
-  box-shadow: 0 4px 12px rgba(7, 32, 43, 0.12);
-}
-
-.chat .input-area {
-  display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-
+  margin-top: 12px;
+  margin-left: 5px;
+  padding-top: 10px;
   margin-bottom: 8px;
   padding: 4px 0 0 0;
   border-top: 1px solid rgba(7, 32, 43, 0.15);
@@ -1217,7 +974,7 @@ chat {
     rgba(210, 255, 220, 0.95)
   );
   box-shadow: 0 0 30px 8px rgba(46, 204, 113, 0.65),
-    /* strong outer glow */ 0 0 12px rgba(46, 204, 113, 0.45) inset;
+    0 0 12px rgba(46, 204, 113, 0.45) inset;
   /* bright inner glow */
   transition: box-shadow 200ms ease, transform 160ms ease,
     border-color 160ms ease;
