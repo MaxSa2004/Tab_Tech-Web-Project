@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = container.querySelector(".ladder-search");
   const sortButton = container.querySelector("#sortbtn");
   let descending = true;
-
+  //configuration of different languages in leaderBoard (EN/PT)
   function tLB(key) {
     const lang = window.currentLang || 'en';
     const root = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
@@ -49,13 +49,13 @@ document.addEventListener("DOMContentLoaded", () => {
     player1: "Player 1"
   };
 
-  // Obter todos os "player rows" — selector adaptado ao teu HTML
+  //Get info of each player
   function getPlayers() {
-    // procura pela classe que usas para cada linha de jogador
+    
     return Array.from(parentForRows.querySelectorAll(".ladder-nav--results-players"));
   }
 
-  // Atualiza a coluna de percentagem (ex: "42.3%")
+  //Update ratios for ranking
   function updateRatios() {
     getPlayers().forEach(player => {
       const gpEl = player.querySelector(".results-gp");
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Ler um valor numérico da coluna results-ratio (remove o "%" se existir)
+  //Reads a ratio player, removing the %
   function readRatio(player) {
     const el = player.querySelector(".results-ratio");
     if (!el) return 0;
@@ -78,17 +78,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return isNaN(v) ? 0 : v;
   }
 
-  // Ler inteiros de uma célula
+  //Reads an integer from a cell
   function readIntFrom(player, selector) {
     const el = player.querySelector(selector);
     return el ? (parseInt(el.textContent.trim(), 10) || 0) : 0;
   }
-  // Nome (para desempate final)
+  // Name in case there is a tie
   function readName(player) {
     return (player.querySelector('.results-user')?.textContent || '').trim().toLowerCase();
   }
 
-  // Ordena e re-inserir as linhas no container correto
+  // Sorts the leaderboard and inserts the new data
   function sortLeaderboard() {
     updateRatios();
 
@@ -96,10 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
     players.sort((a, b) => {
       const ra = readRatio(a);
       const rb = readRatio(b);
-      // 1) Win ratio
+      // inserts the win ratio
       if (ra !== rb) return descending ? (rb - ra) : (ra - rb);
 
-      // 2) Nº de vitórias (sempre DESC para privilegiar quem venceu mais)
+      // Number of wins, always prioritizing
       const gwa = readIntFrom(a, '.results-gw');
       const gwb = readIntFrom(b, '.results-gw');
       if (gwa !== gwb) return gwb - gwa;
