@@ -134,7 +134,7 @@ The rank sorts it by this order: win ratio -> number of games won -> number of g
 You can also search for a specific player using the search bar.
 It's possible to sort it ascending or descending. 
 
-The data is stored in local storage, so it resets by clearing browser data.
+The data is stored in local storage, so it resets by clearing browser data, i.e., it doesn't disappear by refreshing ou closing the browser.
 
 ## Configuration and UI elements
 At this point, there is only one game mode available: vs. AI, with three levels of difficulty (easy, normal and hard). The board can have a range of columns (7,9,11,13,15), but the recommended value is 9. If the player wishes to start, it needs to toggle the checkbox First to Play and the piece attributed is yellow. If not, its red.

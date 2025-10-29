@@ -1209,7 +1209,7 @@ chat {
 
 /* Column headers */
 .ladder-nav--results-col label {
-  color: #888dff;
+  color: #fff;
   font-weight: 600;
 }
 
@@ -1232,7 +1232,7 @@ chat {
 /* Rank style */
 .results-rank .positions {
   font-weight: bold;
-  color: #686ef9;
+  color: white;
 }
 
 /* Search input */
@@ -1249,15 +1249,15 @@ chat {
 }
 
 .ladder-search:focus {
-  border-color: #686ef9;
+  border-color: white;
   background-color: rgba(255,255,255,0.15);
   box-shadow: 0 0 8px rgba(104, 110, 249, 0.4);
 }
 
 /* Sort button */
 #sortbtn {
-  background: #686ef9;
-  color: #fff;
+  background: white;
+  color: #05202b;
   border: none;
   border-radius: 25px;
   padding: 8px 16px;

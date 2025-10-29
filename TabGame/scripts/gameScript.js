@@ -79,12 +79,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const player1Label = L.player1 || (lang === 'pt' ? 'Jogador 1' : 'Player 1');
         const aiLabel = (() => {
             const key = aiDifficulty === 'easy' ? 'easyIA'
-                      : aiDifficulty === 'hard' ? 'hardIA'
-                      : 'normalIA';
+                : aiDifficulty === 'hard' ? 'hardIA'
+                    : 'normalIA';
             return L[key] || // IA (Fácil)/AI (Easy) etc.
-                   (lang === 'pt'
-                      ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})`
-                      : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`);
+                (lang === 'pt'
+                    ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})`
+                    : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`);
         })();
 
         let winnerName = '';
@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Update leaderboard (winner GW+GP, loser GP)
-        updateLeaderboard(winnerName, loserName);
+        window.updateLeaderboard(winnerName, loserName);
 
         // Update TabStats
         TabStats.setWinner(winnerNum);
@@ -449,34 +449,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function checkWinCondition() {
+        let winnerNum = null;
         if (redPieces == 0) {
             // 🔸 Player 2 (Yellow) wins
-            showMessage({ who: 'system', key: 'msg_player_won', params: { player: 2 } });
-            TabStats.setWinner(2);
-            endGame();
-
-            if (vsAI) {
-                // Player (you) wins
-                updateLeaderboard("Jogador 1", "IA (" + aiDifficulty + ")");
-            } else {
-                updateLeaderboard("Jogador 2", "Player 1");
-            }
-            return true;
+            winnerNum = 2;
         } else if (yellowPieces == 0) {
             // 🔸 Player 1 (Red) wins
-            showMessage({ who: 'system', key: 'msg_player_won', params: { player: 1 } });
-            TabStats.setWinner(1);
-            endGame();
-
-            if (vsAI) {
-                // AI wins this time
-                updateLeaderboard("IA (" + aiDifficulty + ")", "Jogador 1");
-            } else {
-                updateLeaderboard("Jogador 1", "Jogador 2");
-            }
-            return true;
+            winnerNum = 1;
+        } else {
+            return false; // sem vencedor ainda
         }
-        return false;
+        showMessage({ who: 'system', key: 'msg_player_won', params: { player: winnerNum } });
+        TabStats.setWinner(winnerNum);
+
+        const lang = window.currentLang || 'pt';
+        const dict = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
+        const L = dict[lang] || dict.en || {};
+        const player1Label = L.player1 || (lang === 'pt' ? 'Jogador 1' : 'Player 1');
+        const aiLabel = (() => {
+            const key = aiDifficulty === 'easy' ? 'easyIA'
+                : aiDifficulty === 'hard' ? 'hardIA'
+                    : 'normalIA';
+            return L[key] || // IA (Fácil)/AI (Easy) etc.
+                (lang === 'pt'
+                    ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})`
+                    : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`);
+        })();
+        let winnerName = '';
+        let loserName = '';
+        if (vsAI) {
+            if (winnerNum === aiPlayerNum) {
+                winnerName = aiLabel;
+                loserName = player1Label;
+            } else {
+                winnerName = player1Label;
+                loserName = aiLabel;
+            }
+        } else {
+            // Local PvP labels
+            const loserNum = (winnerNum === 1 ? 2 : 1);
+            winnerName = lang === 'pt' ? `Jogador ${winnerNum}` : `Player ${winnerNum}`;
+            loserName = lang === 'pt' ? `Jogador ${loserNum}` : `Player ${loserNum}`;
+        }
+        window.updateLeaderboard(winnerName, loserName);
+        endGame();
+        return true;
+
     }
 
 
@@ -1079,7 +1097,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const countdown = document.createElement('div');
         countdown.className = 'dice-countdown';
-        let secs = 2;
+        let secs = 1;
         countdown.dataset.i18nKey = 'dice_countdown';
         countdown.dataset.secs = String(secs);
         countdown.textContent = t('dice_countdown', { secs });
@@ -1113,7 +1131,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const ov = document.body.querySelector('.dice-overlay');
             if (ov) ov.remove();
-        }, 2000);
+        }, 1000);
     }
     function refreshDiceOverlay() {
         const ov = document.body.querySelector('.dice-overlay');

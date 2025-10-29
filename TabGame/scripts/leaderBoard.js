@@ -177,6 +177,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
+  // Inicialização
+  refreshUI();
+
   // Restauro de dados guardados (legacy por nome)
   const savedData = JSON.parse(localStorage.getItem("leaderboardData") || "[]");
   if (savedData.length > 0) {
@@ -194,8 +198,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Inicialização
-  refreshUI();
   sortLeaderboard();
 
   // Expor para o languageScript chamar após mudar de língua
