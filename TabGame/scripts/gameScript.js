@@ -904,7 +904,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ======= Dice (sticks) =======
+    //  Dice (sticks) 
     const upCountProbs = [0.06, 0.25, 0.38, 0.25, 0.06]; // probabilities for 0 to 4 sticks up
     const namesMap = { 0: "Sitteh", 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah" };
     // returns index based on probs array

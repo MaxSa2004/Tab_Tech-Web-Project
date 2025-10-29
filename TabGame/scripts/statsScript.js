@@ -1,6 +1,6 @@
-// Caso seja para fazer tracking de estatísticas do jogo, implementar aqui.
-(function () {
-  const DEFAULT_LABELS = {
+// tracking game statistics and showing end-of-game summary
+(function () { // IIFE to avoid polluting global scope
+  const DEFAULT_LABELS = { // default labels in case no i18n provided (it is, so it's just a fallback)
     pt: {
       summary_title: "Resumo do jogo",
       summary_winner: "Vencedor",
@@ -48,7 +48,7 @@
       hard: "Hard"
     }
   };
-
+  // simple i18n function to translate labels
   function tLocal(key, params = {}) {
     const lang = (window.currentLang || 'pt');
     const dict = (window.i18n && window.i18n[lang]) || {};
@@ -56,36 +56,36 @@
     let str = dict[key] ?? fallback[key] ?? DEFAULT_LABELS.en[key] ?? key;
     return String(str).replace(/\{(\w+)\}/g, (_, k) => params[k] ?? '');
   }
-
+  // TabStats object
   const TabStats = {
-    data: null,
+    data: null, // will hold the stats data
 
-    reset() {
+    reset() { // initialize/reset stats data
       this.data = {
-        startTime: Date.now(),
-        endTime: null,
-        durationMs: null,
+        startTime: Date.now(), // timestamp
+        endTime: null, // timestamp
+        durationMs: null,    // duration in ms
 
         mode: null,           // 'player' | 'ia'
         aiDifficulty: null,   // 'easy' | 'normal' | 'hard' | null
         cols: null,           // nº colunas
 
         firstStarterRole: null, // 'human' | 'ai' | null
-        firstPlayer: 1,       // 1 | 2 (P1 começa nas tuas regras)
+        firstPlayer: 1,       // 1 | 2 
 
         winner: null,         // 1 | 2 | null
 
-        turns: 0,
-        moves: { 1: 0, 2: 0 },
-        captures: { 1: 0, 2: 0 },
-        passes: { 1: 0, 2: 0 },
-        extraRolls: { 1: 0, 2: 0 },
+        turns: 0, // number of turns
+        moves: { 1: 0, 2: 0 }, // number of moves per player
+        captures: { 1: 0, 2: 0 }, // number of captures per player
+        passes: { 1: 0, 2: 0 }, // number of passes per player
+        extraRolls: { 1: 0, 2: 0 }, // number of extra rolls per player
 
-        diceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 0 },
-        log: []
+        diceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 0 }, // count of dice rolls
+        log: [] // event log
       };
     },
-
+    // start tracking a new game
     start({ mode, aiDifficulty, cols, firstPlayer = 1, firstStarterRole = null }) {
       this.reset();
       this.data.mode = mode;
@@ -94,58 +94,59 @@
       this.data.firstPlayer = firstPlayer;
       this.data.firstStarterRole = firstStarterRole;
     },
-
+    // event handlers to track stats
+    /// called when turn advancess
     onTurnAdvance() {
       if (!this.data) return;
       this.data.turns++;
       this.data.log.push({ t: 'turn' });
     },
-
+    // called when a player rolls the dice
     onDice(player, value) {
       if (!this.data) return;
       if (this.data.diceCounts[value] != null) this.data.diceCounts[value]++;
       this.data.log.push({ t: 'roll', player, value });
     },
-
+    // called when a player makes a move
     onMove(player) {
       if (!this.data) return;
       this.data.moves[player]++;
       this.data.log.push({ t: 'move', player });
     },
-
+    // called when a player captures a piece
     onCapture(player, color) {
       if (!this.data) return;
       this.data.captures[player]++;
       this.data.log.push({ t: 'capture', player, color });
     },
-
+    // called when a player passes their turn
     onPass(player) {
       if (!this.data) return;
       this.data.passes[player]++;
       this.data.log.push({ t: 'pass', player });
     },
-
+    // called when a player gets an extra roll
     onExtraRoll(player, value) {
       if (!this.data) return;
       this.data.extraRolls[player]++;
       this.data.log.push({ t: 'extra', player, value });
     },
-
+    // called when the game ends and there's a winner or a quit
     setWinner(playerOrNull) {
       if (!this.data) return;
       this.data.winner = playerOrNull; // 1 | 2 | null (desistência)
     },
-
+    // show the summary modal
     showSummary() {
       if (!this.data) return;
 
-      // calcular duração
+      // calculate duration
       this.data.endTime = Date.now();
       this.data.durationMs = this.data.endTime - this.data.startTime;
       const mins = Math.floor(this.data.durationMs / 60000);
       const secs = Math.floor((this.data.durationMs % 60000) / 1000);
       const durationText = `${mins}m ${secs}s`;
-
+      // determine first player label
       let firstLabel = '';
       const md = this.data;
       if (typeof md.firstStarterRole === 'string') {
@@ -154,7 +155,7 @@
         else if (role === 'ai' || role === 'ia') firstLabel = tLocal('summary_first_player_ai');
       }
 
-      // Back-compat: se não houver role, tenta interpretar firstPlayer string
+      // else try firstPlayer number
       if (!firstLabel) {
         if (typeof md.firstPlayer === 'string') {
           const v = md.firstPlayer.toLowerCase();
@@ -169,44 +170,44 @@
         firstLabel = '-';
       }
 
-      // remove modal anterior se existir
+      // remove modal if already present
       const prev = document.getElementById('gameSummaryModal');
       if (prev) prev.remove();
 
-      // estrutura da modal (usa as tuas classes)
+      // modal structure
       const modal = document.createElement('div');
       modal.className = 'modal is-open';
       modal.id = 'gameSummaryModal';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
-      modal.addEventListener('click', (e) => {
+      modal.addEventListener('click', (e) => { // close when clicking outside content
         if (e.target === modal) modal.remove();
       });
-
+      // content
       const content = document.createElement('div');
       content.className = 'modal-content';
-
+      // close button
       const closeBtn = document.createElement('button');
       closeBtn.className = 'close';
       closeBtn.setAttribute('aria-label', 'Fechar');
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => modal.remove());
-
+      // title
       const title = document.createElement('h3');
       title.textContent = tLocal('summary_title');
-      
+      // body content
       const diffKey = (md.aiDifficulty || '').toLowerCase();
       const diffLabel = diffKey ? tLocal(diffKey) : '';
-
+      // mode label
       const modeLabel = md.mode === 'ia'
         ? `${tLocal('summary_mode_vs_ai')} (${diffLabel ? `${diffLabel}` : ''})`
         : tLocal('summary_mode_vs_player');
-
+      // winner text
       const winnerText = (md.winner === 1 || md.winner === 2)
         ? `P${md.winner}`
         : tLocal('summary_no_winner');
 
-      // helper para linhas
+      // helper to create a paragraph
       const p = (labelKey, value) => `<p><strong>${tLocal(labelKey)}:</strong> ${value}</p>`;
 
       const html = `
@@ -223,10 +224,10 @@
         ${p('summary_extra_rolls', `P1: ${md.extraRolls[1]} , P2: ${md.extraRolls[2]}`)}
         ${p('summary_dice_distribution', `1: ${md.diceCounts[1]} , 2: ${md.diceCounts[2]} , 3: ${md.diceCounts[3]} , 4: ${md.diceCounts[4]} , 6: ${md.diceCounts[6]}`)}
       `;
-
+      // body
       const body = document.createElement('div');
       body.innerHTML = html;
-
+      // assemble modal
       content.appendChild(closeBtn);
       content.appendChild(title);
       content.appendChild(body);
@@ -234,6 +235,6 @@
       document.body.appendChild(modal);
     }
   };
-
+  // expose TabStats globally
   window.TabStats = TabStats;
 })();
