@@ -43,8 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
     games_won: "Games Won",
     win_ratio: "Win Ratio %",
     easyIA: "AI (Easy)", normalIA: "AI (Normal)", hardIA: "AI (Hard)",
-    leader_sort_desc: "Sort: Descending ⬇️",
-    leader_sort_asc: "Sort: Ascending ⬆️",
+    leader_sort_desc: "Sort: Descending",
+    leader_sort_asc: "Sort: Ascending",
     player1: "Player 1"
   };
 
