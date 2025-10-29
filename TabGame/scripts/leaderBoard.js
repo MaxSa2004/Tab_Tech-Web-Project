@@ -1,13 +1,12 @@
 // leaderBoard.js
 document.addEventListener("DOMContentLoaded", () => {
-  // Elementos principais (proteções caso não existam)
+  // Main elements (in case they don't exist)
   const modal = document.getElementById("myModalClassifications");
-  if (!modal) return; // nada a fazer se não existir
+  if (!modal) return; //if doesnt exist, dont do anything
   const container = modal.querySelector("#leaderboard-container");
   if (!container) return;
   const rowsContainer = container.querySelector(".leaderboard-rows") || null;
-  // Se o layout do HTML não tem .leaderboard-rows (no teu HTML atual os players estão diretamente no #leaderboard-container)
-  // tentamos trabalhar com container como fallback:
+  
   const parentForRows = rowsContainer || container;
 
   const searchInput = container.querySelector(".ladder-search");
@@ -96,43 +95,43 @@ document.addEventListener("DOMContentLoaded", () => {
     players.sort((a, b) => {
       const ra = readRatio(a);
       const rb = readRatio(b);
-      // inserts the win ratio
+      // orders by win ratio
       if (ra !== rb) return descending ? (rb - ra) : (ra - rb);
 
-      // Number of wins, always prioritizing
+      // number of wins, always prioritizing the amount of wins
       const gwa = readIntFrom(a, '.results-gw');
       const gwb = readIntFrom(b, '.results-gw');
       if (gwa !== gwb) return gwb - gwa;
 
-      // 3) Jogos jogados (DESC)
+      // sorting by games played 
       const gpa = readIntFrom(a, '.results-gp');
       const gpb = readIntFrom(b, '.results-gp');
       if (gpa !== gpb) return gpb - gpa;
 
-      // 4) Nome (ASC) como último critério estável
+      // as last criteria, name ascending by ascii code
       return readName(a).localeCompare(readName(b));
     });
 
-    // Reatribuir posições e anexar na ordem ao parentForRows
+    // Inserts it each player row the values
     players.forEach((player, index) => {
       const posEl = player.querySelector(".positions");
       if (posEl) posEl.textContent = (index + 1).toString();
-      // appendChild move o nó para o fim; assim reordenamos
+      // appends to the end, then sorts
       parentForRows.appendChild(player);
     });
-    // Atualiza o rótulo do botão sort de acordo com o estado e língua
+    //updates the sorting button, as asc/desc
     if (sortButton) {
       sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
     }
   }
 
-  /// Atualiza textos (tradução) do Leaderboard
+  // updates de ui, based on the language selected
   function refreshUI() {
-    // Título
+    // Title
     const lbTitle = document.getElementById('leaderboardTitle');
     if (lbTitle) lbTitle.textContent = tLB('leaderboardTitle');
 
-    // Cabeçalhos (divs com id e um <label> dentro)
+    //Header
     const setLabel = (sel, key) => {
       const el = document.querySelector(sel);
       if (el) {
@@ -146,12 +145,12 @@ document.addEventListener("DOMContentLoaded", () => {
     setLabel('#games_won', 'games_won');
     setLabel('#win_ratio', 'win_ratio');
 
-    // Placeholder pesquisa
+    // Placeholder for the search
     if (searchInput && 'placeholder' in searchInput) {
       searchInput.placeholder = tLB('leaderSearch');
     }
 
-    // Nomes nas linhas
+    // Name in lines
     const p1 = document.getElementById('player1');
     if (p1) p1.textContent = tLB('player1');
 
@@ -164,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const hardIA = document.getElementById('hardIA');
     if (hardIA) hardIA.textContent = tLB('hardIA');
 
-    // Botão Sort (texto coerente com estado atual)
+    // Sort button according to current language
     if (sortButton) {
       sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
     }
@@ -178,10 +177,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  // Inicialização
+  // Initializing
   refreshUI();
 
-  // Restauro de dados guardados (legacy por nome)
+  // Return of data saved
   const savedData = JSON.parse(localStorage.getItem("leaderboardData") || "[]");
   if (savedData.length > 0) {
     const rows = getPlayers();
@@ -197,19 +196,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
+  //Sorts after allocating the new 
   sortLeaderboard();
 
-  // Expor para o languageScript chamar após mudar de língua
+  // Show after we call languageScript
   window.__refreshLeaderboard = () => {
     refreshUI();
-    // garantir label do botão coerente
+    // Keeping the language aligned
     if (sortButton) {
       sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
     }
   };
 
-  // Update leaderboard dynamically from game results
+  // Updates leaderboard dynamically from game results
   window.updateLeaderboard = function (winnerName, loserName) {
     const container = document.querySelector("#leaderboard-container");
     if (!container) return;
@@ -235,12 +234,12 @@ document.addEventListener("DOMContentLoaded", () => {
       gpEl.textContent = gp;
       gwEl.textContent = gw;
 
-      // 🔹 Calculate win ratio safely
+      //Calculation of the ratio
       const ratio = gp > 0 ? Math.round((gw / gp) * 100) : 0;
       ratioEl.textContent = ratio + "%";
     });
 
-    // 🔸 Save leaderboard to localStorage
+    // Saves the current state of the leaderboard onto the local storage
     const leaderboardData = Array.from(rows).map(p => ({
       name: p.querySelector(".results-user").textContent.trim(),
       gp: parseInt(p.querySelector(".results-gp").textContent.trim()),
@@ -248,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }));
     localStorage.setItem("leaderboardData", JSON.stringify(leaderboardData));
 
-    // Inicial: calcula ratios e ordena
+    // Sorts leaderboard after the update of the leaderboard
     sortLeaderboard();
   };
 });
