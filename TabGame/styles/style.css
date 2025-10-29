@@ -8,6 +8,8 @@
   --muted: #94a3b8;
   --gap: 16px;
   --bubble-pad-y: 8px;
+  --radius: 4px;
+  --panel-bg: #ffffff;
 }
 
 /* base set */
@@ -444,7 +446,6 @@ button[disabled] {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  pointer-events: auto;
 }
 
 .modal-content {
@@ -632,7 +633,6 @@ body.modal-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: auto;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.18);
 }
@@ -717,7 +717,6 @@ body.modal-open {
 }
 
 .dice-result-bubble {
-  pointer-events: auto;
   font-family: Georgia, serif;
   background: rgba(39, 52, 139, 0.96);
   color: #fff;
@@ -776,7 +775,7 @@ body.modal-open {
   /* set a fixed cell size */
   --cell-size: 52px;
   /* using the JS set --cols var */
-  grid-template-columns: repeat(var(--cols), var(--cell-size));
+  grid-template-columns: repeat(var(--cols, 9), var(--cell-size, 52px)); 
 }
 
 /* each cell keeps a fixed square size based on --cell-size */
@@ -801,14 +800,13 @@ body.modal-open {
     /* let it scroll horizontally in its container */
     overflow-x: auto;
     padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
   }
 
   /* preserve grid inside the scrolling wrapper */
   .game-board > .grid-inner {
     display: grid;
     gap: 4px;
-    grid-template-columns: repeat(var(--cols), var(--cell-size));
+    grid-template-columns: repeat(var(--cols, 9), var(--cell-size, 52px)); 
   }
 }
 
