@@ -12,7 +12,9 @@
 
 /* Reset / base */
 * {
-    box-sizing: border-box
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 html,
@@ -227,7 +229,13 @@ button[disabled] {
     display: grid;
     grid-template-columns: 1fr 360px;
     gap: 18px;
-    align-items: stretch;
+    align-items: center;
+    justify-content: center;
+}
+
+.main-area-box{
+    display: flex;
+    justify-content: center; /* horizontal centering */
 }
 
 /* board wrapper */
@@ -565,6 +573,34 @@ button[disabled] {
     max-height: calc(100vh - 80px);
     /* deixa alguma margem top/bottom */
     overflow: auto;
+}
+
+.modal-content h1,
+.modal-content h2,
+.modal-content h3,
+.modal-content h4,
+.modal-content ol {
+    margin: 0 0 12px 0; /* restore default vertical spacing */
+    line-height: 2;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 5px;
+    padding-top: 5px;
+}
+.modal-content ul {
+    line-height: 1.5;
+    padding-left: 80px;
+    margin: 20px;
+}
+.modal-content p{
+    margin: 0 0 10px 0; /* restore default vertical spacing */
+    line-height: 1.5;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.modal-content button {
+    margin-top: 12px; /* spacing for buttons */
 }
 
 .modal .close {

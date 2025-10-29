@@ -451,10 +451,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkWinCondition() {
         let winnerNum = null;
         if (redPieces == 0) {
-            // 🔸 Player 2 (Yellow) wins
+            // player 2 (yellow) wins
             winnerNum = 2;
         } else if (yellowPieces == 0) {
-            // 🔸 Player 1 (Red) wins
+            // player 1 (red) wins
             winnerNum = 1;
         } else {
             return false; // sem vencedor ainda
