@@ -12,7 +12,6 @@ The code doesn't alter the DOM, it only reads the current game state from the DO
   const MODEL_EXTRA_ROLL_IN_TREE = false;         // if true, on die in {1,4,6} the same player moves again in-tree
   const NORMAL_RANDOM_PROB = 0.18;                // randomization for Normal difficulty
   const NORMAL_RANDOM_TOP_K = 2;                  // if >1, pick randomly among top-K moves instead of any move
-  const ORDER_MOVES_HEURISTIC = true;             // try captures first at decision nodes to help alpha-beta
 
   // Realistic stick-dice outcomes and probabilities:
   // Up-count: 0->6, 1->1, 2->2, 3->3, 4->4
