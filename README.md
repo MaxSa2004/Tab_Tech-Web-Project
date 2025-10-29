@@ -107,7 +107,7 @@ Chooses MAX from the averages of each branch.
 
 Differences by difficulty:
 - Easy: Doesn't search the tree. Just filters capture moves. If ther aern't any captures to make, it chooses a random move. It's quick and unpredictable, but can lead to bad results;
-- Normal: Uses expectminimax with DEPTH=2 (shallow depth). It used the newest dice value on the root level, and for the levels beyond, models new dices with the average of the 6 possible values. It's reasonable, with some variety and low cost;
+- Normal: Uses expectminimax with DEPTH=2 (shallow depth). It used the newest dice value on the root level, and for the levels below, models new dices with the average of the 6 possible values. It's reasonable, with some variety and low cost;
 - Hard: Uses expectminimax with DEPTH=4 (deeper search). It doesn't't use any randomness on the final move choice. It's a lot more cosnsitent and strong.
 
 
