@@ -10,7 +10,7 @@
   --bubble-pad-y: 8px;
 }
 
-/* Reset / base */
+/* base set */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -43,6 +43,7 @@ body {
   gap: 12px;
 }
 
+/* logo and relevant h1 for it (.header h1)*/
 .logo_img {
   width: 44px;
   height: 44px;
