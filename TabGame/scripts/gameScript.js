@@ -194,28 +194,30 @@ document.addEventListener("DOMContentLoaded", () => {
     if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState); // update play button state on AI level change, to Start Game
     updatePlayButtonState(); // initial state
 
-    // ---- RENDER BOARD ---- MAX!!
+    // ---- RENDER BOARD ----
     function renderBoard(cols) {
         redPieces = cols;
         yellowPieces = cols;
-        gameBoard.style.setProperty('--cols', cols);
-        gameBoard.style.gridTemplateColumns = `repeat(${cols}, minmax(36px, 1fr))`;
-        gameBoard.innerHTML = '';
+        gameBoard.style.setProperty('--cols', cols); // set style property of cols to be --cols (editable in style.css)
+        gameBoard.innerHTML = ''; // clear html content of gameBoard as we will need to generate the board in next loop
 
+        // generate the board
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
+                // create cell
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.dataset.r = r;
                 cell.dataset.c = c;
 
+                // place arrow in cell accordingly
                 const arrow = document.createElement('i');
                 if (r === 0) arrow.className = 'arrow ' + (c === 0 ? 'down' : 'left');
                 else if (r === 1) arrow.className = 'arrow ' + (c === cols - 1 ? 'up down' : 'right');
                 else if (r === 2) arrow.className = 'arrow ' + (c === 0 ? 'up' : 'left');
                 else if (r === 3) arrow.className = 'arrow ' + (c === cols - 1 ? 'up' : 'right');
 
-                // peças iniciais
+                // place initial pieces
                 const piece = document.createElement('div');
                 piece.setAttribute('move-state', 'not-moved');
                 piece.classList.add('piece');
@@ -223,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (r == 0) { piece.classList.add('yellow'); cell.appendChild(piece); }
                 if (r == 3) { piece.classList.add('red'); cell.appendChild(piece); }
 
-                // jogada por clique
+                // give each cell a click handler (used to select and place pieces in game)
                 cell.addEventListener('click', () => handleCellClick(cell));
 
                 cell.appendChild(arrow);
@@ -232,15 +234,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // seleção de peça MAX!!
+    // piece selection operator - only selects if game is active
     function selectPiece(piece) {
         if (!gameActive) return;
+        // if selecting the currently selected piece we deselect it
         if (selectedPiece == piece) {
             selectedPiece.classList.remove('selected');
             selectedPiece = null;
-            clearHighlights();
+            clearHighlights(); // clear highlights of moves for previously selected piece
             return;
         }
+        // current player selecting their own piece
         if ((currentPlayer == 1 && piece.classList.contains('red')) ||
             (currentPlayer == 2 && piece.classList.contains('yellow'))) {
             if (selectedPiece) selectedPiece.classList.remove('selected');
@@ -248,91 +252,98 @@ document.addEventListener("DOMContentLoaded", () => {
             piece.classList.add('selected');
         }
     }
-    // MAX!!
+
+    // helper function to ensure that all cells are NOT highlighted
     function clearHighlights() {
         gameBoard.querySelectorAll('.cell.green-glow').forEach(c => {
             c.classList.remove('green-glow', 'pulse');
         });
     }
-    // MAX!!
+
+    // manage the clicks on a cell (used by event listener click) - only if game is active
     function handleCellClick(cell) {
         if (!gameActive) return;
-        // bloquear input no turno da IA
+        // don't allow input when AI is playing
         if (vsAI && currentPlayer === aiPlayerNum) return;
 
-        const pieceInCell = cell.querySelector('.piece');
+        const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
 
-        // selecionar peça do jogador atual
+        // selecting current player's piece (non-empty cell and cell selected must contain piece belonging to current player)
         if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
             (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
             selectPiece(pieceInCell);
-            if (!selectedPiece) return;
-            clearHighlights();
+            if (!selectedPiece) return; // fail-safe if no piece to select
+            clearHighlights(); // clear old highlights
 
+            // get a list of all valid moves for the selected piece and highlight each one of legal moves cells
             const state = pieceInCell.getAttribute('move-state');
-            const diceAllowed = (state === 'not-moved' && lastDiceValue !== 1) ? [] : getValidMoves(pieceInCell);
-            diceAllowed.forEach(dest => dest.classList.add('green-glow'));
+            const movesAllowed = (state === 'not-moved' && lastDiceValue !== 1) ? [] : getValidMoves(pieceInCell);
+            movesAllowed.forEach(dest => dest.classList.add('green-glow'));
             return;
         }
 
-        // tentar mover a peça selecionada para a célula clicada
+        // try moving selected piece to a clicked cell (dice rolled and a piece is selected)
         if (selectedPiece && lastDiceValue != null) {
             const state = selectedPiece.getAttribute('move-state');
-            if (state === 'not-moved' && lastDiceValue !== 1) return;
+            if (state === 'not-moved' && lastDiceValue !== 1) return; // first move of a piece must be 1
 
             const possibleMoves = getValidMoves(selectedPiece);
             const isValidMove = possibleMoves.some(dest => dest === cell);
 
+            // check if the selected cell is a valid move
             if (isValidMove) {
                 if (state === 'not-moved' && lastDiceValue === 1) {
-                    selectedPiece.setAttribute('move-state', 'moved');
+                    selectedPiece.setAttribute('move-state', 'moved'); // update atribute of a piece on its first ever move
                 }
+
+                // place selected piece in new cell after move and clear highlights and make sure selectedPiece is null
                 movePieceTo(selectedPiece, cell);
                 clearHighlights();
                 selectedPiece.classList.remove('selected');
                 selectedPiece = null;
 
-                if (checkWinCondition()) return;
+                if (checkWinCondition()) return; // check if someone won
 
+                // check if current player gets another turn based on their dice roll
                 if (lastDiceValue === 4 || lastDiceValue === 6 || lastDiceValue === 1) {
                     throwBtn.disabled = false;
                     nextTurnBtn.disabled = true;
                 } else {
                     nextTurn();
                 }
-                lastDiceValue = null;
+                lastDiceValue = null; // reset dice value (awaits for new value from next dice roll)
             }
         }
     }
 
-    // MAX!!
+    // returns a list of all valid moves for a given piece and dice value
     function getValidMoves(piece, diceValue = lastDiceValue) {
-        if (!piece || diceValue == null) return [];
+        if (!piece || diceValue == null) return []; // if no piece selected or no dice rolled return nothing
 
         const startCell = piece.parentElement;
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
 
         const r = parseInt(startCell.dataset.r, 10);
-        const c = parseInt(startCell.dataset.c, 10);
+        const c = parseInt(startCell.dataset.c, 10); // start cells properties
         const moveState = piece.getAttribute('move-state');
         const playerClass = piece.classList.contains('red') ? 'red' : 'yellow';
 
-        // regra: não pode entrar na fila de topo se tiver peças na base
+        // rule: cannot enter top row if still has pieces in base row
         const hasBasePieces = Array
             .from(gameBoard.querySelectorAll(`.piece.${playerClass}`))
             .some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
 
-        // caso especial: fila 1 (index 1)
+        // "special" case - 2nd to top row
         if (r === 1) {
             let remaining = diceValue;
             let currentC = c;
 
-            const stepsToRightEnd = cols - 1 - currentC;
+            const stepsToRightEnd = cols - 1 - currentC; // num steps left to reach end of row
             const horizontalMove = Math.min(remaining, stepsToRightEnd);
             currentC += horizontalMove;
-            remaining -= horizontalMove;
+            remaining -= horizontalMove; // update col index accordingly
 
-            if (remaining === 0) {
+            if (remaining === 0) { // if doesn't spill out of row index 1
                 const targetCell = gameBoard.querySelector(`.cell[data-r="1"][data-c="${currentC}"]`);
                 return targetCell ? [targetCell] : [];
             }
@@ -341,11 +352,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const upCell = gameBoard.querySelector(`.cell[data-r="0"][data-c="${currentC}"]`);
             const downCell = gameBoard.querySelector(`.cell[data-r="2"][data-c="${currentC}"]`);
 
-            if (!hasBasePieces && !(moveState === 'row-four' && r !== 0) && upCell) {
+            // if possible to move into top row add possible moves
+            if (!hasBasePieces && moveState !== 'row-four' && upCell) {
                 targets.push({ cell: upCell, r: 0, c: currentC });
             }
+            // add downward possible moves
             if (downCell) targets.push({ cell: downCell, r: 2, c: currentC });
 
+            // if got spill over follow arrows and add new possible moves to further targets based on 'targets'
             if (remaining > 1) {
                 const furtherTargets = [];
                 targets.forEach(({ cell }) => {
@@ -373,10 +387,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 return furtherTargets;
             }
 
+            // if no more spaces left unadded to move, return the possible moves
             return targets.map(t => t.cell);
         }
 
-        // movimento normal pelas setas
+        // normal movement rows/cases: following the arrow tags
         let currentCell = startCell;
         for (let step = 0; step < diceValue; step++) {
             const arrow = currentCell.querySelector('.arrow');
@@ -398,6 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return currentCell ? [currentCell] : [];
     }
+
     // if a piece is captured, send it to the captured pieces container (The player who captured it container)
     function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         if (!pieceEl) return; // safety check
@@ -418,47 +434,57 @@ document.addEventListener("DOMContentLoaded", () => {
         // removes the original piece from the board
         pieceEl.remove();
     }
-    // MAX !!
+
+    // place parsed piece in destCell
     function movePieceTo(piece, destCell) {
         const existingPiece = destCell.querySelector('.piece');
+        // check if piece already in destCell (capture)
         if (existingPiece) {
+            // get colour of existingPiece
             const color = existingPiece.classList.contains('red') ? 'red' : 'yellow';
             TabStats.onCapture(currentPlayer, color);
             if (existingPiece.classList.contains('red')) {
+                // red piece captured
                 redPieces--;
                 showMessage({ who: 'system', key: 'red_pieces', params: { count: redPieces } });
                 sendCapturedPieceToContainer(existingPiece, currentPlayer);
             } else if (existingPiece.classList.contains('yellow')) {
+                // yellow piece captured
                 yellowPieces--;
                 showMessage({ who: 'system', key: 'yellow_pieces', params: { count: yellowPieces } });
                 sendCapturedPieceToContainer(existingPiece, currentPlayer);
             }
         }
 
+        // check if move-state needs to be updated (moving into top row)
         const destRow = parseInt(destCell.dataset.r, 10);
         const currentState = piece.getAttribute('move-state');
         if (destRow === 0 || currentState === 'row-four') {
             piece.setAttribute('move-state', 'row-four');
         }
-        destCell.appendChild(piece);
+        destCell.appendChild(piece); // place piece in cell
         TabStats.onMove(currentPlayer);
     }
-    // MAX!!
+
+    // board flip is done at each turn swap between players
     function flipBoard() {
         lastDiceValue = null;
-        // preparar UI para novo turno
+
+        // UI if AI's turn
         if (throwBtn) throwBtn.disabled = (vsAI && (currentPlayer === aiPlayerNum));
         if (nextTurnBtn) nextTurnBtn.disabled = true;
 
         const cols = parseInt(gameBoard.style.getPropertyValue('--cols'), 10);
         const cells = Array.from(gameBoard.querySelectorAll('.cell'));
 
+        // make sure no pieces actively selected
         if (selectedPiece) {
             selectedPiece.classList.remove('selected');
             selectedPiece = null;
         }
 
-        const newPositions = [];
+        // mirror/invert each piece from their original positions so it looks like we are viewing board from opponent's perspective
+        const newPositions = []; // array of new positions
         cells.forEach(cell => {
             const piece = cell.querySelector('.piece');
             if (piece) {
@@ -470,26 +496,29 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // clear all cells of pieces
         cells.forEach(cell => {
             const piece = cell.querySelector('.piece');
             if (piece) piece.remove();
         });
 
+        // place pieces in their "new" positions
         newPositions.forEach(({ piece, newR, newC }) => {
             const dest = gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
             if (dest) dest.appendChild(piece);
         });
     }
 
-    // MAX !!
+    // switch turns handler
     function nextTurn() {
+        // change currentPlayer to other player and notify in message system
         currentPlayer = currentPlayer === 1 ? 2 : 1;
         currentPlayerEl.textContent = currentPlayer;
         TabStats.onTurnAdvance();
         showMessage({ who: 'system', key: 'msg_turn_of', params: { player: currentPlayer } });
         flipBoard();
 
-        // se for IA, lança automaticamente
+        // if it is AI turn, play AI turn
         if (vsAI && currentPlayer === aiPlayerNum) {
             setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno da IA:', err)), 200);
         } else {
@@ -549,7 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    // MAX !!
+    // end game helper - resets all "global" variables and reset board and button states
     function endGame() {
         TabStats.showSummary();
         currentPlayer = 1;
@@ -559,7 +588,6 @@ document.addEventListener("DOMContentLoaded", () => {
         yellowPieces = 0;
         selectedPiece = null;
 
-        // IA
         vsAI = false;
         aiPlayerNum = null;
         humanPlayerNum = 1;
@@ -572,14 +600,15 @@ document.addEventListener("DOMContentLoaded", () => {
         renderBoard(parseInt(widthSelect.value, 10));
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = true;
-        // reativar configurações e gerir botões principais
+
+        // reactivate settings options
         setConfigEnabled(true);
         if (playButton) playButton.disabled = !isConfigValid();
         if (leaveButton) leaveButton.disabled = true;
         updatePlayButtonState();
     }
 
-    // messages MAX!!
+    // messages
     function showMessage({ who = 'system', player = null, text, key, params }) {
         const wrap = document.createElement('div');
         wrap.className = 'message';
@@ -698,7 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // throw dice button  MAX !!
+    // throw dice button
     if (throwBtn) {
         throwBtn.addEventListener('click', async (e) => {
             if (vsAI && currentPlayer === aiPlayerNum) {
@@ -709,17 +738,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const result = await window.tabGame.spawnAndLaunch();
-
-                // guarda para getValidMoves/handleCellClick
                 lastDiceValue = result;
 
-                // 1) valor do dado
+                // indicate value of dice rolled
                 showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
 
+                // special roll cases
                 const isExtra = (result === 1 || result === 4 || result === 6);
                 const isTab = (result === 1);
 
-                // calcula jogadas e capturas
+                // calculate moves/captures
                 const playerColor = getColorForPlayerNum(currentPlayer);
                 const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
                 const captureMoves = legalMoves.filter(m => {
@@ -727,7 +755,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     return occ && !occ.classList.contains(playerColor);
                 });
 
-                // 2) sem jogadas
+                // no possible moves - if extra move allowed, indicate to roll... otherwise indicate to skip turn
                 if (legalMoves.length === 0) {
                     if (isExtra) {
                         // primeiro o “double”, depois o aviso de sem jogadas extra
@@ -750,12 +778,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     return; // termina este lançamento
                 }
 
-                // 3) há jogadas
+                // moves possible
                 if (isTab) {
-                    // Tâb: prioriza captura; senão, conversão vem antes do "double"
+                    // Tâb: prioritise capture
                     const convertibleCount = countConvertiblePieces(currentPlayer);
 
-                    if (captureMoves.length > 0) {
+                    if (captureMoves.length > 0) { // make a capture and indicate reroll
                         // captura primeiro, depois "double"
                         showMessage({
                             who: 'player',
@@ -765,16 +793,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         });
                         showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
                     } else if (convertibleCount > 0) {
-                        // conversão antes do "double"
+                        // conersion before double
                         showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
                         showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
                     } else {
-                        // nada a converter (tudo convertido): mantém "double" antes do aviso de movimento
+                        // nothing to convert
                         showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
                         showMessage({ who: 'system', key: 'msg_player_can_move' });
                     }
                 } else {
-                    // 4 ou 6: “double” antes; 2/3: sem double
+                    // 4 or 6: double roll... 2/3: no double
                     if (isExtra) {
                         showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
                     }
@@ -790,7 +818,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // UI e stats
+                // UI and stats
                 nextTurnBtn.disabled = true;
                 throwBtn.disabled = true;
 
