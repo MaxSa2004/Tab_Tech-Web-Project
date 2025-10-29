@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     leaderboardTitle: "Classificações",
     leaderSearch: "Procurar utilizador...",
     rank: "Posição",
-    user: "Utilizador",
+    user1: "Utilizador",
     games_played: "Jogos",
     games_won: "Vitórias",
     win_ratio: "Taxa de vitória %",
@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     leaderboardTitle: "Leaderboard",
     leaderSearch: "Search User...",
     rank: "Rank",
-    user: "User",
+    user1: "User",
     games_played: "Games Played",
     games_won: "Games Won",
     win_ratio: "Win Ratio %",
@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
     setLabel('#rank', 'rank');
-    setLabel('#user', 'user');
+    setLabel('#user1', 'user1');
     setLabel('#games_played', 'games_played');
     setLabel('#games_won', 'games_won');
     setLabel('#win_ratio', 'win_ratio');

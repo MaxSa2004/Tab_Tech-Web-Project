@@ -1,32 +1,25 @@
 <!DOCTYPE html>
-<html lang="pt-PT"> <!--lanuage-->
+<html lang="en"> <!--lanuage-->
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" /> <!--responsive-->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width">
     <title>Tâb Game</title>
-    <link rel="stylesheet" href="styles/style.css" /> <!--main style-->
+    <link rel="stylesheet" href="styles/style.css"> <!--main style-->
+    <script src="scripts/authenticationScript.js" defer></script> <!--authentication script-->
     <script src="scripts/visualScript.js"></script> <!--style script-->
     <script src="scripts/languageScript.js"></script> <!--language script-->
     <script src="scripts/statsScript.js"></script> <!--stats script-->
     <script src="scripts/gameScript.js"></script> <!--game script-->
     <script src="scripts/ai.js"></script> <!--AI script-->
     <script src="scripts/leaderBoard.js"></script> <!--leaderboard script-->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-    <!--Montserrat-->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap"
-      rel="stylesheet"
-    />
-    <!--Inter-->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet"> <!--Montserrat-->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Montserrat:wght@600;700&display=swap" rel="stylesheet"> <!--Inter-->
   </head>
 
   <body>
-    <header class="header" role="banner">
+    <header class="header">
       <div class="header-left">
-        <img src="images/logo.png" alt="Tâb logo" class="logo_img" />
+        <img src="images/logo.png" alt="Tâb logo" class="logo_img">
         <h1 id="title">Tâb Game</h1>
       </div>
 
@@ -54,14 +47,14 @@
                 The two players sit opposite each other; each begins with a full
                 outer row of pieces.
               </p>
-              <hr />
+              <hr>
               <h4>Setup</h4>
               <p>Choose an odd number of columns in the configuration panel.</p>
               <p>
                 Each player's pieces will initially be displayed on the first
                 row (bottow row from the player's perspective).
               </p>
-              <hr />
+              <hr>
               <h4>Dice</h4>
               <p>
                 The game dice used is a combination of 4 wooden sticks. Each
@@ -82,13 +75,13 @@
                 Throws of 1,4 and 6 grant the player an extra throw; 2 and 3 end
                 the player's turn.
               </p>
-              <hr />
+              <hr>
               <h4>Beginning of the match</h4>
               <p>
                 At the start of the match, neither player may move until someone
                 throws a tâb (1).
               </p>
-              <hr />
+              <hr>
               <h4>Movement</h4>
               <p>
                 To move a piece, not just the first one, if it wasn't moved
@@ -104,13 +97,13 @@
                 if there are no pieces (with the same color) on the first row.
                 If that happens, you skip your turn on the button "Skip turn".
               </p>
-              <hr />
+              <hr>
               <h4>Capturing</h4>
               <p>
                 If a moving piece lands on one or more enemy pieces, those enemy
                 pieces are knocked off the board and goes to the oponent's side.
               </p>
-              <hr />
+              <hr>
               <h4>Restrictions</h4>
               <p>
                 No piece may return to its original home once it has left it,
@@ -119,7 +112,7 @@
                 player's original/first row.
               </p>
               <p></p>
-              <hr />
+              <hr>
               <h4>End of game</h4>
               <p>
                 The game ends when one player has no pieces left on the board;
@@ -138,8 +131,8 @@
             <section id="leaderboard-container" class="scrims-ladder">
               <div class="ladder-nav">
                 <div class="ladder-nav--col ladder-title">
-                  <h1 id="leaderboardTitle">Leaderboard</h1>
-                  <br /><br />
+                  <h2 id="leaderboardTitle">Leaderboard</h2>
+                  <br><br>
                 </div>
                 <div class="ladder-nav--col">
                   <input
@@ -147,9 +140,9 @@
                     id="leaderSearch"
                     class="ladder-search"
                     placeholder="Search User..."
-                  />
-                  <br />
-                  <br />
+                  >
+                  <br>
+                  <br>
                 </div>
               </div>
               <button id="sortbtn">Sort: Descending ⬇️</button>
@@ -159,7 +152,7 @@
                 <div class="ladder-nav--results-col" id="rank">
                   <label>Rank</label>
                 </div>
-                <div class="ladder-nav--results-col" id="user">
+                <div class="ladder-nav--results-col" id="user1">
                   <label>User</label>
                 </div>
                 <div class="ladder-nav--results-col" id="games_played">
@@ -269,7 +262,7 @@
                 similar mechanics, involving racing and capturing pieces along
                 intersecting paths.
               </p>
-              <hr />
+              <hr>
               <h4>Earliest Mentions and Linguistic Clues</h4>
               <p>
                 The earliest known reference to Tâb appears in a poem from 1310,
@@ -284,7 +277,7 @@
                 Asia, the game traveled with merchants and pilgrims, reaching as
                 far east as India and as far west as Tripoli.
               </p>
-              <hr />
+              <hr>
               <h4>Social Context and Historical Accounts</h4>
               <p>
                 Tâb was especially popular among the poorer classes of Egypt,
@@ -300,7 +293,7 @@
                 also confirmed the game’s widespread use among people of all
                 social classes, from commoners to merchants and travelers.
               </p>
-              <hr />
+              <hr>
               <h4>Gameplay and Symbolism</h4>
               <p>
                 Tâb is a war game, typically played on a board of three or four
@@ -319,7 +312,7 @@
                 symbolism, merging strategic gameplay with metaphors drawn from
                 the medieval Islamic world.
               </p>
-              <hr />
+              <hr>
               <h4>Decline and Rediscovery</h4>
               <p>
                 By the late medieval period, Tâb had spread across much of the
@@ -347,25 +340,29 @@
             src="images/pt-flag.png"
             alt="Bandeira de Portugal"
             class="flag-icon"
-          />
+          >
           PT
         </a>
         /
         <a href="#" id="langEN">
-          <img src="images/uk-flag.png" alt="UK flag" class="flag-icon" /> EN
+          <img src="images/uk-flag.png" alt="UK flag" class="flag-icon"> EN
         </a>
       </div>
       <!--Login form-->
-      <form class="authForm" aria-label="Login">
+      <form id="loginForm" class="authForm" aria-label="Login">
         <label for="user" class="sr-only">User</label>
-        <input id="user" name="user" type="text" placeholder="User" />
+        <input id="user" name="user" type="text" placeholder="User">
         <label for="pass" class="sr-only">Password</label>
-        <input id="pass" name="pass" type="password" placeholder="Password" />
-        <button type="submit" class="authBtn">Login</button>
+        <input id="pass" name="pass" type="password" placeholder="Password">
+        <button type="button" class="authBtn" id="loginBtn">Login</button>
       </form>
+      <div id="userInfo" class="user_info" hidden> <!-- for now, if clicked on Login button, the user logs in without a username, just to see future features-->
+        <span id="userName"></span>
+        <button id="logoutBtn" type="button">Logout</button>
+      </div>
     </header>
     <!--Board, config, player sides and chat bot-->
-    <main class="main-area-box" role="application">
+    <main class="main-area-box">
       <div class="main-area">
         <!-- LEFT: board + config + captured pieces -->
         <section class="board-wrapper" aria-label="Área do tabuleiro">
@@ -404,7 +401,7 @@
               </select>
 
               <label>
-                <input type="checkbox" id="first_to_play" checked /> First to
+                <input type="checkbox" id="first_to_play" checked> First to
                 Play
               </label>
 
@@ -417,7 +414,7 @@
           </div>
 
           <!-- board: responsive grid, columns defined by JS -->
-          <div id="gameBoard" class="game-board" aria-label="Tabuleiro do jogo">
+          <div id="gameBoard" class="game-board" role="region" aria-label="Tabuleiro do jogo">
             <!-- cells are injected by JS -->
           </div>
 
