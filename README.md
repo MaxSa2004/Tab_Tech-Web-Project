@@ -1,7 +1,7 @@
 
 # Tâb Game
 
-Tâb is a two player running-fight board game played across the Middle East and North Africa. This project implements that gaming experience against Artificial Intelligence, that comes with three different levels of difficulty. Included in its features presented below is the website's bilingual capacity. 
+Tâb is a two player running-fight board game played across the Middle East and North Africa. This project implements the game and integrates Artificial Intelligence, that comes with three different levels of difficulty. Included in its features presented below is the website's bilingual capacity. 
 
 
 ![Html5](https://img.shields.io/badge/HTML5-E34F26.svg?style=for-the-badge&logo=HTML5&logoColor=white)
