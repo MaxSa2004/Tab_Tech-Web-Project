@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let vsAI = false;   // true if playing against AI
     let aiDifficulty = 'normal';  // 'easy' | 'normal' | 'hard'
     let aiPlayerNum = null;       // 1 (red) ou 2 (yellow)
+    let humanPlayerNum = 1;    // 1 (red) ou 2 (yellow) || 1 is default
 
     // pieces
     let redPieces = 0;
@@ -40,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // helper function to get color by player number
     function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
     // helper function to check if it's human's turns
-    function isHumanTurn() { 
+    function isHumanTurn() {
         return !vsAI || currentPlayer !== aiPlayerNum;
     }
 
@@ -67,6 +68,52 @@ document.addEventListener("DOMContentLoaded", () => {
         playButton.disabled = !isConfigValid() || gameActive === true;
         if (leaveButton) leaveButton.disabled = !gameActive;
     }
+    // helper: get localized labels for captured panels
+    function getLocalizedLabelsForPanels() {
+        const lang = window.currentLang || 'pt';
+        const dict = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
+        const L = dict[lang] || dict.en || {};
+        // get labels with fallbacks
+        const player1Label = L.player1 || (lang === 'pt' ? 'Jogador 1' : 'Player 1');
+        const player2Label = (lang === 'pt' ? 'Jogador 2' : 'Player 2');
+        // AI label based on difficulty
+        const aiKey = (aiDifficulty === 'easy') ? 'easyIA'
+            : (aiDifficulty === 'hard') ? 'hardIA'
+                : 'normalIA';
+        const aiLabel =
+            L[aiKey] ||
+            (lang === 'pt'
+                ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})`
+                : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`);
+
+        return { player1Label, player2Label, aiLabel }; // return labels
+    }
+
+    // update captured panels titles based on mode and localization
+    function refreshCapturedTitles() {
+        const elP1 = document.getElementById('capTitleP1'); // (capturedP1)
+        const elP2 = document.getElementById('capTitleP2'); // (capturedP2)
+        if (!elP1 || !elP2) return; // skip
+
+        const { player1Label, player2Label, aiLabel } = getLocalizedLabelsForPanels();
+
+        if (vsAI) { // PvE mode
+            if (aiPlayerNum === 1) {
+                elP1.textContent = aiLabel;
+                elP2.textContent = player1Label;
+            } else { // aiPlayerNum === 2
+                elP1.textContent = player1Label;
+                elP2.textContent = aiLabel;
+            }
+        } else {
+            // PvP 
+            elP1.textContent = player1Label;
+            elP2.textContent = player2Label;
+        }
+    }
+
+    // expose refreshCapturedTitles globally
+    window.__refreshCaptured = refreshCapturedTitles;
     // leave button click handler
     leaveButton.addEventListener('click', () => {
         if (!gameActive) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
@@ -82,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : aiDifficulty === 'hard' ? 'hardIA'
                     : 'normalIA';
             return L[key] || // IA (Fácil)/AI (Easy) etc. 
-                (lang === 'pt' 
+                (lang === 'pt'
                     ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})` // IA (Fácil/Difícil/Normal)
                     : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`); // AI (Easy/Normal/Hard)
         })();
@@ -125,6 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedPiece = null;
         lastDiceValue = null;
         aiPlayerNum = null;
+        humanPlayerNum = 1;
+
+        refreshCapturedTitles(); // reset captured titles
 
         if (capturedP1) capturedP1.innerHTML = '';
         if (capturedP2) capturedP2.innerHTML = '';
@@ -349,13 +399,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return currentCell ? [currentCell] : [];
     }
     // if a piece is captured, send it to the captured pieces container (The player who captured it container)
-    function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) { 
+    function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         if (!pieceEl) return; // safety check
-        const target = capturedByPlayer === 1 ? capturedP1 : capturedP2; // determine target container (capturedP1 or capturedP2)
+        const humanMadeCapture = capturedByPlayer === humanPlayerNum; // check if human made the capture
+        const target = humanMadeCapture ? capturedP1 : capturedP2; // determine target container (capturedP1 or capturedP2)
         if (!target) return; // safety check
         // determine color
-        const isRed = pieceEl.classList.contains('red'); 
-        const colorClass = isRed ? 'red' : 'yellow'; 
+        const isRed = pieceEl.classList.contains('red');
+        const colorClass = isRed ? 'red' : 'yellow';
 
         // creates a token representing the captured piece
         const token = document.createElement('div');
@@ -511,8 +562,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // IA
         vsAI = false;
         aiPlayerNum = null;
+        humanPlayerNum = 1;
 
         lastDiceValue = null;
+        refreshCapturedTitles();
         if (capturedP1) capturedP1.innerHTML = '';
         if (capturedP2) capturedP2.innerHTML = '';
         gameActive = false;
@@ -611,6 +664,8 @@ document.addEventListener("DOMContentLoaded", () => {
         aiDifficulty = diffSel;
 
         aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null; // if vsAI, determine AI player number (depends on who plays first), else null
+        humanPlayerNum = vsAI ? (humanFirst ? 1 : 2) : 1; // if vsAI, determine human player number, else 1
+        refreshCapturedTitles(); // update captured panels titles based on mode and localization
 
         currentPlayer = 1; // red starts
         currentPlayerEl.textContent = currentPlayer; // update UI current Player text
@@ -889,7 +944,7 @@ document.addEventListener("DOMContentLoaded", () => {
             movePieceTo(piece, destCell); // move piece
 
             if (checkWinCondition()) return; // check for win condition
- 
+
             // extra throw rules
             if (result === 1 || result === 4 || result === 6) {
                 showMessage({ who: 'system', key: 'msg_ai_extra_roll' });
@@ -923,7 +978,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // spawns dice pouch and launches dice, returns Promise with game value (1-6)
     function createDicePouch(autoDrop = false) {
         const prev = document.body.querySelector('.dice-overlay'); // remove existing overlay
-        if (prev) prev.remove(); 
+        if (prev) prev.remove();
         // create overlay elements
         const overlay = document.createElement('div');
         overlay.className = 'dice-overlay';
