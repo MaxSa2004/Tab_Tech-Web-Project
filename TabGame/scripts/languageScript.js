@@ -1,7 +1,9 @@
-window.currentLang = window.currentLang || 'pt';
-const i18n = {
-  pt: {
+window.currentLang = window.currentLang || 'pt'; // the window object is global and supported in all browsers; currentLang keeps track of the selected language and defaults to 'pt' (Portuguese) if not already set
+const i18n = { // internationalization
+  pt: { // list of id:text pairs for Portuguese
     title: 'Jogo Tâb',
+    // buttons and modals
+    // instructions
     myBtnInstructions: 'Ver Instruções',
     modalContentInstructions: `<h3>Como jogar Tâb</h3>
         <h4>Introdução</h4>
@@ -42,8 +44,8 @@ const i18n = {
         <hr>
         <h4>Fim do jogo</h4>
         <p>O jogo termina quando um jogador fica sem peças no tabuleiro; o outro jogador é o vencedor.</p> `,
+      // classifications
     myBtnClassifications: 'Ver Classificações',
-    // div id para modal-content dentro de classifications
     modalContentClassifications: `<h3>Classificações</h3>`,
     leaderboardTitle: "Classificações",
     rank: "Posição",
@@ -56,6 +58,7 @@ const i18n = {
     normalIA: "IA (Normal)",
     hardIA: "IA (Difícil)",
     leaderSearch: "Procurar utilizador...",
+    // extra information
     myBtnExtra: 'Mais sobre o Tâb',
     modalContentExtra: `<h3>História do Tâb</h3>
         <h4>Origens e Distribuição Geográfica</h4>
@@ -77,6 +80,7 @@ const i18n = {
         <h4>Declínio e Redescoberta</h4>
         <p>No final do período medieval, o Tâb tinha-se espalhado por grande parte do mundo islâmico, tornando-se um dos jogos tradicionais mais reconhecidos da região. Entrou em declínio gradual durante o século XIX, embora os viajantes e os etnógrafos continuassem a documentá-lo.</p>
         <p>No século XX, os arqueólogos redescobriram tabuleiros e referências ao Tâb por todo o Mediterrâneo oriental, confirmando as suas profundas raízes históricas. A sua persistência durante séculos em todos os continentes faz dele um raro exemplo de um jogo de tabuleiro tradicional cujas regras, terminologia e significado simbólico sobreviveram praticamente intactos tanto pela tradição oral como pelos registos escritos.</p>`,
+    // configuration of board and game 
     configTitle: "Configuração",
     width1: "Largura",
     mode: "Modo",
@@ -91,13 +95,14 @@ const i18n = {
     first_to_play: "Primeiro a jogar",
     playButton: "Iniciar Jogo",
     leaveButton: "Sair do Jogo",
+    // game  texts and  prompts
     prompts: "Mensagens do Jogo",
     captured_one: "Suas peças",
     captured_two: "Peças do oponente",
     toggleMute: "Som: Ligado",
-    throwDiceBtn: "Lançar dado",
+    throwDiceBtn: "Lançar dado", // button to throw the dice
     current: "Jogador atual",
-    nextTurn: "Passar a vez",
+    nextTurn: "Passar a vez", // button to skip turn
     msg_game_started: "Jogo iniciado - Bom jogo!",
     msg_leave_game: "Jogador {player} desistiu.",
     msg_turn_of: "Agora é o turno do Jogador {player}.",
@@ -117,6 +122,7 @@ const i18n = {
     red_pieces: "Peças vermelhas restantes: {count}",
     yellow_pieces: "Peças amarelas restantes: {count}",
     select_mode: "Seleciona o modo de jogo e, se for vs. IA, selecciona o nível de dificuldade antes de começares.",
+    // pouch and dice texts
     dice_auto_hint: "Lançamento automático...",
     dice_face_up: "CIMA",
     dice_face_down: "BAIXO",
@@ -128,6 +134,7 @@ const i18n = {
     dice_name_2: "Itneyn",
     dice_name_3: "Teláteh",
     dice_name_4: "Arba'ah",
+    // statistics and game summary
     summary_title: "Resumo do jogo",
     summary_winner: "Vencedor",
     summary_duration: "Duração",
@@ -146,13 +153,15 @@ const i18n = {
     summary_no_winner: "Sem vencedor",
     summary_first_player_human: "Humano",
     summary_first_player_ai: "IA",
+    // leaderboard sort
     leader_sort_desc: "Ordenar: Descendente ⬇️",
     leader_sort_asc: "Ordenar: Ascendente ⬆️",
   },
-  en: {
+  en: { // list of id:text pairs for English
     title: 'Tâb Game',
+    // buttons and modals
+    // instructions
     myBtnInstructions: 'See Instructions',
-    // div id para modal-content dentro de instructions
     modalContentInstructions: `<h3>How to play Tâb</h3>
         <h4>Introduction</h4>
         <p>Tâb is a two player running-fight board game played across the Middle East and North Africa.</p>
@@ -203,8 +212,8 @@ const i18n = {
         <hr>
         <h4>End of game</h4>
         <p>The game ends when one player has no pieces left on the board; the other player is the winner.</p>`,
+    // classifications    
     myBtnClassifications: 'See Classifications',
-    // div id para modal-content dentro de classifications
     modalContentClassifications: `<h3>Classifications</h3>`,
     leaderboardTitle: "Leaderboard",
     rank: "Rank",
@@ -217,6 +226,7 @@ const i18n = {
     normalIA: "AI (Normal)",
     hardIA: "AI (Hard)",
     leaderSearch: "Search user...",
+    // extra information
     myBtnExtra: 'More about Tâb',
     modalContentExtra: `<h3>Tâb's History</h3>
         <h4>Origins and Geographic Spread</h4>
@@ -262,6 +272,7 @@ const i18n = {
           Mediterranean, confirming its deep historical roots. Its endurance for centuries across continents makes it
           a rare example of a traditional board game whose rules, terminology, and symbolic meaning have survived
           largely intact through both oral tradition and written record.</p>`,
+    // configuration of board and game
     configTitle: "Configuration",
     width1: "Width",
     mode: "Mode",
@@ -276,13 +287,14 @@ const i18n = {
     first_to_play: "First to Play",
     playButton: "Start Game",
     leaveButton: "Leave Game",
+    // game texts and  prompts
     prompts: "Game Prompts",
     captured_one: "Your pieces",
     captured_two: "Oponnent's pieces",
     toggleMute: "Sound: On",
-    throwDiceBtn: "Throw dice",
+    throwDiceBtn: "Throw dice", // button to throw the dice
     current: "Current player: ",
-    nextTurn: "Skip turn",
+    nextTurn: "Skip turn",  // button to skip turn
     msg_game_started: "Game started - Have fun!",
     msg_leave_game: "Player {player} gave up.",
     msg_turn_of: "It's Player {player}'s turn.",
@@ -302,6 +314,7 @@ const i18n = {
     red_pieces: "Red pieces remaining: {count}",
     yellow_pieces: "Yellow pieces remaining: {count}",
     select_mode: "Select the game mode and, if it's vs IA, select the difficulty level before you start.",
+    // pouch and dice texts
     dice_auto_hint: "Auto throwing...",
     dice_face_up: "UP",
     dice_face_down: "DOWN",
@@ -313,6 +326,7 @@ const i18n = {
     dice_name_2: "Itneyn",
     dice_name_3: "Teláteh",
     dice_name_4: "Arba'ah",
+    // statistics and game summary
     summary_title: "Game summary",
     summary_winner: "Winner",
     summary_duration: "Duration",
@@ -331,180 +345,176 @@ const i18n = {
     summary_no_winner: "No winner",
     summary_first_player_human: "Human",
     summary_first_player_ai: "AI",
+    // leaderboard sort
     leader_sort_desc: "Sort: Descending ⬇️",
     leader_sort_asc: "Sort: Ascending ⬆️",
 
   }
 };
 
-// languageScript.js
-document.addEventListener('DOMContentLoaded', () => {
-  if (typeof i18n === 'undefined') {
+// function to set the language based on user selection
+document.addEventListener('DOMContentLoaded', () => { // the DOMContentLoaded event fires when the initial HTML document has been completely loaded and parsed, without waiting for stylesheets, images, and subframes to finish loading
+  if (typeof i18n === 'undefined') { // check if i18n is defined
     console.error('i18n não encontrado. Certifica-te que translations.js é carregado antes deste script.');
     return;
   }
 
-  // keys que contêm HTML (usar innerHTML)
+  // keys that contain HTML content to update
   const htmlKeys = ['modalContentInstructions', 'modalContentClassifications', 'modalContentExtra'];
 
-  // keys de texto que queremos atualizar (conforme o teu i18n)
+  // keys that contain simple text content to update
   const textKeys = [
     'title', 'myBtnInstructions', 'myBtnClassifications', 'myBtnExtra',
     'configTitle', 'width1', 'mode', 'lvl', 'easy', 'normal', 'hard', 'optionMode', 'optionIA', 'player', 'ia',
     'first_to_play', 'playButton', 'captured_one', 'captured_two',
     'toggleMute', 'throwDiceBtn', 'current', 'nextTurn', 'prompts', 'leaveButton'
   ];
-
+  // function to set the language
   const setLang = (lang) => {
-    window.currentLang = lang;
-    if (!i18n[lang]) {
+    window.currentLang = lang; // update the global currentLang variable
+    if (!i18n[lang]) { // check if the selected language exists in the i18n object
       console.warn('Língua não encontrada:', lang);
       return;
     }
 
-    // 1) atualizar textos simples / labels / botões de forma segura
+    // 1) updates simple text elements
     textKeys.forEach(key => {
-      const value = i18n[lang][key];
-      if (value === undefined) return; // nada para esta key
+      const value = i18n[lang][key]; // get the translation for the key
+      if (value === undefined) return; // skip if no translation available
 
-      const el = document.getElementById(key);
+      const el = document.getElementById(key); // try to find element by id=key
 
-      // se não existe elemento com esse id, tenta encontrar label[for="key"]
-      // (útil quando preferes usar label[for] em vez de ids nos labels)
+      // if it doesn't exist by id, try to find label[for=key], which is common for inputs
       const labelFor = document.querySelector(`label[for="${key}"]`);
 
-      // Caso: element exists
+      // if element el exists by id
       if (el) {
         const tag = el.tagName;
-
-        // Não sobrescrever SELECTs diretamente (preserva options)
+        // if element is SELECT, update associated label
         if (tag === 'SELECT') {
-          // tenta traduzir label associado (label[for="selectId"]) se existir
+          // first try label[for=key]
           if (labelFor) labelFor.textContent = value;
           else {
-            // se o select tem id igual ao key mas o label tem id diferente (ex: label id="width"), tenta por id
+            // fallback: try label by id (#keyLabel or #key-label)
             const labelById = document.getElementById(`${key}Label`) || document.getElementById(`${key}-label`);
             if (labelById) labelById.textContent = value;
           }
           return;
         }
 
-        // Não sobrescrever INPUT/checkbox/textarea — actualiza label ou placeholder
+        // if element is INPUT or TEXTAREA, update associated label or placeholder (specifies a short hint that describes the expected value of an input field)
         if (tag === 'INPUT' || tag === 'TEXTAREA') {
-          // procura label que envolva o input (ex: <label><input> Text</label>)
+          // searches for wrapping label
           const wrappingLabel = el.closest('label');
           if (wrappingLabel) {
-            // 1) remover nós de texto antigos (evita duplicação)
+            // 1) removes existent text nodes (keeps other elements, e.g., spans/icons)
             Array.from(wrappingLabel.childNodes).forEach(node => {
               if (node.nodeType === Node.TEXT_NODE) node.remove();
             });
 
-            // 2) criar/atualizar um único span para o texto da label
+            // 2) creates/updates span.i18n-label-text (to keep styling/icons intact)
             let textSpan = wrappingLabel.querySelector('.i18n-label-text');
             if (!textSpan) {
               textSpan = document.createElement('span');
               textSpan.className = 'i18n-label-text';
               wrappingLabel.appendChild(textSpan);
             }
-            // adiciona um espaço inicial para separar do input
+            // updates text
             textSpan.textContent = ' ' + value;
             return;
           }
-          // se houver label[for], atualiza
+          // if no wrapping label, tries label[for=key]
           if (labelFor) {
             labelFor.textContent = value;
             return;
           }
-          // fallback: atualiza placeholder se existir
+          // fallback: updates placeholder (if exists)
           if ('placeholder' in el) {
             el.placeholder = value;
           } else {
-            // como último recurso, não sobrescrever o input value
+            // last resource: does not update for security reasons (to avoid misleading labels)
             console.warn(`Não actualizei input #${key} por segurança; adiciona um label[for="${key}"] para traduzir.`);
           }
           return;
         }
 
-        // Caso: elemento é container que contém o strong #currentPlayer (ex: div id="current")
+        // in case the key is 'current' (current player display)
         if (key === 'current') {
-          // preserva elemento #currentPlayer
+          // preserves element <strong id="currentPlayer">X</strong> inside the text
           const strong = el.querySelector('#currentPlayer');
           const strongHtml = strong ? strong.outerHTML : '';
           el.innerHTML = `${value} ${strongHtml}`; // ex: "Current player: <strong id='currentPlayer'>1</strong>"
           return;
         }
 
-        // Caso: opções individuais com id (ex: <option id="easy">)
+        // in case the element is OPTION, the value goes to textContent (the value is the translated text, and the textContent is what is shown to the user, so it's like we substitute the text by the translated one)
         if (tag === 'OPTION') {
           el.textContent = value;
           return;
         }
 
-        // Caso geral: botões, headings, divs, spans -> texto simples
+        // in general, updates textContent, just like in OPTION case
         el.textContent = value;
         return;
       }
 
-      // Se não existe elemento com id=key, talvez exista uma label[for="key"]
+      // if element not found by id, but found label[for=key]
       if (labelFor) {
         labelFor.textContent = value;
         return;
       }
 
-      // Se não existe nem id nem label, procura por option com esse id (ex: options com id easy/hard)
+      // else look for option by id (for cases like <option id="easy"> etc.)
       const opt = document.getElementById(key);
       if (opt && opt.tagName === 'OPTION') {
         opt.textContent = value;
         return;
       }
 
-    // caso não encontrado: ignora silenciosamente (podes descomentar o log para debug)
-    // console.log(`(i18n) elemento para "${key}" não encontrado no DOM.`);
+    // if not found, skip
+
     });
 
-    // 2) actualizar blocos HTML (modais, conteúdos com tags)
+    // 2) update html blocks, like modals
     htmlKeys.forEach(key => {
-      const value = i18n[lang][key];
-      if (value === undefined) return;
-      const el = document.getElementById(key);
+      const value = i18n[lang][key]; // get the translation for the key
+      if (value === undefined) return; // skip if no translation available
+      const el = document.getElementById(key); // try to find element by id=key
       if (!el) {
-        // console.log(`(i18n) bloco HTML #${key} não encontrado.`);
+        // if not found, skip
         return;
       }
-      el.innerHTML = value;
+      el.innerHTML = value; // update innerHTML with the translated content
     });
 
-    // 3) traduzir opções específicas (caso tenhas <option id="easy"> etc.)
+    // 3) translate specific options in selects (by id)
     ['easy', 'normal', 'hard', 'player', 'ia', 'optionMode', 'optionIA'].forEach(optId => {
-      const text = i18n[lang][optId];
-      if (text === undefined) return;
-      const optEl = document.getElementById(optId);
-      if (optEl && optEl.tagName === 'OPTION') optEl.textContent = text;
+      const text = i18n[lang][optId]; // get the translation for the option
+      if (text === undefined) return; // skip if no translation available
+      const optEl = document.getElementById(optId); // try to find option element by id
+      if (optEl && optEl.tagName === 'OPTION') optEl.textContent = text; // update textContent if it's an OPTION
     });
 
-    // acessibilidade / SEO hint
+    // update document language attribute (for accessibility)
     document.documentElement.lang = (lang === 'pt' ? 'pt-PT' : 'en');
 
-    // guarda escolha
+    // saves choice in localStorage
     localStorage.setItem('siteLang', lang);
 
-    if (window.__refreshChat) window.__refreshChat();
-    if (window.__refreshDice) window.__refreshDice();
-    if (window.__refreshCaptured) window.__refreshCaptured();
-    if (window.__refreshLeaderboard) window.__refreshLeaderboard();
+    if (window.__refreshChat) window.__refreshChat(); // custom function to refresh chat texts
+    if (window.__refreshDice) window.__refreshDice(); // custom function to refresh dice texts
+    if (window.__refreshCaptured) window.__refreshCaptured(); // custom function to refresh captured pieces texts
+    if (window.__refreshLeaderboard) window.__refreshLeaderboard(); // custom function to refresh leaderboard texts
 
   };
 
-// listeners com guard (se os elementos não existirem, nada falha)
-const elPt = document.getElementById('langPT');
-const elEn = document.getElementById('langEN');
-if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); });
-if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); });
+// attach event listeners to language switch buttons/links -> set the language on click
+const elPt = document.getElementById('langPT'); // get the Portuguese language button/link by its id
+const elEn = document.getElementById('langEN'); // get the English language button/link by its id
+if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); }); // if we click on the Portuguese language button/link, set language to 'pt'
+if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); }); // if we click on the English language button/link, set language to 'en'
 
-// inicializar (fallback para en conforme preferes)
+// initialization on page load: set language from localStorage or default to 'en'
 setLang(localStorage.getItem('siteLang') || 'en');
 
-  // debug helper (descomenta se precisares)
-  // window.__i18n = i18n;
-  // console.log('i18n pronto. keys:', Object.keys(i18n));
 });
