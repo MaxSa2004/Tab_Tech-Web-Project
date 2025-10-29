@@ -221,6 +221,7 @@ button[disabled] {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  padding-top: 10px;
 }
 
 /* row of game settings */
