@@ -610,31 +610,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // messages
     function showMessage({ who = 'system', player = null, text, key, params }) {
-        const wrap = document.createElement('div');
+        const wrap = document.createElement('div'); // message wrapper
         wrap.className = 'message';
 
-        const bubble = document.createElement('div');
+        const bubble = document.createElement('div'); // message bubble
         bubble.className = 'bubble';
 
-        if (key) {
-            // guardar key/params para re-tradução futura
+        if (key) { // i18n key provided
+            // use i18n translation
             bubble.dataset.i18nKey = key;
-            if (params && Object.keys(params).length) {
+            if (params && Object.keys(params).length) { // store params as JSON string if provided
                 bubble.dataset.i18nParams = JSON.stringify(params);
             }
-            bubble.textContent = t(key, params || {});
+            bubble.textContent = t(key, params || {}); // set translated text
         } else {
-            // fallback: texto literal (não será re-traduzido no futuro)
+            // fallback: use raw text
             bubble.textContent = text ?? '';
         }
 
-        if (who === 'system') {
+        if (who === 'system') { // system message
             wrap.classList.add('msg-server');
             wrap.appendChild(bubble);
-        } else {
+        } else { // player message
             wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
             const avatar = document.createElement('div');
-            avatar.className = 'avatar';
+            avatar.className = 'avatar'; // player avatar
             avatar.textContent = 'P' + player;
             const stack = document.createElement('div');
             stack.appendChild(bubble);
@@ -643,7 +643,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         messagesEl.appendChild(wrap);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+        messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll to bottom
     }
 
     // translate existing chat bubbles if language changes
