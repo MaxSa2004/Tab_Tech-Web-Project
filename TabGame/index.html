@@ -1,22 +1,16 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-PT"> <!--lanuage-->
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" /> <!--responsive-->
     <title>Tâb Game</title>
-    <link rel="stylesheet" href="styles/style.css" />
-    <script src="scripts/visualScript.js"></script>
-    <!--style script-->
-    <script src="scripts/languageScript.js"></script>
-    <!--language script-->
-    <script src="scripts/statsScript.js"></script>
-    <!--stats script-->
-    <script src="scripts/gameScript.js"></script>
-    <!--game script-->
-    <script src="scripts/ai.js"></script>
-    <!--AI script-->
-    <script src="scripts/leaderBoard.js"></script>
-    <!--leaderboard script-->
+    <link rel="stylesheet" href="styles/style.css" /> <!--main style-->
+    <script src="scripts/visualScript.js"></script> <!--style script-->
+    <script src="scripts/languageScript.js"></script> <!--language script-->
+    <script src="scripts/statsScript.js"></script> <!--stats script-->
+    <script src="scripts/gameScript.js"></script> <!--game script-->
+    <script src="scripts/ai.js"></script> <!--AI script-->
+    <script src="scripts/leaderBoard.js"></script> <!--leaderboard script-->
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap"
       rel="stylesheet"
@@ -160,7 +154,7 @@
               </div>
               <button id="sortbtn">Sort: Descending ⬇️</button>
 
-              <!-- Cabeçalhos -->
+              <!-- Top row for the table -->
               <div class="ladder-nav--results">
                 <div class="ladder-nav--results-col" id="rank">
                   <label>Rank</label>
@@ -178,8 +172,8 @@
                   <label>Win Ratio %</label>
                 </div>
               </div>
-
-              <!-- Jogador 1 -->
+              <!--Initial values and order when data is at 0-->
+              <!-- Player 1 -->
               <div class="ladder-nav--results-players">
                 <div class="results-col">
                   <span class="results-rank"
@@ -196,7 +190,7 @@
                 </div>
               </div>
 
-              <!-- IA (easy) -->
+              <!-- AI (easy) -->
               <div class="ladder-nav--results-players">
                 <div class="results-col">
                   <span class="results-rank"
@@ -213,7 +207,7 @@
                 </div>
               </div>
 
-              <!-- IA (normal) -->
+              <!-- AI (normal) -->
               <div class="ladder-nav--results-players">
                 <div class="results-col">
                   <span class="results-rank"
@@ -230,7 +224,7 @@
                 </div>
               </div>
 
-              <!-- IA (hard) -->
+              <!-- AI (hard) -->
               <div class="ladder-nav--results-players">
                 <div class="results-col">
                   <span class="results-rank"
@@ -347,7 +341,7 @@
           </div>
         </div>
       </div>
-      <div class="lang-switch">
+      <div class="lang-switch"> <!--language switcher-->
         <a href="#" id="langPT">
           <img
             src="images/pt-flag.png"
@@ -361,7 +355,7 @@
           <img src="images/uk-flag.png" alt="UK flag" class="flag-icon" /> EN
         </a>
       </div>
-
+      <!--Login form-->
       <form class="authForm" aria-label="Login">
         <label for="user" class="sr-only">User</label>
         <input id="user" name="user" type="text" placeholder="User" />
@@ -370,7 +364,7 @@
         <button type="submit" class="authBtn">Login</button>
       </form>
     </header>
-
+    <!--Board, config, player sides and chat bot-->
     <main class="main-area-box" role="application">
       <div class="main-area">
         <!-- LEFT: board + config + captured pieces -->
@@ -378,6 +372,7 @@
           <div class="config">
             <h3 id="configTitle">Configuration</h3>
             <div class="controls-row">
+              <!-- board width selection + game mode + IA level + first to play + play/leave buttons -->
               <label for="width" id="width1">Width:</label>
               <select id="width" name="width">
                 <option value="7">7</option>
@@ -414,18 +409,16 @@
               </label>
 
               <button id="playButton" class="playButton">Start Game</button>
-              <button id="leaveButton" class="leaveButton" disabled>
-                Leave Game
-              </button>
+              <button id="leaveButton" class="leaveButton" disabled>Leave Game</button>
             </div>
           </div>
           <div class="arena" id="arena">
-            <!--pop up dos dados injetado em JS-->
+            <!--pop up of data injected by JS-->
           </div>
 
-          <!-- board: grid responsiva, colunas definidas via JS -->
+          <!-- board: responsive grid, columns defined by JS -->
           <div id="gameBoard" class="game-board" aria-label="Tabuleiro do jogo">
-            <!-- cells são injetadas por JS segundo largura selecionada -->
+            <!-- cells are injected by JS -->
           </div>
 
           <!-- captured pieces area -->
@@ -435,9 +428,7 @@
               <div id="capturedP1" class="captured-list"></div>
             </div>
             <div class="captured-col">
-              <div class="captured-title" id="captured_two">
-                Oponnent's pieces
-              </div>
+              <div class="captured-title" id="captured_two">Oponnent's pieces</div>
               <div id="capturedP2" class="captured-list"></div>
             </div>
           </div>
@@ -457,10 +448,9 @@
             aria-atomic="false"
           ></div>
 
-          <div class="input-area">
+          <div class="input-area"> <!--Buttons to play and current player number-->
             <button id="throwDiceBtn" class="link-button">Throw dice</button>
-            <div class="current-player" id="current">
-              Current player: <strong id="currentPlayer">1</strong>
+            <div class="current-player" id="current">Current player: <strong id="currentPlayer">1</strong>
             </div>
             <button id="nextTurn" class="link-button">Skip turn</button>
           </div>
