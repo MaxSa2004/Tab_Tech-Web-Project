@@ -72,7 +72,7 @@ const i18n = { // internationalization
         <h4>Contexto Social e Relatos Históricos</h4>
         <p>O Tab era especialmente popular entre as classes mais pobres do Egipto, onde continuou a ser jogado até ao século XIX. O viajante inglês Edward William Lane registou descrições detalhadas das suas regras e do jogo na década de 1820, fazendo da sua obra um dos relatos mais completos do jogo que chegaram até nós.</p>
         <p>Após os escritos de Lane, estudiosos como Murray, Bell e Parlett ajudaram a reavivar o interesse pelo Tab durante o século XX. As evidências arqueológicas do Mediterrâneo Oriental também confirmaram o uso generalizado do jogo entre pessoas de todas as classes sociais, desde plebeus a comerciantes e viajantes.</p>
-        h4>Jogabilidade e Simbolismo</h4>
+        <h4>Jogabilidade e Simbolismo</h4>
         <p>Tâb é um jogo de guerra, tipicamente jogado num tabuleiro de três ou quatro filas. Pertence a uma família mais vasta de jogos de "luta em curso" — semelhantes ao Tablan indiano e ao Daldøs escandinavo — em que as peças de cada jogador correm pelo tabuleiro em direções opostas, capturando peças inimigas quando os caminhos se cruzam.</p>
         <p>Uma característica distintiva do Tâb é a sua mecânica de conversão. Quando um jogador lança um resultado especial conhecido como tâb (frequentemente equivalente a "1" nos dados modernos), uma das suas peças é convertida de cristã (não convertida) para muçulmana (convertida). Apenas as peças convertidas podem mover-se livremente e participar nas capturas.
         Esta regra reflete provavelmente o simbolismo cultural e religioso do jogo, fundindo uma jogabilidade estratégica com metáforas retiradas do mundo islâmico medieval.</p>
