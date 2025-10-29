@@ -154,8 +154,8 @@ const i18n = { // internationalization
     summary_first_player_human: "Humano",
     summary_first_player_ai: "IA",
     // leaderboard sort
-    leader_sort_desc: "Ordenar: Descendente ⬇️",
-    leader_sort_asc: "Ordenar: Ascendente ⬆️",
+    leader_sort_desc: "Ordenar: Descendente",
+    leader_sort_asc: "Ordenar: Ascendente",
   },
   en: { // list of id:text pairs for English
     title: 'Tâb Game',
@@ -346,8 +346,8 @@ const i18n = { // internationalization
     summary_first_player_human: "Human",
     summary_first_player_ai: "AI",
     // leaderboard sort
-    leader_sort_desc: "Sort: Descending ⬇️",
-    leader_sort_asc: "Sort: Ascending ⬆️",
+    leader_sort_desc: "Sort: Descending",
+    leader_sort_asc: "Sort: Ascending",
 
   }
 };
