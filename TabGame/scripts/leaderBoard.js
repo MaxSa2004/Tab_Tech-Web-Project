@@ -30,8 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
     games_won: "Vitórias",
     win_ratio: "Taxa de vitória %",
     easyIA: "IA (Fácil)", normalIA: " IA (Normal)", hardIA: "IA (Difícil)",
-    leader_sort_desc: "Ordenar: Descendente ⬇️",
-    leader_sort_asc: "Ordenar: Ascendente ⬆️",
+    leader_sort_desc: "Ordenar: Descendente",
+    leader_sort_asc: "Ordenar: Ascendente",
     player1: "Jogador 1"
   };
   const DEFAULT_EN = {
