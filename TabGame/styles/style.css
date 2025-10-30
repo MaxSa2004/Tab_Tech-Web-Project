@@ -418,7 +418,7 @@ button[disabled] {
   color: var(--muted);
 }
 
-.sr-only {
+.loginInput {
   position: absolute;
   left: -9999px;
   top: auto;
