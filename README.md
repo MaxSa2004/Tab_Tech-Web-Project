@@ -60,6 +60,7 @@ The project is supported by all browsers and screen sizes.
 - Leaderboard with sort/search
 - PT/EN live switch
 - Acessible modals and controls
+- Login (just a simulation for now)
 
 ## Gameplay overview
 
@@ -116,6 +117,11 @@ Differences by difficulty:
 All UI strings are translated (prompts, buttons, summary, leaderboard, dice overlay). 
 The language reseting doesn't reset the game. Instead, it translates all text that is on the page. 
 
+What is i18n? 
+~~~
+i18n is the process of designing and developing an application so it can be easily adapted to various languages and regions without needing to rewrite the source code. It's like building a "language-ready" app. Its main goal is to separate text and formats from application logic. So instead of writing text directly in the code, we can use a placeholder or key, and the actual text is stored in separate language files.
+~~~
+
 How did we add a language:
 - Add object in i18n with a respective key (with 2 languages or more, the key must be the same)
 - Update setLang to include new keys if features are added
@@ -153,14 +159,35 @@ For example, to throw a dice, the data flows in this order:
 dice overlay -> lastDiceValue -> valid moves -> move -> stats/log -> summary/leaderboard
 
 ## Improvement Ideas
-A good idea would be to actually see the AI making the move because the dice modal appears on top of the board. Instead the AI uses the dice in a more automatic way than the player and the player just sees the final move, and therefore, may get lost about where they had a piece captured etc. 
+A good idea would be to actually see the AI making the move because the dice modal appears on top of the board. Instead the AI uses the dice in a more automatic way than the player and the player just sees the final move, and therefore, may get lost about where they had a piece captured etc. Another thing that we could improve in the future would be resizing the board and chat in relation to the browser's size. If the page is big, for instance when using a monitor, the board is quite small.
 
 ## Acknowledgments
-[Cyningstan](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=http://www.cyningstan.com/game/937/tb&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQFnoECB0QAQ&usg=AOvVaw3K2Qgo-Zjw-BQ99W3sxvn3)
+Explanation of the game rules and history:
 
-[Tabletopia](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://tabletopia.com/games/tab&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQFnoECCAQAQ&usg=AOvVaw1S0pQGnGfjYCyh41kKLnIR)
+- [Cyningstan](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=http://www.cyningstan.com/game/937/tb&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQFnoECB0QAQ&usg=AOvVaw3K2Qgo-Zjw-BQ99W3sxvn3)
 
-[NewVenture Games](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.youtube.com/watch%3Fv%3DeqrFoFZUJdk&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQwqsBegQIERAB&usg=AOvVaw2g7DZMhjtCaRyMvqMG9b0I)
+- [Tabletopia](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://tabletopia.com/games/tab&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQFnoECCAQAQ&usg=AOvVaw1S0pQGnGfjYCyh41kKLnIR)
+
+- [NewVenture Games](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.youtube.com/watch%3Fv%3DeqrFoFZUJdk&ved=2ahUKEwiopvaC28eQAxWY3AIHHWxbDwgQwqsBegQIERAB&usg=AOvVaw2g7DZMhjtCaRyMvqMG9b0I)
+
+Implementation guides/ code resources:
+
+- [W3Schools on input elements](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/password&ved=2ahUKEwj_zt7Ph8yQAxVqVKQEHUH2JhUQFnoECBYQAQ&usg=AOvVaw2FJK5dTGY6BKsVSJEFYiyK)
+
+- [W3Schools on Modal Box](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.w3schools.com/howto/howto_css_modals.asp&ved=2ahUKEwjvpp_oh8yQAxUWXaQEHY9zFkcQFnoECAQQAQ&usg=AOvVaw1Trci-zSfb8Qkn7ezvRizX)
+
+- [Checkers Game Implementation Video](https://www.youtube.com/watch?v=JwvXf6JzbXc)
+
+- [Checkers Game Implementation Code](https://codepen.io/calincojo/pen/wBQqYm)
+
+- [i18n usage step-by-step](https://medium.com/@nohanabil/building-a-multilingual-static-website-a-step-by-step-guide-7af238cc8505)
+
+
+Markup validation service:
+
+- [W3C](https://validator.w3.org) - works for HTML and CSS
+
+
 
 ## Authorship
 Made by Bruno Barros, Maximiliano Sá and Rita Moreira.
