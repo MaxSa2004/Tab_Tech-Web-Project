@@ -14,11 +14,11 @@ Tâb is a two player running-fight board game played across the Middle East and 
 ## Directory Tree
 ```text
 TabGame/
-├── images/                   
-|   ├── logo.png                
+├── images/
+|   ├── logo.png
 |   ├── pt-flag.png
 │   └── uk-flag.png
-├── scripts/   
+├── scripts/
 │   ├── ai.js
     ├── authenticationScript.js
 │   ├── gameScript.js
@@ -26,10 +26,10 @@ TabGame/
 │   ├── leaderBoard.js
 |   ├── statsScript.js
 │   └── visualScript.js
-├── styles/              
-|   └── style.css         
+├── styles/
+|   └── style.css
 └── index.html
-README.md                 
+README.md
 ```
 
 ## Table of Contents
