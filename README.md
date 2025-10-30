@@ -20,7 +20,7 @@ TabGame/
 │   └── uk-flag.png
 ├── scripts/
 │   ├── ai.js
-    ├── authenticationScript.js
+│   ├── authenticationScript.js
 │   ├── gameScript.js
 |   ├── languageScript.js
 │   ├── leaderBoard.js
