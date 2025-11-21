@@ -88,5 +88,18 @@ const Network = (function () {
         return postJSON('/ranking', {group, size});
     }
 
+    return {
+        postJSON,
+        getJSON,
+        register, 
+        join,
+        leave, 
+        roll,
+        pass,
+        notify,
+        createUpdateEventSource,
+        ranking
+    };
+
     
-})
+})();
