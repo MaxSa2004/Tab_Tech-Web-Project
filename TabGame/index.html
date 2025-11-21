@@ -341,11 +341,11 @@
       </div>
       <!--Login form-->
       <form id="loginForm" class="authForm" aria-label="Login">
-        <label for="user" class="loginInput">User</label>
+        <label for="user" class="loginInput" id="nick">User</label>
         <input id="user" name="user" type="text" placeholder="User">
         <label for="pass" class="loginInput">Password</label>
-        <input id="pass" name="pass" type="password" placeholder="Password">
-        <button type="button" class="authBtn" id="loginBtn">Login</button>
+        <input id="pass" name="pass" type="password" id="pass" placeholder="Password">
+        <button type="submit" class="authBtn" id="loginBtn">Login</button>
       </form>
       <div id="userInfo" class="user_info" hidden> <!-- for now, if clicked on Login button, the user logs in without a username, just to see future features-->
         <span id="userName" class="username"></span>
