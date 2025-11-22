@@ -2,7 +2,7 @@
 // specific functions: register, join, leave, roll, pass, notify, update, ranking
 
 const Network = (function () {
-    const BASE = 'http://twserver.alunos.dcc.fc.up.pt:8008/';
+    const BASE = 'http://twserver.alunos.dcc.fc.up.pt:8008';
 
     // generic functions POST, GET
     async function postJSON(path, bodyObj){

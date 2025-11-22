@@ -1120,3 +1120,12 @@ main {
 .scrims-ladder .ladder-title h1 {
   color: #fff; /* make only the title white */
 }
+
+/* forces style on authenticator */
+.hidden-by-js {
+  display: none !important;
+}
+
+.visible-by-js {
+  display:flex !important;
+}
