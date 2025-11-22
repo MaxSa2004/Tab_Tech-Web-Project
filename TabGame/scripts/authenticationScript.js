@@ -71,17 +71,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
         const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game') || window.currentGameId;
         logoutBtn.disabled = true;
-
-        const leaveButton = document.getElementById('leaveButton');
-        if(leaveButton){
-            const wasDisabled = leaveButton.disabled;
+        try {
+            if(window.updateEventSource){
+                try {
+                    window.updateEventSource.close();
+                } catch(e){
+                    console.warn('Não foi possível fechar updateEventSource:', e);
+                }
+                if(window.updatePollHandle){
+                    clearInterval(window.updatePollHandle);
+                    window.updatePollHandle = null;
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao limpar atualizações do jogo:', e);
+        }
+        if(typeof window.leaveGame === 'function'){
             try {
-                leaveButton.disabled = false;
-                leaveButton.click();
+                window.leaveGame({showStats: false, updaterank: false});
             } catch (e) {
-                console.warn('Não foi possível clicar em leaveButton;', e);
-            } finally {
-                leaveButton.disabled = wasDisabled;
+                console.warn('Erro ao sair do jogo:', e);
             }
         } else {
             const board = document.getElementById('gameBoard');
@@ -91,13 +100,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if(cap1) cap1.innerHTML = '';
             if(cap2) cap2.innerHTML = '';
         }
+        if(typeof window.clearMessages === 'function'){
+            try {
+                window.clearMessages();
+            } catch (e) {
+                const m = document.getElementById('messages');
+                if(m) m.innerHTML = '';
+            }
+        }
+        if(typeof window.initGame === 'function'){
+            try {
+                window.initGame({initConfig: true});
+            } catch (e) {
+                console.warn('Erro ao reiniciar o estado do jogo:', e);
+            }
+        }
+        try {
+            sessionStorage.removeItem('tt_password');
+            sessionStorage.removeItem('tt_game');
+            localStorage.removeItem('tt_password');
+            localStorage.removeItem('tt_game');
+        } catch (e) {
+            console.warn('Não foi possível remover dados de sessionStorage/localStorage:', e);
+        }
 
-        nick = sessionStorage.getItem('tt_nick') || '';
-        form = document.getElementById('loginForm');
-        userBox = document.getElementById('userInfo');
-        inputnick = document.getElementById('user');
-        inputpassword = document.getElementById('pass');
-        userNameText = document.getElementById('userName');
+        try { window.onbeforeunload = null; } catch(e){}
 
         if(form){
             form.classList.remove('hidden-by-js');

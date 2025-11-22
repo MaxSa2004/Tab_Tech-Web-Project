@@ -115,7 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // expose refreshCapturedTitles globally
     window.__refreshCaptured = refreshCapturedTitles;
     // leave button click handler
-    leaveButton.addEventListener('click', () => {
+
+    function leaveGame({showStats = true, updateRank = true} = {})  {
         if (!gameActive) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
 
         // Helpers to obtain localized player labels for leaderboard update
@@ -155,16 +156,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 winnerNum = 1;
             }
         }
-
         // Update leaderboard (winner GW+GP, loser GP) while leaving
-        window.updateLeaderboard(winnerName, loserName);
+        if(updateRank) {
+            try {
+                window.updatePlayerRankingOnLeave(winnerName, loserName);
+            } catch (e) {
+                console.warn('Erro ao atualizar ranking ao sair do jogo:', e);
+            }
+        }
 
         // Update TabStats to show summary with the winner before resetting
-        TabStats.setWinner(winnerNum);
-        TabStats.showSummary();
+        if(showStats){
+            try {
+                TabStats.setWinner(winnerNum);
+                TabStats.showSummary();
+            } catch (e) {
+                console.warn('Erro ao mostrar estatísticas do jogo ao sair do jogo:', e);
+            }
+        }
+
 
         // system message that the player has left the game
-        showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
+        if(showStats){
+            showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
+        }
+        
 
         // Reset game state & UI
         gameActive = false;
@@ -188,7 +204,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderBoard(parseInt(widthSelect.value, 10));
         updatePlayButtonState();
-    });
+    }
+
+    window.leaveGame = leaveGame;
+    if(leaveButton){
+        leaveButton.addEventListener('click', () => leaveGame({showStats: true, updateRank: true}));
+    }
 
     if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState); // update play button state on mode change, if mode is PvP, else waits for AI level
     if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState); // update play button state on AI level change, to Start Game
@@ -659,6 +680,13 @@ document.addEventListener("DOMContentLoaded", () => {
             b.textContent = t(key, params); // re-translate and update text content
         });
     }
+
+    function clearMessages() {
+        if(!messagesEl) return;
+        messagesEl.innerHTML = '';
+        return;
+    }
+    window.clearMessages = clearMessages;
 
     // expose refreshChatBubbles globally
     window.__refreshChat = refreshChatBubbles;
@@ -1229,19 +1257,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     window.tabGame.getLastValue = () => lastDiceValue; // getter for last dice value
 
-    // --- initialization ---
-    const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
-    renderBoard(initialCols);
-    showMessage({ who: 'system', key: 'select_mode' });
-
-    if (nextTurnBtn) nextTurnBtn.disabled = true;
-    if (throwBtn) throwBtn.disabled = true;
-
-    //  debug warnings
-    if (!widthSelect) console.warn('widthSelect not found');
-    if (!gameBoard) console.warn('gameBoard not found');
-    if (!messagesEl) console.warn('messagesEl not found');
-
     // i18n helper function to translate keys with params
     function t(key, params = {}) {
         const lang = window.currentLang || 'pt';
@@ -1252,4 +1267,35 @@ document.addEventListener("DOMContentLoaded", () => {
         let str = dict[key] ?? root.en?.[key] ?? root.pt?.[key] ?? key;
         return String(str).replace(/\{(\w+)\}/g, (_, k) => params[k] ?? '');
     }
+
+    // --- initialization ---
+    function initGame({initConfig = false}  = {}) {
+        const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
+        renderBoard(initialCols);
+        showMessage({ who: 'system', key: 'select_mode' });
+        if(initConfig) {
+            if(modeSelect) {
+                modeSelect.value = '';
+                modeSelect.selectedIndex = 0;
+            }
+            if(iaLevelSelect) {
+                iaLevelSelect.value = '';
+                iaLevelSelect.selectedIndex = 0;
+            }
+            if(widthSelect) widthSelect.value = 9;
+            if(firstToPlayCheckbox) firstToPlayCheckbox.checked = false;
+        }
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
+        if (throwBtn) throwBtn.disabled = true;
+    
+        //  debug warnings
+        if (!widthSelect) console.warn('widthSelect not found');
+        if (!gameBoard) console.warn('gameBoard not found');
+        if (!messagesEl) console.warn('messagesEl not found');
+    
+    }
+
+    window.initGame = initGame;
+    initGame();
+    
 });
