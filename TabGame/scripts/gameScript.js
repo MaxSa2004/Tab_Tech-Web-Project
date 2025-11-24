@@ -26,9 +26,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // AI state and mode
     let gameMode = 'player';      // 'player' | 'ia'
     let vsAI = false;   // true if playing against AI
+    let vsPlayer = false; 
     let aiDifficulty = 'normal';  // 'easy' | 'normal' | 'hard'
     let aiPlayerNum = null;       // 1 (red) ou 2 (yellow)
     let humanPlayerNum = 1;    // 1 (red) ou 2 (yellow) || 1 is default
+    let waitingForPair = false;
+
 
     // pieces
     let redPieces = 0;
@@ -40,9 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // helper function to get color by player number
     function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
-    // helper function to check if it's human's turns
+    // helper function to check if it's human's turns (our turn)
     function isHumanTurn() {
-        return !vsAI || currentPlayer !== aiPlayerNum;
+        return currentPlayer === humanPlayerNum || currentPlayer !== aiPlayerNum;
     }
 
     // config validation helper
@@ -61,12 +64,79 @@ document.addEventListener("DOMContentLoaded", () => {
         if (modeSelect) modeSelect.disabled = !enabled;
         if (iaLevelSelect) iaLevelSelect.disabled = !enabled;
         if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = !enabled;
+        if (modeSelect && modeSelect.value === 'player') {
+            if (iaLevelSelect) iaLevelSelect.disabled = true;
+            if(firstToPlayCheckbox)firstToPlayCheckbox.disabled = true;
+        }
+    }
+// function that updates game state (paired), roll, pass, leave...
+    function handleUpdateMessage(ev) {
+        let payload;
+        try {
+            payload = JSON.parse(ev.data);
+
+        } catch {
+            console.warn('Invalid message payload:', ev.data);
+            return;
+        }
+        if(payload.event === 'paired' || payload.event === 'game_started' || payload.type === 'paired'){
+            const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const gameId = payload.game || payload.gameId || window.currentGameId;
+            setWaitingForPair(false);
+            updatePlayButtonState();
+            if(gameId){
+                sessionStorage.setItem('tt_game', gameId);
+                window.currentGameId = gameId;
+            }
+            const players = Array.isArray(payload.players) ? payload.players : [];
+            if(players.length === 2 && localNick){
+                humanPlayerNum = (players[0] === localNick) ? 1 : 2;
+
+            } else {
+                humanPlayerNum = 1;
+            }
+            if(payload.starterNick){
+                currentPlayer = (payload.starterNick === localNick) ? 1 : 2;
+
+            } else if (Array.isArray(payload.players) && payload.players.length === 2){
+                currentPlayer = (players[0] === localNick) ? 1 : 2;
+
+            } else {
+                currentPlayer = 1;
+            }
+            if(currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
+
+            gameActive = true;
+            setConfigEnabled(false);
+            if(playButton) playButton.disabled = true;
+            if(leaveButton) leaveButton.disabled = false;
+            updatePlayButtonState();
+            refreshCapturedTitles();
+
+            try {
+                TabStats.start({
+                    mode: 'player',
+                    aiDifficulty: null,
+                    cols: parseInt(widthSelect.value, 10),
+                    firstPlayer: (currentPlayer === humanPlayerNum) ? 'you' : 'opponent'
+                });
+                TabStats.onTurnAdvance();
+            } catch (e){
+                console.warn('Erro ao iniciar estatísticas do jogo:', e);
+            }
+            if(throwBtn) throwBtn.disabled = !(currentPlayer===humanPlayerNum);
+            showMessage({ who: 'system', key: 'msg_paired'}); 
+        }
     }
     // helper to update play and leave button state based on config validity and game state (if playing, play button disabled and leave button enabled, else the opposite)
     function updatePlayButtonState() {
         if (!playButton) return;
-        playButton.disabled = !isConfigValid() || gameActive === true;
-        if (leaveButton) leaveButton.disabled = !gameActive;
+        playButton.disabled = !isConfigValid() || gameActive || waitingForPair;
+        if (leaveButton) leaveButton.disabled = !(gameActive || waitingForPair);
+    }
+    function setWaitingForPair(value){
+        waitingForPair = !!value;
+        updatePlayButtonState();
     }
     // helper: get localized labels for captured panels
     function getLocalizedLabelsForPanels() {
@@ -116,7 +186,32 @@ document.addEventListener("DOMContentLoaded", () => {
     window.__refreshCaptured = refreshCapturedTitles;
     // leave button click handler
 
-    function leaveGame({showStats = true, updateRank = true} = {})  {
+    function leaveGame({ showStats = true, updateRank = true } = {}) {
+        if(waitingForPair && !gameActive){
+            const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
+            const gameId = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
+            if(nick && password && gameId){
+                try {
+                    Network.leave({ nick, password, game: gameId }); 
+                } catch (e) {
+                    console.warn('Erro ao sair da partida ao cancelar emparelhamento:', e);
+                }
+            }
+            try {
+                if(window.updateEventSource){
+                    window.updateEventSource.close();
+                    window.updateEventSource = null;
+                }
+            } catch (e){
+                console.warn('Erro ao fechar EventSource ao cancelar emparelhamento:', e);
+            }
+            setWaitingForPair(false);
+            showMessage({ who: 'system', key: 'msg_pairing_cancelled' });
+            setConfigEnabled(true);
+            renderBoard(parseInt(widthSelect.value, 10));
+            return;
+        }
         if (!gameActive) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
 
         // Helpers to obtain localized player labels for leaderboard update
@@ -157,7 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         // Update leaderboard (winner GW+GP, loser GP) while leaving
-        if(updateRank) {
+        if (updateRank) {
             try {
                 window.updatePlayerRankingOnLeave(winnerName, loserName);
             } catch (e) {
@@ -166,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Update TabStats to show summary with the winner before resetting
-        if(showStats){
+        if (showStats) {
             try {
                 TabStats.setWinner(winnerNum);
                 TabStats.showSummary();
@@ -177,10 +272,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // system message that the player has left the game
-        if(showStats){
+        if (showStats) {
             showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
         }
-        
+
 
         // Reset game state & UI
         gameActive = false;
@@ -189,6 +284,8 @@ document.addEventListener("DOMContentLoaded", () => {
         lastDiceValue = null;
         aiPlayerNum = null;
         humanPlayerNum = 1;
+        vsAI = false;
+        vsPlayer = false;
 
         refreshCapturedTitles(); // reset captured titles
 
@@ -207,8 +304,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.leaveGame = leaveGame;
-    if(leaveButton){
-        leaveButton.addEventListener('click', () => leaveGame({showStats: true, updateRank: true}));
+    if (leaveButton) {
+        leaveButton.addEventListener('click', () => leaveGame({ showStats: true, updateRank: true }));
     }
 
     if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState); // update play button state on mode change, if mode is PvP, else waits for AI level
@@ -286,6 +383,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!gameActive) return;
         // don't allow input when AI is playing
         if (vsAI && currentPlayer === aiPlayerNum) return;
+        if(vsPlayer && currentPlayer !== humanPlayerNum) return;
 
         const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
 
@@ -610,6 +708,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedPiece = null;
 
         vsAI = false;
+        vsPlayer = false;
         aiPlayerNum = null;
         humanPlayerNum = 1;
 
@@ -681,8 +780,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+
     function clearMessages() {
-        if(!messagesEl) return;
+        if (!messagesEl) return;
         messagesEl.innerHTML = '';
         return;
     }
@@ -704,7 +804,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (authForm) authForm.addEventListener('submit', (ev) => ev.preventDefault());
 
     // Start Game button handler
-    if (playButton) playButton.addEventListener('click', () => {
+    if (playButton) playButton.addEventListener('click', async () => {
         //block: validate config first
         if (!isConfigValid()) {
             showMessage({ who: 'system', key: 'select_mode' });
@@ -718,47 +818,94 @@ document.addEventListener("DOMContentLoaded", () => {
 
         gameMode = modeVal;
         vsAI = (modeVal === 'ia'); // if mode is 'ia', vsAI is true
+        vsPlayer = (modeVal === 'player');
         aiDifficulty = diffSel;
 
         aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null; // if vsAI, determine AI player number (depends on who plays first), else null
+
+
         humanPlayerNum = vsAI ? (humanFirst ? 1 : 2) : 1; // if vsAI, determine human player number, else 1
         refreshCapturedTitles(); // update captured panels titles based on mode and localization
+        if (vsPlayer) {
+            const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
+            if (!nick || !password) {
+                alert("Você precisa estar autenticado para jogar contra outro jogador.");
+                return;
+            }
+            if (!window.updateEventSource) {
+                try {
+                    window.updateEventSource = Network.createUpdateEventSource({ nick});
+                    window.updateEventSource.onmessage = handleUpdateMessage;
+                    window.updateEventSource.onerror = (err) => {
+                        console.warn('Erro na conexão com o servidor de atualizações:', err);
+                    };
 
-        currentPlayer = 1; // red starts
-        currentPlayerEl.textContent = currentPlayer; // update UI current Player text
-        // after reading all the data, initialize the stats
-        TabStats.start({
-            mode: gameMode,
-            aiDifficulty,
-            cols: parseInt(widthSelect.value, 10),
-            firstPlayer: vsAI ? (humanFirst ? "Human" : "Ai") : null
-        });
-        TabStats.onTurnAdvance(); // first turn (+1)
-        // starting msg
-        showMessage({ who: 'system', key: 'msg_game_started' });
+                } catch (e) {
+                    console.warn('Erro ao criar EventSource para atualizações:', e);
+                }
 
-        gameActive = true;
-        updatePlayButtonState(); // update buttons (block Play button, enable Leave button)
-        setConfigEnabled(false); // disable config UI while gameActive = true
+            }
+            setWaitingForPair(true);
+            playButton.disabled = true;
+            showMessage({ who: 'system', key: 'msg_waiting_opponent' });
+            const size = parseInt(widthSelect.value, 10);
+            const group = 36;
 
-        if (nextTurnBtn) nextTurnBtn.disabled = true; // disable next turn button initially
-        if (throwBtn) throwBtn.disabled = (vsAI && aiPlayerNum === 1); // disable throw button if AI starts
-        if (playButton) playButton.disabled = true; // disable play button
-        if (leaveButton) leaveButton.disabled = false; // enable leave button
-        if (isHumanTurn() && throwBtn && !throwBtn.disabled) { // prompt first dice throw if human starts, throwBtn exists and is enabled 
-            showMessage({ who: 'system', key: 'msg_dice' });
+            try {
+                await Network.join({ group, nick, password, size });
+
+            } catch (err) {
+                console.warn('Erro ao juntar-se ao jogo PvP:', err);
+                alert('Erro ao juntar-se ao jogo contra outro jogador. Por favor, tente novamente mais tarde.');
+                playButton.disabled = false;
+                showMessage({ who: 'system', key: 'msg_error_joining_game' });
+            }
+            
+            return;
+        }
+        if (vsAI) {
+            currentPlayer = 1; // red starts
+            currentPlayerEl.textContent = currentPlayer; // update UI current Player text
+            // after reading all the data, initialize the stats
+            TabStats.start({
+                mode: gameMode,
+                aiDifficulty: vsAI ? aiDifficulty : null,
+                cols: parseInt(widthSelect.value, 10),
+                firstPlayer: vsAI ? (humanFirst ? "Human" : "Ai") : null
+            });
+            TabStats.onTurnAdvance(); // first turn (+1)
+            // starting msg
+            showMessage({ who: 'system', key: 'msg_game_started' });
+
+            gameActive = true;
+            updatePlayButtonState(); // update buttons (block Play button, enable Leave button)
+            setConfigEnabled(false); // disable config UI while gameActive = true
+
+            if (nextTurnBtn) nextTurnBtn.disabled = true; // disable next turn button initially
+            if (throwBtn) throwBtn.disabled = (vsAI && aiPlayerNum === 1); // disable throw button if AI starts
+            if (playButton) playButton.disabled = true; // disable play button
+            if (leaveButton) leaveButton.disabled = false; // enable leave button
+            if (isHumanTurn() && throwBtn && !throwBtn.disabled) { // prompt first dice throw if human starts, throwBtn exists and is enabled 
+                showMessage({ who: 'system', key: 'msg_dice' });
+            }
+
+            // if AI starts, run its turn after a short delay
+            if (vsAI && 1 === aiPlayerNum) {
+                setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);
+            }
         }
 
-        // if AI starts, run its turn after a short delay
-        if (vsAI && 1 === aiPlayerNum) {
-            setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro no turno inicial da IA:', err)), 250);
-        }
     });
 
     // throw dice button
     if (throwBtn) {
         throwBtn.addEventListener('click', async (e) => {
             if (vsAI && currentPlayer === aiPlayerNum) {
+                e.preventDefault();
+                return;
+            }
+            if (vsPlayer && currentPlayer !== humanPlayerNum) {
                 e.preventDefault();
                 return;
             }
@@ -1269,33 +1416,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- initialization ---
-    function initGame({initConfig = false}  = {}) {
+    function initGame({ initConfig = false } = {}) {
         const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
         renderBoard(initialCols);
         showMessage({ who: 'system', key: 'select_mode' });
-        if(initConfig) {
-            if(modeSelect) {
+        if (initConfig) {
+            if (modeSelect) {
                 modeSelect.value = '';
                 modeSelect.selectedIndex = 0;
             }
-            if(iaLevelSelect) {
+            if (iaLevelSelect) {
                 iaLevelSelect.value = '';
                 iaLevelSelect.selectedIndex = 0;
             }
-            if(widthSelect) widthSelect.value = 9;
-            if(firstToPlayCheckbox) firstToPlayCheckbox.checked = false;
+            if (widthSelect) widthSelect.value = 9;
+            if (firstToPlayCheckbox) firstToPlayCheckbox.checked = false;
         }
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = true;
-    
+
         //  debug warnings
         if (!widthSelect) console.warn('widthSelect not found');
         if (!gameBoard) console.warn('gameBoard not found');
         if (!messagesEl) console.warn('messagesEl not found');
-    
+
     }
 
     window.initGame = initGame;
     initGame();
-    
+
 });

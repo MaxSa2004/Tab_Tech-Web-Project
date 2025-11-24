@@ -42,8 +42,9 @@ const Network = (function () {
 
     // join, args: group, nick, password & size
     async function join({group, nick, password, size}){
-        if(group == null || !nick || password == null ||size == null) throw new Error('join: argumentos obrigatórios (group, nick, password, size)');
-        return postJSON('/join', {group, nick, password, size});
+        if(group == null || !nick || password == null ||size == null ) throw new Error('join: argumentos obrigatórios (group, nick, password, size)');
+        const body = {group, nick, password, size};
+        return postJSON('/join', body);
     }
 
     // leave, args: nick, password, game
@@ -54,20 +55,20 @@ const Network = (function () {
 
     // roll, args: nick, password, game, cell
     async function roll({nick, password, game, cell}){
-        if(!nick || password == null || game == null || cell ==  null) throw new Error('leave: argumentos obrigatórios (nick, password, game, cell)');
+        if(!nick || password == null || game == null || cell ==  null) throw new Error('roll: argumentos obrigatórios (nick, password, game, cell)');
         return postJSON('/roll', {nick, password, game, cell});
     }
 
 
     // pass, args: nick, password, game, cell
     async function pass({nick, password, game, cell}){
-        if(!nick || password == null || game == null || cell ==  null) throw new Error('leave: argumentos obrigatórios (nick, password, game, cell)');
+        if(!nick || password == null || game == null || cell ==  null) throw new Error('pass: argumentos obrigatórios (nick, password, game, cell)');
         return postJSON('/pass', {nick, password, game, cell});
     }
 
     // notify, args: nick, password, game, cell
     async function notify({nick, password, game, cell}){
-        if(!nick || password == null || game == null || cell ==  null) throw new Error('leave: argumentos obrigatórios (nick, password, game, cell)');
+        if(!nick || password == null || game == null || cell ==  null) throw new Error('notify: argumentos obrigatórios (nick, password, game, cell)');
         return postJSON('/notify', {nick, password, game, cell});
     }
 
@@ -75,8 +76,10 @@ const Network = (function () {
     // update: SSE, Server-Sent Event, (EventSource) — deve ser GET com params urlencoded.
     // Retorna o EventSource para que o script principal o possa gerir (onmessage, onerror, close).
     function createUpdateEventSource({ nick, game }) {
-        if (!nick || game == null) throw new Error('update SSE: argumentos obrigatórios (nick, game)');
-        const qs = new URLSearchParams({ group: String(group), nick, password });
+        if (!nick) throw new Error('update SSE: argumentos obrigatórios (nick)');
+        const params = {nick};
+        if(game!=null && game!=='') params.game = game;
+        const qs = new URLSearchParams(params);
         const url = BASE + '/update?' + qs.toString();
         // EventSource abre ligação GET persistente e recebe eventos do servidor.
         return new EventSource(url);
@@ -84,7 +87,7 @@ const Network = (function () {
 
     // ranking, args: group, size
     async function ranking({group, size}){
-        if(group == null || size == null) throw new Error('leave: argumentos obrigatórios (group, size)');
+        if(group == null || size == null) throw new Error('ranking: argumentos obrigatórios (group, size)');
         return postJSON('/ranking', {group, size});
     }
 
