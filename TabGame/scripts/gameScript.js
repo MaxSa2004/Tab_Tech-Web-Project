@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // AI state and mode
     let gameMode = 'player';      // 'player' | 'ia'
     let vsAI = false;   // true if playing against AI
-    let vsPlayer = false; 
+    let vsPlayer = false;
     let aiDifficulty = 'normal';  // 'easy' | 'normal' | 'hard'
     let aiPlayerNum = null;       // 1 (red) ou 2 (yellow)
     let humanPlayerNum = 1;    // 1 (red) ou 2 (yellow) || 1 is default
@@ -66,10 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = !enabled;
         if (modeSelect && modeSelect.value === 'player') {
             if (iaLevelSelect) iaLevelSelect.disabled = true;
-            if(firstToPlayCheckbox)firstToPlayCheckbox.disabled = true;
+            if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = true;
         }
     }
-// function that updates game state (paired), roll, pass, leave...
+    // function that updates game state (paired), roll, pass, leave...
     function handleUpdateMessage(ev) {
         let payload;
         try {
@@ -79,37 +79,38 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn('Invalid message payload:', ev.data);
             return;
         }
-        if(payload.event === 'paired' || payload.event === 'game_started' || payload.type === 'paired'){
+        // handle pairing / game started
+        if (payload.event === 'paired' || payload.event === 'game_started' || payload.type === 'paired') {
             const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
             const gameId = payload.game || payload.gameId || window.currentGameId;
             setWaitingForPair(false);
             updatePlayButtonState();
-            if(gameId){
+            if (gameId) {
                 sessionStorage.setItem('tt_game', gameId);
                 window.currentGameId = gameId;
             }
             const players = Array.isArray(payload.players) ? payload.players : [];
-            if(players.length === 2 && localNick){
+            if (players.length === 2 && localNick) {
                 humanPlayerNum = (players[0] === localNick) ? 1 : 2;
 
             } else {
                 humanPlayerNum = 1;
             }
-            if(payload.starterNick){
+            if (payload.starterNick) {
                 currentPlayer = (payload.starterNick === localNick) ? 1 : 2;
 
-            } else if (Array.isArray(payload.players) && payload.players.length === 2){
+            } else if (Array.isArray(payload.players) && payload.players.length === 2) {
                 currentPlayer = (players[0] === localNick) ? 1 : 2;
 
             } else {
                 currentPlayer = 1;
             }
-            if(currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
+            if (currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
 
             gameActive = true;
             setConfigEnabled(false);
-            if(playButton) playButton.disabled = true;
-            if(leaveButton) leaveButton.disabled = false;
+            if (playButton) playButton.disabled = true;
+            if (leaveButton) leaveButton.disabled = false;
             updatePlayButtonState();
             refreshCapturedTitles();
 
@@ -121,11 +122,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     firstPlayer: (currentPlayer === humanPlayerNum) ? 'you' : 'opponent'
                 });
                 TabStats.onTurnAdvance();
-            } catch (e){
+            } catch (e) {
                 console.warn('Erro ao iniciar estatísticas do jogo:', e);
             }
-            if(throwBtn) throwBtn.disabled = !(currentPlayer===humanPlayerNum);
-            showMessage({ who: 'system', key: 'msg_paired'}); 
+            if (throwBtn) throwBtn.disabled = !(currentPlayer === humanPlayerNum);
+            showMessage({ who: 'system', key: 'msg_paired' });
+        } else if (payload.event === 'left' || payload.type === 'left') { // leave updated
+            // opponent left
+            const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const leaverNick = payload.nick || '';
+            if (leaverNick && leaverNick !== localNick) {
+                showMessage({ who: 'system', key: 'msg_opponent_left' });
+                leaveGame({ showStats: true, updateRank: false });
+            }
+        } else if (payload.event == 'roll' || payload.type === 'roll') {
+            // dice rolled
+            const rollerNick = payload.nick || '';
+            const val = parseInt(payload.value, 10);
+            window.tabGame.showRemoteRoll(val).then(() => {
+                const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+                const rollerNum = (rollerNick === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
+                if (rollerNum === currentPlayer) {
+                    processDiceResult(currentPlayer, val);
+                }
+            });
         }
     }
     // helper to update play and leave button state based on config validity and game state (if playing, play button disabled and leave button enabled, else the opposite)
@@ -134,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
         playButton.disabled = !isConfigValid() || gameActive || waitingForPair;
         if (leaveButton) leaveButton.disabled = !(gameActive || waitingForPair);
     }
-    function setWaitingForPair(value){
+    function setWaitingForPair(value) {
         waitingForPair = !!value;
         updatePlayButtonState();
     }
@@ -187,23 +207,23 @@ document.addEventListener("DOMContentLoaded", () => {
     // leave button click handler
 
     function leaveGame({ showStats = true, updateRank = true } = {}) {
-        if(waitingForPair && !gameActive){
+        if (waitingForPair && !gameActive) {
             const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
             const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
             const gameId = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
-            if(nick && password && gameId){
+            if (nick && password && gameId) {
                 try {
-                    Network.leave({ nick, password, game: gameId }); 
+                    Network.leave({ nick, password, game: gameId });
                 } catch (e) {
                     console.warn('Erro ao sair da partida ao cancelar emparelhamento:', e);
                 }
             }
             try {
-                if(window.updateEventSource){
+                if (window.updateEventSource) {
                     window.updateEventSource.close();
                     window.updateEventSource = null;
                 }
-            } catch (e){
+            } catch (e) {
                 console.warn('Erro ao fechar EventSource ao cancelar emparelhamento:', e);
             }
             setWaitingForPair(false);
@@ -308,7 +328,10 @@ document.addEventListener("DOMContentLoaded", () => {
         leaveButton.addEventListener('click', () => leaveGame({ showStats: true, updateRank: true }));
     }
 
-    if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState); // update play button state on mode change, if mode is PvP, else waits for AI level
+    if (modeSelect) modeSelect.addEventListener('change', () => {
+        setConfigEnabled(true);
+        updatePlayButtonState();
+    }); // update play button state on mode change, if mode is PvP, else waits for AI level
     if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState); // update play button state on AI level change, to Start Game
     updatePlayButtonState(); // initial state
 
@@ -383,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!gameActive) return;
         // don't allow input when AI is playing
         if (vsAI && currentPlayer === aiPlayerNum) return;
-        if(vsPlayer && currentPlayer !== humanPlayerNum) return;
+        if (vsPlayer && currentPlayer !== humanPlayerNum) return;
 
         const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
 
@@ -835,7 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (!window.updateEventSource) {
                 try {
-                    window.updateEventSource = Network.createUpdateEventSource({ nick});
+                    window.updateEventSource = Network.createUpdateEventSource({ nick });
                     window.updateEventSource.onmessage = handleUpdateMessage;
                     window.updateEventSource.onerror = (err) => {
                         console.warn('Erro na conexão com o servidor de atualizações:', err);
@@ -861,7 +884,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 playButton.disabled = false;
                 showMessage({ who: 'system', key: 'msg_error_joining_game' });
             }
-            
+
             return;
         }
         if (vsAI) {
@@ -900,7 +923,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // throw dice button
     if (throwBtn) {
-        throwBtn.addEventListener('click', async (e) => {
+        throwBtn.addEventListener('click', async () => {
+
             if (vsAI && currentPlayer === aiPlayerNum) {
                 e.preventDefault();
                 return;
@@ -910,98 +934,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             if (!gameActive) return;
-
-            try {
-                const result = await window.tabGame.spawnAndLaunch();
-                lastDiceValue = result;
-
-                // indicate value of dice rolled
-                showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
-
-                // special roll cases
-                const isExtra = (result === 1 || result === 4 || result === 6);
-                const isTab = (result === 1);
-
-                // calculate moves/captures
-                const playerColor = getColorForPlayerNum(currentPlayer);
-                const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
-                const captureMoves = legalMoves.filter(m => {
-                    const occ = m.destCell.querySelector('.piece');
-                    return occ && !occ.classList.contains(playerColor);
-                });
-
-                // no possible moves - if extra move allowed, indicate to roll... otherwise indicate to skip turn
-                if (legalMoves.length === 0) {
-                    if (isExtra) {
-                        // primeiro o “double”, depois o aviso de sem jogadas extra
-                        showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
-
-                        TabStats.onDice(currentPlayer, result);
-                        TabStats.onExtraRoll(currentPlayer, result);
-
-                        // volta a lançar
-                        throwBtn.disabled = false;
-                        nextTurnBtn.disabled = true;
-                    } else {
-                        showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-
-                        TabStats.onDice(currentPlayer, result);
-
-                        throwBtn.disabled = true;
-                        nextTurnBtn.disabled = false;
-                    }
-                    return; // termina este lançamento
+            if (vsPlayer && currentPlayer === humanPlayerNum) {
+                const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+                const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
+                const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
+                if (!nick || password == null || game == null || game == '') {
+                    alert((lang === 'pt' ? 'Você precisa estar autenticado para jogar contra outro jogador.' : 'You need to be authenticated to play against another player.'));
+                    return;
                 }
-
-                // moves possible
-                if (isTab) {
-                    // Tâb: prioritise capture
-                    const convertibleCount = countConvertiblePieces(currentPlayer);
-
-                    if (captureMoves.length > 0) { // make a capture and indicate reroll
-                        // captura primeiro, depois "double"
-                        showMessage({
-                            who: 'player',
-                            player: currentPlayer,
-                            key: 'msg_capture',
-                            params: { n: captureMoves.length }
-                        });
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                    } else if (convertibleCount > 0) {
-                        // conersion before double
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                    } else {
-                        // nothing to convert
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                        showMessage({ who: 'system', key: 'msg_player_can_move' });
-                    }
-                } else {
-                    // 4 or 6: double roll... 2/3: no double
-                    if (isExtra) {
-                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                    }
-                    if (captureMoves.length > 0) {
-                        showMessage({
-                            who: 'player',
-                            player: currentPlayer,
-                            key: 'msg_capture',
-                            params: { n: captureMoves.length }
-                        });
-                    } else {
-                        showMessage({ who: 'system', key: 'msg_player_can_move' });
-                    }
+                try {
+                    throwBtn.disabled = true;
+                    await Network.roll({
+                        nick,
+                        password,
+                        game,
+                    });
+                    showMessage({ who: 'system', key: 'msg_roll_sent' });
+                } catch (err) {
+                    console.warn('Erro ao enviar jogada para o servidor:', err);
+                    alert((lang === 'pt' ? 'Erro ao enviar jogada para o servidor. Por favor, tente novamente mais tarde.' : 'Error sending move to server. Please try again later.'));
+                    throwBtn.disabled = false;
                 }
+                return;
+            } else if (vsAI || vsPlayer) {
+                try {
+                    const result = await window.tabGame.spawnAndLaunch();
+                    processDiceResult(currentPlayer, result);
 
-                // UI and stats
-                nextTurnBtn.disabled = true;
-                throwBtn.disabled = true;
-
-                TabStats.onDice(currentPlayer, result);
-                if (isExtra) TabStats.onExtraRoll(currentPlayer, result);
-
-            } catch (err) {
-                console.warn('Erro ao lançar dados:', err);
+                } catch (err) {
+                    console.warn('Erro ao lançar dados:', err);
+                }
             }
         });
     }
@@ -1234,10 +1196,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (autoDrop) setTimeout(() => dropDiceSticks(pouch, arena, overlay), 120); // auto drop after short delay
     }
     // drops the dice sticks with animation, computes result, shows bubble
-    function dropDiceSticks(pouch, arena, overlay) {
+    function dropDiceSticks(pouch, arena, overlay, forcedValue = null) {
         const sticks = Array.from(pouch.querySelectorAll('.dice-stick')); // get sticks
+        if (forcedValue != null) {
+            chosenUpCount = (forcedValue === 6) ? 0 : forcedValue;
+        } else {
+            chosenUpCount = sampleFromDistribution(upCountProbs); // sample up count
+        }
 
-        const chosenUpCount = sampleFromDistribution(upCountProbs); // sample up count
 
         const indices = [0, 1, 2, 3]; // shuffle indices
         for (let i = indices.length - 1; i > 0; i--) { // Fisher-Yates shuffle
@@ -1404,6 +1370,96 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     window.tabGame.getLastValue = () => lastDiceValue; // getter for last dice value
 
+    window.tabGame.showRemoteRoll = function (value) {
+        return new Promise((resolve) => {
+            const prev = document.body.querySelector('.dice-overlay');
+            if (prev) {
+                prev.remove();
+            }
+            createDicePouch(false);
+            window.tabGame._resolveResult = resolve;
+            const overlay = document.body.querySelector('.dice-overlay');
+            const arena = overlay.querySelector('.dice-arena');
+            const pouch = overlay.querySelector('.dice-pouch');
+
+            setTimeout(() => {
+                dropDiceSticks(pouch, arena, overlay, value);
+            }, 100);
+            lastDiceValue = value;
+        });
+    };
+
+    function processDiceResult(playerNum, result) {
+        lastDiceValue = result;
+        showMessage({ who: 'player', player: playerNum, key: 'msg_dice_thrown', params: { value: result } });
+        const isExtra = (result === 1 || result === 4 || result === 6);
+        const isTab = (result === 1);
+        const legalMoves = enumerateLegalMovesDOM(playerNum, result);
+        const playerColor = getColorForPlayerNum(playerNum);
+        const captureMoves = legalMoves.filter(m => {
+            const occ = m.destCell.querySelector('.piece');
+            return occ && !occ.classList.contains(playerColor);
+        });
+        if (legalMoves.length === 0) {
+            if (isExtra) {
+                showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
+                TabStats.onDice(playerNum, result);
+                TabStats.onExtraRoll(playerNum, result);
+                if (playerNum === humanPlayerNum && throwBtn) {
+                    throwBtn.disabled = false;
+                }
+            } else {
+                showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+                TabStats.onDice(playerNum, result);
+                if (playerNum === humanPlayerNum && nextTurnBtn) {
+                    nextTurnBtn.disabled = false;
+                }
+                return;
+            }
+            if (isTab) {
+                const convertibleCount = countConvertiblePieces(playerNum);
+                if (captureMoves.length > 0) {
+                    showMessage({
+                        who: 'player',
+                        player: playerNum,
+                        key: 'msg_capture',
+                        params: { n: captureMoves.length }
+                    });
+                    showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                } else if (convertibleCount > 0) {
+                    showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
+                    showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                } else {
+                    showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                    showMessage({ who: 'system', key: 'msg_player_can_move' });
+                }
+            } else {
+                if (isExtra) {
+                    showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                }
+                if (captureMoves.length > 0) {
+                    showMessage({
+                        who: 'player',
+                        player: playerNum,
+                        key: 'msg_capture',
+                        params: { n: captureMoves.length }
+                    });
+                } else {
+                    showMessage({ who: 'system', key: 'msg_player_can_move' });
+                }
+            }
+            TabStats.onDice(playerNum, result);
+            if (isExtra) {
+                TabStats.onExtraRoll(playerNum, result);
+            }
+            if (playerNum === humanPlayerNum) {
+                if (throwBtn) throwBtn.disabled = true;
+                if (nextTurnBtn) nextTurnBtn.disabled = true;
+            }
+        }
+    }
+
+
     // i18n helper function to translate keys with params
     function t(key, params = {}) {
         const lang = window.currentLang || 'pt';
@@ -1434,6 +1490,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = true;
+
+        setConfigEnabled(true);
 
         //  debug warnings
         if (!widthSelect) console.warn('widthSelect not found');

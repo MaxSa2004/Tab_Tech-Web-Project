@@ -53,10 +53,10 @@ const Network = (function () {
         return postJSON('/leave', {nick, password, game});
     }
 
-    // roll, args: nick, password, game, cell
-    async function roll({nick, password, game, cell}){
-        if(!nick || password == null || game == null || cell ==  null) throw new Error('roll: argumentos obrigatórios (nick, password, game, cell)');
-        return postJSON('/roll', {nick, password, game, cell});
+    // roll, args: nick, password, game
+    async function roll({nick, password, game}){
+        if(!nick || password == null || game == null || cell ==  null) throw new Error('roll: argumentos obrigatórios (nick, password, game)');
+        return postJSON('/roll', {nick, password, game});
     }
 
 
