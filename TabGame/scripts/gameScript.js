@@ -888,34 +888,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Você precisa estar autenticado para jogar contra outro jogador.");
                 return;
             }
-            if (!window.updateEventSource) {
-                try {
-                    window.updateEventSource = Network.createUpdateEventSource({ nick });
-                    window.updateEventSource.onmessage = handleUpdateMessage;
-                    window.updateEventSource.onerror = (err) => {
-                        console.warn('Erro na conexão com o servidor de atualizações:', err);
-                    };
-
-                } catch (e) {
-                    console.warn('Erro ao criar EventSource para atualizações:', e);
-                }
-
-            }
             setWaitingForPair(true);
             playButton.disabled = true;
             showMessage({ who: 'system', key: 'msg_waiting_opponent' });
             const size = parseInt(widthSelect.value, 10);
             const group = 36;
-
             try {
-                await Network.join({ group, nick, password, size });
+                const joinResult = await Network.join({group, nick, password, size});
+                const gameId = joinResult.game;
+                sessionStorage.setItem('tt_game', gameId);
+                window.currentGameId = gameId;
+                if (!window.updateEventSource) {
+                    try {
+                        window.updateEventSource = Network.createUpdateEventSource({ nick });
+                        window.updateEventSource.onmessage = handleUpdateMessage;
+                        window.updateEventSource.onerror = (err) => {
+                            console.warn('Erro na conexão com o servidor de atualizações:', err);
+                        };
 
+                    } catch (e) {
+                        console.warn('Erro ao criar EventSource para atualizações:', e);
+                    }
+
+                }
             } catch (err) {
-                console.warn('Erro ao juntar-se ao jogo PvP:', err);
-                alert('Erro ao juntar-se ao jogo contra outro jogador. Por favor, tente novamente mais tarde.');
-                playButton.disabled = false;
-                showMessage({ who: 'system', key: 'msg_error_joining_game' });
+                console.warn('Erro ao entrar na partida PvP:', err);
+                alert("Erro ao encontrar um oponente. Por favor, tente novamente mais tarde.");
+                setWaitingForPair(false);
+                updatePlayButtonState();
             }
+            
+
+            
 
             return;
         }
