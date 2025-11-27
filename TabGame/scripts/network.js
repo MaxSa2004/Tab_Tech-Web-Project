@@ -61,9 +61,9 @@ const Network = (function () {
 
 
     // pass, args: nick, password, game, cell
-    async function pass({nick, password, game, cell}){
-        if(!nick || password == null || game == null || cell ==  null) throw new Error('pass: argumentos obrigatórios (nick, password, game, cell)');
-        return postJSON('/pass', {nick, password, game, cell});
+    async function pass({nick, password, game}){
+        if(!nick || password == null || game == null) throw new Error('pass: argumentos obrigatórios (nick, password, game)');
+        return postJSON('/pass', {nick, password, game});
     }
 
     // notify, args: nick, password, game, cell
