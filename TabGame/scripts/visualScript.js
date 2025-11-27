@@ -30,7 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Attach modal openers: buttons (if clicked open the respective modal)
     if (btnInstructions) btnInstructions.addEventListener('click', (e) => { e.preventDefault(); openModal(modalInstructions, btnInstructions); });
-    if (btnClassifications) btnClassifications.addEventListener('click', (e) => { e.preventDefault(); openModal(modalClassifications, btnClassifications); });
+    if (btnClassifications) {
+        btnClassifications.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            openModal(modalClassifications, btnClassifications); 
+            window.__refreshLeaderBoard();
+        });
+    }
     if (btnExtra) btnExtra.addEventListener('click', (e) => { e.preventDefault(); openModal(modalExtra, btnExtra); });
 
     // close buttons (.close) 

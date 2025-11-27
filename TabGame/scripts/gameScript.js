@@ -329,14 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 winnerNum = 1;
             }
         }
-        // Update leaderboard (winner GW+GP, loser GP) while leaving
-        if (updateRank) {
-            try {
-                window.updatePlayerRankingOnLeave(winnerName, loserName);
-            } catch (e) {
-                console.warn('Erro ao atualizar ranking ao sair do jogo:', e);
-            }
-        }
+
 
         // Update TabStats to show summary with the winner before resetting
         if (showStats) {
@@ -801,7 +794,6 @@ document.addEventListener("DOMContentLoaded", () => {
             winnerName = lang === 'pt' ? `Jogador ${winnerNum}` : `Player ${winnerNum}`;
             loserName = lang === 'pt' ? `Jogador ${loserNum}` : `Player ${loserNum}`;
         }
-        window.updateLeaderboard(winnerName, loserName); // update leaderboard
         endGame(); // end game
         return true;
 

@@ -2,16 +2,15 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Main elements (in case they don't exist)
   const modal = document.getElementById("myModalClassifications");
-  if (!modal) return; //if doesnt exist, dont do anything
   const container = modal.querySelector("#leaderboard-container");
-  if (!container) return;
-  const rowsContainer = container.querySelector(".leaderboard-rows") || null;
-  
-  const parentForRows = rowsContainer || container;
+  if (!modal || !container) return;
+  const rowsContainer = container.querySelector(".leaderboard-rows") || container;
+
 
   const searchInput = container.querySelector(".ladder-search");
   const sortButton = container.querySelector("#sortbtn");
   let descending = true;
+  const group = 36;
   //configuration of different languages in leaderBoard (EN/PT)
   function tLB(key) {
     const lang = window.currentLang || 'en';
@@ -51,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
   //Get info of each player
   function getPlayers() {
     
-    return Array.from(parentForRows.querySelectorAll(".ladder-nav--results-players"));
+    return Array.from(rowsContainer.querySelectorAll(".ladder-nav--results-players"));
   }
 
   //Update ratios for ranking
@@ -117,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const posEl = player.querySelector(".positions");
       if (posEl) posEl.textContent = (index + 1).toString();
       // appends to the end, then sorts
-      parentForRows.appendChild(player);
+      rowsContainer.appendChild(player);
     });
     //updates the sorting button, as asc/desc
     if (sortButton) {
@@ -202,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Show after we call languageScript
   window.__refreshLeaderboard = () => {
     refreshUI();
+    window.fetchRanking();
     // Keeping the language aligned
     if (sortButton) {
       sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
@@ -250,6 +250,55 @@ document.addEventListener("DOMContentLoaded", () => {
     // Sorts leaderboard after the update of the leaderboard
     sortLeaderboard();
   };
+
+  window.fetchRanking = async function () {
+    rowsContainer.innerHTML = '<p>Loading...</p>';
+    const widthSelect = document.getElementById('width');
+    const size = widthSelect ? parseInt(widthSelect.value, 10) : 9;
+    try{
+      const data = await Network.ranking({group, size});
+      const rankingList = data.ranking || [];
+      renderRankingTable(rankingList);
+    } catch(err){
+      rowsContainer.innerHTML = `<p>Error loading leaderboard: ${err.message}</p>`;
+      console.error('Error fetching ranking:', err);
+    }
+  };
+  function renderRankingTable(playersData){
+    rowsContainer.innerHTML = '';
+    if(!playersData || playersData.length === 0){
+      rowsContainer.innerHTML = '<p>No data available.</p>';
+      return;
+    }
+    playersData.forEach((playerData, index) => {
+      const games = playerData.games_played || 0;
+      const wins = playerData.games_won || 0;
+      const ratio = games > 0 ? ((wins / games) * 100).toFixed(1) + '%' : '0%';
+      const row = document.createElement('div');
+      row.className = 'ladder-nav--results-players';
+      const colRank = createCol('positions', String(index + 1));
+      const colUser = createCol('results-user', playerData.nick || 'Unknown');
+      const colGamesPlayed = createCol('results-gp', String(games));
+      const colGamesWon = createCol('results-gw', String(wins));
+      const colRatio = createCol('results-ratio', ratio);
+      row.appendChild(colRank);
+      row.appendChild(colUser);
+      row.appendChild(colGamesPlayed);
+      row.appendChild(colGamesWon);
+      row.appendChild(colRatio);
+      rowsContainer.appendChild(row);
+
+    });
+    sortLeaderboard();
+  }
+  function createCol(className, textContent){
+    const col = document.createElement('div');
+    col.className = className;
+    const label = document.createElement('label');
+    label.textContent = textContent;
+    col.appendChild(label);
+    return col;
+  }
 });
 
 
