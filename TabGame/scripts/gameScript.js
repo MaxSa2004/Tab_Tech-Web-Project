@@ -160,7 +160,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 TabStats.onPass(currentPlayer);
                 nextTurn();
             }
+        } else if(payload.event === 'update' || payload.type === 'update'){
+            if(payload.board){
+                updateBoardFromRemote(payload.board);
+            }
+            if(payload.count){
+                redPieces = payload.count.red !== undefined ? payload.count.red : redPieces;
+                yellowPieces = payload.count.yellow !== undefined ? payload.count.yellow : yellowPieces;
+            }
+            if(payload.turn){
+                const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+                const turnNick = payload.turn;
+                const turnPlayerNum = (turnNick === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
+                if(turnPlayerNum !== currentPlayer){
+                    currentPlayer = turnPlayerNum;
+                    if(currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
+                    flipBoard();
+                    TabStats.onTurnAdvance();
+                }
+            }
         }
+    }
+    function updateBoardFromRemote(boardData) {
+        if(!Array.isArray(boardData)) return;
+        const allCells = Array.from(gameBoard.querySelectorAll('.cell'));
+        allCells.forEach(cell => {
+            const piece = cell.querySelector('.piece');
+            if (piece) piece.remove(); // remove existing pieces
+            cell.classList.remove('green-glow'); // clear highlights
+        });
+        boardData.forEach(item => {
+            const r = item.position ? item.position.r : item.r;
+            const c = item.position ? item.position.c : item.c;
+            const color = item.color;
+            const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+            if (cell) {
+                const piece = document.createElement('div');
+                piece.classList.add('piece');
+                const colorCLass =(item.color==='red') ? 'red' : 'yellow';
+                piece.classList.add(colorCLass);
+                piece.setAttribute('move-state','moved');
+                cell.appendChild(piece);
+            }
+        });
+        redPieces = boardData.querySelectorAll('.piece.red').length;
+        yellowPieces = boardData.querySelectorAll('.piece.yellow').length;
     }
     // helper to update play and leave button state based on config validity and game state (if playing, play button disabled and leave button enabled, else the opposite)
     function updatePlayButtonState() {
@@ -416,12 +460,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // manage the clicks on a cell (used by event listener click) - only if game is active
-    function handleCellClick(cell) {
+    async function handleCellClick(cell) {
         if (!gameActive) return;
         // don't allow input when AI is playing
         if (vsAI && currentPlayer === aiPlayerNum) return;
         if (vsPlayer && currentPlayer !== humanPlayerNum) return;
-
+        // PVP mode
+        if(vsPlayer && currentPlayer === humanPlayerNum){
+            const r = parseInt(cell.dataset.r, 10);
+            const c = parseInt(cell.dataset.c, 10);
+            const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
+            const isMyPiece = pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains(humanPlayerNum===1))? 'red' : 'yellow');
+            if(isMyPiece){ // if it's my piece and another piece is already selected, deselect previous
+                const prev = document.querySelector('.cell.selected'); // previously selected cell
+                if(prev) prev.classList.remove('selected'); // deselect previous
+                pieceInCell.classList.add('selected'); // select current
+                selectedPiece = pieceInCell;
+            }
+            const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
+            const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
+            try {
+                await Network.notify({ nick, password, game, cell: { r:r, c:c } });
+                if(!isMyPiece && selectedPiece){
+                    selectedPiece.classList.remove('selected');
+                    selectedPiece = null;
+                }
+            } catch (err) {
+                console.warn('Erro ao notificar jogada ao servidor:', err);
+                if(selectPiecedPiece){
+                    selectedPiece.classList.remove('selected');
+                    selectedPiece = null;
+                }
+            }
+            return;
+        }
         const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
 
         // selecting current player's piece (non-empty cell and cell selected must contain piece belonging to current player)
@@ -736,6 +809,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // end game helper - resets all "global" variables and reset board and button states
     function endGame() {
+        try {
+            if (window.updateEventSource) {
+                window.updateEventSource.close();
+                window.updateEventSource = null;
+            }
+        } catch (e) {
+            console.warn('Erro ao fechar EventSource ao finalizar o jogo:', e);
+        }
         TabStats.showSummary();
         currentPlayer = 1;
         gameActive = false;
