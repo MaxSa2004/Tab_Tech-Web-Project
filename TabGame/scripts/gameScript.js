@@ -146,6 +146,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     processDiceResult(currentPlayer, val);
                 }
             });
+        } else if(payload.event == 'pass' || payload.type === 'pass') {
+            // turn passed
+            const nextPlayerNick = payload.nick;
+            let serverNextPlayerNum;
+            const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            if(nextPlayerNick === localNick) { // if next player is us
+                serverNextPlayerNum = humanPlayerNum; // we are next
+            } else {
+                serverNextPlayerNum = (humanPlayerNum === 1) ? 2 : 1; // opponent is next (whoever its number is - 1 or 2)
+            }
+            if(serverNextPlayerNum === currentPlayer){ // if who passed was the current player, we advance turn
+                TabStats.onPass(currentPlayer);
+                nextTurn();
+            }
         }
     }
     // helper to update play and leave button state based on config validity and game state (if playing, play button disabled and leave button enabled, else the opposite)
@@ -817,7 +831,25 @@ document.addEventListener("DOMContentLoaded", () => {
     // UI listeners
     // next turn button
     if (nextTurnBtn) {
-        nextTurnBtn.addEventListener('click', () => {
+        nextTurnBtn.addEventListener('click', async () => {
+            if(vsPlayer && currentPlayer === humanPlayerNum){
+                const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+                const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
+                const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
+                if(!nick || !password || !game){
+                    alert("Você precisa estar autenticado para jogar contra outro jogador.");
+                    return;
+                }
+                try {
+                    nextTurnBtn.disabled = true;
+                    await Network.pass({ nick, password, game });
+                } catch (err) {
+                    console.warn('Erro ao passar o turno no modo PvP:', err);
+                    alert('Erro ao passar o turno. Por favor, tente novamente.');
+                    nextTurnBtn.disabled = false;
+                }
+                return;
+            }
             TabStats.onPass(currentPlayer); // stats
             nextTurn(); // advance turn
         });
