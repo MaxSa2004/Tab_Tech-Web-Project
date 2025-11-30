@@ -973,7 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.currentGameId = gameId;
                 if (!window.updateEventSource) {
                     try {
-                        window.updateEventSource = Network.createUpdateEventSource({ nick });
+                        window.updateEventSource = Network.createUpdateEventSource({ nick, game : gameId });
                         window.updateEventSource.onmessage = handleUpdateMessage;
                         window.updateEventSource.onerror = (err) => {
                             console.warn('Erro na conexão com o servidor de atualizações:', err);

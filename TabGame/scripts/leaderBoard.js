@@ -9,8 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const searchInput = container.querySelector(".ladder-search");
   const sortButton = container.querySelector("#sortbtn");
+
   let descending = true;
   const group = 36;
+
   //configuration of different languages in leaderBoard (EN/PT)
   function tLB(key) {
     const lang = window.currentLang || 'en';
@@ -49,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   //Get info of each player
   function getPlayers() {
-    
     return Array.from(rowsContainer.querySelectorAll(".ladder-nav--results-players"));
   }
 
@@ -179,91 +180,47 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initializing
   refreshUI();
 
-  // Return of data saved
-  const savedData = JSON.parse(localStorage.getItem("leaderboardData") || "[]");
-  if (savedData.length > 0) {
+  const savedData = JSON.parse(localStorage.getItem('leaderboardData') || 'null');
+  if(savedData && savedData.length>0){
     const rows = getPlayers();
     savedData.forEach(data => {
-      const player = rows.find(
-        p => p.querySelector(".results-user")?.textContent.trim() === data.name
-      );
-      if (player) {
-        const gpEl = player.querySelector(".results-gp");
-        const gwEl = player.querySelector(".results-gw");
-        if (gpEl) gpEl.textContent = String(parseInt(data.gp, 10) || 0);
-        if (gwEl) gwEl.textContent = String(parseInt(data.gw, 10) || 0);
-      }
+      const username = data.nick || data.name || 'Unknown';
+      const player = rows.find(r => r.querySelector('.results-user')?.textContent.trim() === username);
     });
+    if(player){
+      const gpEl = player.querySelector(".results-gp");
+      const gwEl = player.querySelector(".results-gw");
+      if(gpEl) gpEl.textContent = String(data.games_played || 0);
+      if(gwEl) gwEl.textContent = String(data.games_won || 0);
+    }
   }
-  //Sorts after allocating the new 
+
   sortLeaderboard();
 
   // Show after we call languageScript
-  window.__refreshLeaderboard = () => {
+  window.__refreshLeaderboard = async () => {
     refreshUI();
-    window.fetchRanking();
+    
     // Keeping the language aligned
     if (sortButton) {
       sortButton.textContent = descending ? tLB('leader_sort_desc') : tLB('leader_sort_asc');
-    }
-  };
-
-  // Updates leaderboard dynamically from game results
-  window.updateLeaderboard = function (winnerName, loserName) {
-    const container = document.querySelector("#leaderboard-container");
-    if (!container) return;
-
-    const rows = container.querySelectorAll(".ladder-nav--results-players");
-
-    rows.forEach(player => {
-      const username = player.querySelector(".results-user").textContent.trim();
-      const gpEl = player.querySelector(".results-gp");
-      const gwEl = player.querySelector(".results-gw");
-      const ratioEl = player.querySelector(".results-ratio");
-
-      let gp = parseInt(gpEl.textContent) || 0;
-      let gw = parseInt(gwEl.textContent) || 0;
-
-      if (username === winnerName) {
-        gp++;
-        gw++;
-      } else if (username === loserName) {
-        gp++;
+      
+      const widthSelect = document.getElementById('width');
+      const size = widthSelect ? parseInt(widthSelect.value, 10) : 9;
+      try {
+        const data = await Network.ranking({group, size});
+        const rankingList = data.ranking || [];
+        renderRankingTable(rankingList);
+      } catch (err) {
+        rowsContainer.innerHTML = `<p>Error loading leaderboard: ${err.message}</p>`;
+        console.warn('Error fetching ranking:', err);
       }
-
-      gpEl.textContent = gp;
-      gwEl.textContent = gw;
-
-      //Calculation of the ratio
-      const ratio = gp > 0 ? Math.round((gw / gp) * 100) : 0;
-      ratioEl.textContent = ratio + "%";
-    });
-
-    // Saves the current state of the leaderboard onto the local storage
-    const leaderboardData = Array.from(rows).map(p => ({
-      name: p.querySelector(".results-user").textContent.trim(),
-      gp: parseInt(p.querySelector(".results-gp").textContent.trim()),
-      gw: parseInt(p.querySelector(".results-gw").textContent.trim())
-    }));
-    localStorage.setItem("leaderboardData", JSON.stringify(leaderboardData));
-
-    // Sorts leaderboard after the update of the leaderboard
-    sortLeaderboard();
-  };
-
-  window.fetchRanking = async function () {
-    rowsContainer.innerHTML = '<p>Loading...</p>';
-    const widthSelect = document.getElementById('width');
-    const size = widthSelect ? parseInt(widthSelect.value, 10) : 9;
-    try{
-      const data = await Network.ranking({group, size});
-      const rankingList = data.ranking || [];
-      renderRankingTable(rankingList);
-    } catch(err){
-      rowsContainer.innerHTML = `<p>Error loading leaderboard: ${err.message}</p>`;
-      console.error('Error fetching ranking:', err);
     }
   };
+
+  window.fetchRanking = window.__refreshLeaderboard;
+
+
   function renderRankingTable(playersData){
     rowsContainer.innerHTML = '';
     if(!playersData || playersData.length === 0){
