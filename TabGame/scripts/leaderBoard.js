@@ -180,7 +180,22 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initializing
   refreshUI();
 
+  const savedData = JSON.parse(localStorage.getItem('leaderboardData') || 'null');
+  if(savedData && savedData.length>0){
+    const rows = getPlayers();
+    savedData.forEach(data => {
+      const username = data.nick || data.name || 'Unknown';
+      const player = rows.find(r => r.querySelector('.results-user')?.textContent.trim() === username);
+    });
+    if(player){
+      const gpEl = player.querySelector(".results-gp");
+      const gwEl = player.querySelector(".results-gw");
+      if(gpEl) gpEl.textContent = String(data.games_played || 0);
+      if(gwEl) gwEl.textContent = String(data.games_won || 0);
+    }
+  }
 
+  sortLeaderboard();
 
   // Show after we call languageScript
   window.__refreshLeaderboard = async () => {
@@ -213,8 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     playersData.forEach((playerData, index) => {
-      const games = (playerData.games_played ?? playerData.games) || 0;
-      const wins = (playerData.games_won ?? playerData.victories) || 0;
+      const games = playerData.games_played || 0;
+      const wins = playerData.games_won || 0;
       const ratio = games > 0 ? ((wins / games) * 100).toFixed(1) + '%' : '0%';
       const row = document.createElement('div');
       row.className = 'ladder-nav--results-players';

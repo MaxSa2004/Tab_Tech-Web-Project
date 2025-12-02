@@ -34,11 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnClassifications.addEventListener('click', (e) => { 
             e.preventDefault(); 
             openModal(modalClassifications, btnClassifications); 
-            if(typeof window.__refreshLeaderboard === 'function'){
-                window.__refreshLeaderboard();
-            } else if(typeof window.fetchRanking === 'function'){
-                window.fetchRanking();
-            }
+            window.__refreshLeaderBoard();
         });
     }
     if (btnExtra) btnExtra.addEventListener('click', (e) => { e.preventDefault(); openModal(modalExtra, btnExtra); });
