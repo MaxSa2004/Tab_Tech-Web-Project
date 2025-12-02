@@ -44,7 +44,7 @@ const i18n = { // internationalization
         <hr>
         <h4>Fim do jogo</h4>
         <p>O jogo termina quando um jogador fica sem peças no tabuleiro; o outro jogador é o vencedor.</p> `,
-      // classifications
+    // classifications
     myBtnClassifications: 'Ver Classificações',
     modalContentClassifications: `<h3>Classificações</h3>`,
     leaderboardTitle: "Classificações",
@@ -156,6 +156,18 @@ const i18n = { // internationalization
     // leaderboard sort
     leader_sort_desc: "Ordenar: Descendente",
     leader_sort_asc: "Ordenar: Ascendente",
+    msg_waiting_opponent: "A procurar adversário...",
+    msg_pairing_cancelled: "Emparelhamento cancelado.",
+    msg_server_error: "Erro do servidor: {error}",
+    msg_ranking_cleared: "Sem dados de ranking para este grupo/tamanho.",
+    msg_ranking_updated: "{ranking}",
+    msg_wait_opponent_move: "Aguarda a jogada do adversário...",
+    msg_roll_sent: "Lançamento enviado.",
+    msg_game_ended_draw: "Jogo terminado sem vencedor.",
+    msg_select_piece_move: "Seleciona uma peça para mover.",
+    msg_select_destination: "Seleciona a casa de destino.",
+    msg_select_opponent_piece: "Seleciona uma peça do adversário para capturar.",
+    msg_roll_first: "Lança o dado primeiro.",
   },
   en: { // list of id:text pairs for English
     title: 'Tâb Game',
@@ -348,6 +360,18 @@ const i18n = { // internationalization
     // leaderboard sort
     leader_sort_desc: "Sort: Descending",
     leader_sort_asc: "Sort: Ascending",
+    msg_waiting_opponent: "Searching for an opponent...",
+    msg_pairing_cancelled: "Pairing cancelled.",
+    msg_server_error: "Server error: {error}",
+    msg_ranking_cleared: "No ranking data for this group/board size.",
+    msg_ranking_updated: "{ranking}",
+    msg_wait_opponent_move: "Waiting for the opponent's move...",
+    msg_roll_sent: "Roll sent.",
+    msg_game_ended_draw: "Game ended with no winner.",
+    msg_select_piece_move: "Select a piece to move.",
+    msg_select_destination: "Select the destination square.",
+    msg_select_opponent_piece: "Select an opponent piece to capture.",
+    msg_roll_first: "Throw the dice first.",
 
   }
 };
@@ -471,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => { // the DOMContentLoaded ev
         return;
       }
 
-    // if not found, skip
+      // if not found, skip
 
     });
 
@@ -508,13 +532,13 @@ document.addEventListener('DOMContentLoaded', () => { // the DOMContentLoaded ev
 
   };
 
-// attach event listeners to language switch buttons/links -> set the language on click
-const elPt = document.getElementById('langPT'); // get the Portuguese language button/link by its id
-const elEn = document.getElementById('langEN'); // get the English language button/link by its id
-if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); }); // if we click on the Portuguese language button/link, set language to 'pt'
-if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); }); // if we click on the English language button/link, set language to 'en'
+  // attach event listeners to language switch buttons/links -> set the language on click
+  const elPt = document.getElementById('langPT'); // get the Portuguese language button/link by its id
+  const elEn = document.getElementById('langEN'); // get the English language button/link by its id
+  if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); }); // if we click on the Portuguese language button/link, set language to 'pt'
+  if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); }); // if we click on the English language button/link, set language to 'en'
 
-// initialization on page load: set language from localStorage or default to 'en'
-setLang(localStorage.getItem('siteLang') || 'en');
+  // initialization on page load: set language from localStorage or default to 'en'
+  setLang(localStorage.getItem('siteLang') || 'en');
 
 });
