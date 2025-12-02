@@ -1,3 +1,5 @@
+const { Network } = require("inspector/promises");
+
 // DOMContentLoaded ensures that all html is loaded before script runs
 document.addEventListener("DOMContentLoaded", () => {
     const widthSelect = document.getElementById('width');
@@ -31,6 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let aiPlayerNum = null;       // 1 (red) ou 2 (yellow)
     let humanPlayerNum = 1;    // 1 (red) ou 2 (yellow) || 1 is default
     let waitingForPair = false;
+
+    let currentServerStep = null; // 'from' | 'to' | 'take' | null
 
 
     // pieces
@@ -93,8 +97,284 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             return;
         }
-        
+
         const localNick = sessionStorage.getItem('tt_nick');
+
+
+        // cell
+        if(payload.cell && typeof payload.cell.square === 'number'){
+            try {
+                const squareIdx = payload.cell.square;
+                const initialNick = payload.initial || getInitialNick();
+                const cols = parseInt(widthSelect?.value || '9', 10);
+                const {r,c} = serverIndexToLocalCell(squareIdx, cols, initialNick);
+                const domCell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+                if(domCell){
+                    domCell.classList.add('green-glow', 'pulse');
+                    setTimeout(() => {
+                        domCell.classList.remove('green-glow', 'pulse');
+                    }, 900);
+                    if(payload.step === 'from'){
+                        const p = domCell.querySelector('.piece');
+                        if(p){
+                            if(selectedPiece) selectedPiece.classList.remove('selected');
+                            selectedPiece = p;
+                            p.classList.add('selected');
+                            clearHighlights();  
+                            const state = p.getAttribute('move-state');
+                            const movesAllowed = (state === 'not-moved' && lastDiceValue != 1) ? [] : getValidMoves(p);
+                            movesAllowed .forEach(dest => dest.classList.add('green-glow'));
+
+                        }
+                    } else if(payload.step === 'to'){
+                        if(selectedPiece){
+                            selectedPiece.classList.remove('selected');
+                            selectedPiece = null;
+                        }
+                        clearHighlights();
+                    }
+                }
+            } catch(e) {
+                console.warn('Erro ao processar célula destacada do servidor:', e);
+            }
+        }
+        // dice
+        if(payload.dice !== undefined){
+            const turnNick = payload.turn;
+            const isMyTurn = turnNick ? (turnNick === localNick) : (currentPlayer === humanPlayerNum);
+            if(payload.dice === null){
+                // dado consumido/inválido
+                lastDiceValue = null;
+                if(throwBtn) throwBtn.disabled = !isMyTurn;
+                if(nextTurnBtn) nextTurnBtn.disabled = true;
+                if(isMyTurn){
+                    showMessage({who: 'system', key: 'msg_dice'});
+                }
+                return;
+            }
+            const diceObj = payload.dice || {};
+            const val = diceObj.value;
+            const keepPlaying = !!diceObj.keepPlaying;
+            window.tabGame.showRemoteRoll(val).then(() => {
+                lastDiceValue = val;
+                const meNum = humanPlayerNum;
+                const oppNum = (meNum === 1) ? 2 : 1;
+                showMessage({who: isMyTurn ? 'player' : 'player', player: isMyTurn ? meNum : oppNum, key: 'msg_dice_thrown', params: { value: val }});
+                try {
+                    TabStats.onDiceThrown(val, isMyTurn);
+                } catch (e) {
+
+                }
+                if(keepPlaying){
+                    if(val === 1){
+                        const n = countConvertiblePieces(isMyTurn ? meNum : oppNum);
+                        if(n>0){
+                            showMessage({who: 'system', key: 'msg_dice_thrown_one', params: { n }});
+                        }
+                    }
+                    showMessage({who: 'system', key: 'msg_dice_thrown_double', params: { value: val }});
+                    try {
+                        TabStats.onExtraRoll(currentPlayer, val);
+                    } catch (e) {
+
+                    }
+                }
+                if(throwBtn) throwBtn.disabled = true;
+                if(nextTurnBtn) nextTurnBtn.disabled = true;
+            });
+        }
+
+        // error
+
+        // game
+        if(payload.game){
+            const prev = sessionStorage.getItem('tt_game') || '';
+            if(payload.game !== prev){
+                sessionStorage.setItem('tt_game', payload.game);
+            }
+            window.currentGameId = payload.game;
+            try {
+                if(window.updateEventSource && window.updateEventSource.readyState !== 2){
+                    const currentUrl = window.updateEventSource.url || '';
+                    const hasGameParam = currentUrl.includes('game=');
+                    if(!hasGameParam){
+                        const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+                        if(nick){
+                            window.updateEventSource.close();
+                            window.updateEventSource = Network.createUpdateEventSource({ nick, game: payload.game });
+                            window.updateEventSource.onmessage = handleUpdateMessage;
+                            window.updateEventSource.onerror = (err) => {
+                                console.warn('EventSource error:', err);
+                            };
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Erro ao atualizar EventSource com novo ID de jogo:', e);
+            }
+            
+        }
+
+        // initial
+        if(payload.initial){
+            sessionStorage.setItem('tt_initial', payload.initial);
+            humanPlayerNum = (payload.initial === localNick) ? 1 : 2;
+            if(!gameActive){
+                gameActive = true;
+                waitingForPair = false;
+                setConfigEnabled(false);
+                if(playButton) playButton.disabled = true;
+                if(leaveButton) leaveButton.disabled = false;
+                if(nextTurnBtn) nextTurnBtn.disabled = true;
+                if(throwBtn) throwBtn.disabled = true;
+                refreshCapturedTitles();
+                showMessage({who: 'system', key: 'msg_game_started'});
+            }
+        }
+
+        // mustPass
+        if(payload.mustPass !== undefined){
+            const turnNick = payload.turn;
+            const isMyTurn = turnNick ? (turnNick === localNick) : (currentPlayer === humanPlayerNum);
+            if(payload.mustPass === true){
+                if(isMyTurn){
+                    if(nextTurnBtn) nextTurnBtn.disabled = false;
+                    if(throwBtn) throwBtn.disabled = true;
+                    showMessage({who: 'system', key: 'msg_player_no_moves_pass'});
+                } else {
+                    if(nextTurnBtn) nextTurnBtn.disabled = true;
+                    if(throwBtn) throwBtn.disabled = true;
+                }
+            }  else {
+                if(nextTurnBtn) nextTurnBtn.disabled = true;
+            }
+        }
+
+        // pieces
+        if(payload.pieces){
+            let sizeFromServer = null;
+            if(Array.isArray(payload.pieces) && payload.pieces.length % 4 === 0){
+                sizeFromServer = payload.pieces.length / 4;
+            }
+            if(sizeFromServer && widthSelect){
+                const cur = parseInt(widthSelect.value, 10);
+                if(cur !== sizeFromServer){
+                    widthSelect.value = String(sizeFromServer);
+                    renderBoard(sizeFromServer);
+                } else if(!gameBoard.querySelector('.cell')){
+                    renderBoard(sizeFromServer);
+                }
+            }
+            const initialNick = payload.initial || getInitialNick();
+            updateBoardFromRemote(payload.pieces, initialNick);
+        }
+
+        // players
+        if(payload.players && typeof payload.players === 'object'){
+            try {
+                sessionStorage.setItem('tt_players', JSON.stringify(payload.players));
+            } catch (e) {
+
+            }
+            const myColor = localNick ? payload.players[localNick] : null;
+            if(myColor){
+                const myNum = (String(myColor).toLowerCase() === 'red') ? 1 : 2;
+                if(humanPlayerNum !== myNum){
+                    humanPlayerNum = myNum;
+                    refreshCapturedTitles();
+                }
+            }
+            const nicks = Object.keys(payload.players);
+            const opponentNick = localNick ? nicks.find(n => n !== localNick) : null;
+            if(opponentNick){
+                sessionStorage.setItem('tt_opponent', opponentNick);
+            }
+            if(!gameActive){
+                gameActive = true;
+                waitingForPair = false;
+                setConfigEnabled(false);
+                if(playButton) playButton.disabled = true;
+                if(leaveButton) leaveButton.disabled = false;
+                if(nextTurnBtn) nextTurnBtn.disabled = true;
+                if(throwBtn) throwBtn.disabled = true;
+                showMessage({who: 'system', key: 'msg_game_started'});
+            }
+        }
+
+        // ranking
+
+        // selected
+
+        // step
+        if(payload.step !== undefined){
+            const step = payload.step;
+            const turnNick = payload.turn;
+            const isMyTurn = turnNick ? (turnNick === localNick) : (currentPlayer === humanPlayerNum);
+            const changed = (step !== currentServerStep);
+            currentServerStep = step;
+            if(throwBtn){
+                const canRollNow = (payload.dice === null) && isMyTurn;
+                throwBtn.disabled = !canRollNow;
+            }
+            if(nextTurnBtn) nextTurnBtn.disabled = true;
+            if(!isMyTurn){
+                if(throwBtn) throwBtn.disabled = true;
+                if(changed){
+                    showMessage({who: 'system', key: 'msg_wait_opponent_move'});
+                }
+                return;
+            }
+            if(step === 'from'){
+                const hasServerDice = (payload.dice !== udnefined && payload.dice !== null) || (lastDiceValue !== null);
+                if(changed){
+                    if(!hasServerDice){
+                        showMessage({who: 'system', key: 'msg_dice'});
+                    } else {
+                        showMessage({who: 'system', key: 'msg_select_piece_move'});
+                    }
+                }
+                clearHighlights();
+            } else if(step === 'to'){
+                if(changed){
+                    showMessage({who: 'system', key: 'msg_select_destination'});
+                }
+                if(throwBtn) throwBtn.disabled = true;
+            } else if(step === 'take'){
+                if(changed){
+                    showMessage({who: 'system', key: 'msg_select_opponent_piece'});
+                }
+                if(throwBtn) throwBtn.disabled = true;
+            }
+        }
+
+        // turn
+        if(payload.turn){
+            const turnNick = payload.turn;
+            const isMyTurn = (turnNick === localNick);
+            const newPlayerNum = isMyTurn ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
+            const changed = (newPlayerNum !== currentPlayer);
+            currentPlayer = newPlayerNum;
+            if(currentPlayerEl) currentPlayerEl.textContent = isMyTurn ? 'EU' : String(turnNick);
+            if(changed){
+                selectedPiece = null;
+                lastDiceValue = null;
+                clearHighlights();
+                // flip.board();
+                try {
+                    TabStats.onTurnAdvance();
+                } catch (e) {
+                    console.warn('TabStats onTurnAdvance failed', e);
+                }
+            }
+            if(throwBtn) throwBtn.disabled = !isMyTurn;
+            if(nextTurnBtn) nextTurnBtn.disabled = true;
+        }
+
+        // winner
+
+
+        // antigo
+  /*       const localNick = sessionStorage.getItem('tt_nick');
 
         // 1. ATIVAÇÃO ROBUSTA
         if ((payload.initial || payload.players || payload.turn || payload.pieces) && !gameActive) {
@@ -266,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
             endGame();
         } else if (payload.error) {
             console.warn("Server Error:", payload.error);
-        }
+        } */
     }
     // --- FUNÇÕES EM FALTA (Visual / Tabuleiro) ---
 
@@ -330,10 +610,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 const cssColor = (serverColor === 'red') ? 'red' : 'yellow';
                 
                 piece.classList.add(cssColor);
+
                 
-                // Manter estado visual se a peça já se moveu
-                if (pieceData.inMotion) piece.setAttribute('move-state', 'moved');
-                
+                let moveState = 'not-moved';
+                if(pieceData.reachedLastRow){
+                    moveState = 'row-four';
+                }else if(pieceData.inMotion){
+                    moveState = 'moved';
+                }
+                piece.setAttribute('move-state', moveState);
                 cell.appendChild(piece);
             }
         });
