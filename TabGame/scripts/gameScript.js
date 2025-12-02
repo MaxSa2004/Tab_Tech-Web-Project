@@ -41,11 +41,28 @@ document.addEventListener("DOMContentLoaded", () => {
     // dice
     let lastDiceValue = null;
 
+    // Add quick debugger helper (put after variable declarations)
+    window.__dbgState = function () {
+        return {
+            humanPlayerNum, currentPlayer, gameActive, vsAI, vsPlayer, aiPlayerNum, waitingForPair,
+            throwBtnDisabled: throwBtn ? throwBtn.disabled : null,
+            nextTurnBtnDisabled: nextTurnBtn ? nextTurnBtn.disabled : null,
+            tt_nick: sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick'),
+            tt_game: sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game'),
+            eventSourceReadyState: window.updateEventSource ? window.updateEventSource.readyState : null
+        };
+    };
+
     // helper function to get color by player number
     function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
     // helper function to check if it's human's turns (our turn)
     function isHumanTurn() {
-        return currentPlayer === humanPlayerNum || currentPlayer !== aiPlayerNum;
+        return currentPlayer === humanPlayerNum;
+    }
+
+    // helper to read initial nick saved by server (robust fallback)
+    function getInitialNick() {
+        return sessionStorage.getItem('tt_initial') || localStorage.getItem('tt_initial') || null;
     }
 
     // config validation helper
@@ -69,142 +86,261 @@ document.addEventListener("DOMContentLoaded", () => {
             if (firstToPlayCheckbox) firstToPlayCheckbox.disabled = true;
         }
     }
-    // function that updates game state (paired), roll, pass, leave...
     function handleUpdateMessage(ev) {
         let payload;
         try {
             payload = JSON.parse(ev.data);
-
-        } catch {
-            console.warn('Invalid message payload:', ev.data);
+        } catch (e) {
             return;
         }
-        // handle pairing / game started
-        if (payload.event === 'paired' || payload.event === 'game_started' || payload.type === 'paired') {
-            const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-            const gameId = payload.game || payload.gameId || window.currentGameId;
-            setWaitingForPair(false);
-            updatePlayButtonState();
-            if (gameId) {
-                sessionStorage.setItem('tt_game', gameId);
-                window.currentGameId = gameId;
+        
+        const localNick = sessionStorage.getItem('tt_nick');
+
+        // 1. ATIVAÇÃO ROBUSTA
+        if ((payload.initial || payload.players || payload.turn || payload.pieces) && !gameActive) {
+            // ... (igual ao anterior) ...
+            if (payload.initial) {
+                humanPlayerNum = (payload.initial === localNick) ? 1 : 2;
+                sessionStorage.setItem('tt_initial', payload.initial);
+            } else if (payload.players && payload.players[0]) {
+                humanPlayerNum = (payload.players[0] === localNick) ? 1 : 2;
             }
-            const players = Array.isArray(payload.players) ? payload.players : [];
-            if (players.length === 2 && localNick) {
-                humanPlayerNum = (players[0] === localNick) ? 1 : 2;
-
-            } else {
-                humanPlayerNum = 1;
+            // Tentativa de ler da memória se falhar
+            if (!payload.initial && !payload.players) {
+                const savedInitial = sessionStorage.getItem('tt_initial');
+                if (savedInitial) humanPlayerNum = (savedInitial === localNick) ? 1 : 2;
             }
-            if (payload.starterNick) {
-                currentPlayer = (payload.starterNick === localNick) ? 1 : 2;
-
-            } else if (Array.isArray(payload.players) && payload.players.length === 2) {
-                currentPlayer = (players[0] === localNick) ? 1 : 2;
-
-            } else {
-                currentPlayer = 1;
-            }
-            if (currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
-
+            
             gameActive = true;
+            waitingForPair = false;
             setConfigEnabled(false);
             if (playButton) playButton.disabled = true;
             if (leaveButton) leaveButton.disabled = false;
-            updatePlayButtonState();
-            refreshCapturedTitles();
+            showMessage({who: 'system', key: 'msg_game_started'});
+        }
 
-            try {
-                TabStats.start({
-                    mode: 'player',
-                    aiDifficulty: null,
-                    cols: parseInt(widthSelect.value, 10),
-                    firstPlayer: (currentPlayer === humanPlayerNum) ? 'you' : 'opponent'
-                });
-                TabStats.onTurnAdvance();
-            } catch (e) {
-                console.warn('Erro ao iniciar estatísticas do jogo:', e);
-            }
-            if (throwBtn) throwBtn.disabled = !(currentPlayer === humanPlayerNum);
-            showMessage({ who: 'system', key: 'msg_paired' });
-        } else if (payload.event === 'left' || payload.type === 'left') { // leave updated
-            // opponent left
+        // 2. ID DO JOGO
+        if (payload.game) {
+            window.currentGameId = payload.game;
+            sessionStorage.setItem('tt_game', payload.game);
+        }
+
+        // 3. ATUALIZAR TABULEIRO
+        if (payload.pieces) {
+            const initialToUse = payload.initial || sessionStorage.getItem('tt_initial');
+            updateBoardFromRemote(payload.pieces, initialToUse);
+        }
+
+        // 4. TURNO E ESTADO DOS BOTÕES
+        if (payload.turn!== undefined) {
             const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-            const leaverNick = payload.nick || '';
-            if (leaverNick && leaverNick !== localNick) {
-                showMessage({ who: 'system', key: 'msg_opponent_left' });
-                leaveGame({ showStats: true, updateRank: false });
-            }
-        } else if (payload.event == 'roll' || payload.type === 'roll') {
-            // dice rolled
-            const rollerNick = payload.nick || '';
-            const val = parseInt(payload.value, 10);
-            window.tabGame.showRemoteRoll(val).then(() => {
-                const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-                const rollerNum = (rollerNick === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
-                if (rollerNum === currentPlayer) {
-                    processDiceResult(currentPlayer, val);
+            let turnPlayerNum = null;
+            let isMyTurn = (payload.turn === localNick);
+            if (typeof payload.turn === 'number') {
+                turnPlayerNum = payload.turn;
+                isMyTurn = (turnPlayerNum === humanPlayerNum);
+            } else if (typeof payload.turn === 'string') {
+                // Pode ser um nick ou uma string com o número; tentar interpretar
+                const maybeNum = parseInt(payload.turn, 10);
+                if (!isNaN(maybeNum)) {
+                    turnPlayerNum = maybeNum;
+                    isMyTurn = (turnPlayerNum === humanPlayerNum);
+                } else {
+                    // é um nick — compara com localNick para decidir
+                    isMyTurn = localNick && (payload.turn === localNick);
+                    turnPlayerNum = isMyTurn ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
                 }
-            });
-        } else if(payload.event == 'pass' || payload.type === 'pass') {
-            // turn passed
-            const nextPlayerNick = payload.nick;
-            let serverNextPlayerNum;
-            const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-            if(nextPlayerNick === localNick) { // if next player is us
-                serverNextPlayerNum = humanPlayerNum; // we are next
-            } else {
-                serverNextPlayerNum = (humanPlayerNum === 1) ? 2 : 1; // opponent is next (whoever its number is - 1 or 2)
             }
-            if(serverNextPlayerNum === currentPlayer){ // if who passed was the current player, we advance turn
-                TabStats.onPass(currentPlayer);
-                nextTurn();
+        
+            // Atualiza UI do currentPlayer numeric e limpa lastDiceValue se mudou de jogador
+            if (turnPlayerNum !== null && turnPlayerNum !== currentPlayer) {
+                currentPlayer = turnPlayerNum;
+                if (currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
+                // Ao mudar de jogador limpamos qualquer dado pendente
+                lastDiceValue = null;
+                flipBoard();
+                try { TabStats.onTurnAdvance(); } catch (e) { console.warn('TabStats onTurnAdvance failed', e); }
+            } else if (currentPlayerEl) {
+                // Se não houve troca, apenas actualiza etiqueta
+                currentPlayerEl.textContent = isMyTurn ? 'EU' : String(payload.turn);
             }
-        } else if(payload.event === 'update' || payload.type === 'update'){
-            if(payload.board){
-                updateBoardFromRemote(payload.board);
+        
+            // Determinar se estamos numa "fase de movimento" (step indica mover)
+            const isMovePhase = (payload.step === 'from' || payload.step === 'to' || payload.step === 'take');
+        
+            // Decidir se podemos rolar:
+            // - é a minha vez AND
+            //   - servidor indicou explicitamente dice === null (dice consumido -> pronto para rolar)
+            //   - OU não estamos numa fase de movimento e o servidor não exige um passo 'from'
+            //   - OU o servidor enviou um campo extraRoll true (fallback custom)
+            const serverSaysRoll = (payload.dice === null) || (payload.extraRoll === true);
+            const canRoll = isMyTurn && (!isMovePhase) && (serverSaysRoll || payload.dice === undefined);
+        
+            if (throwBtn) {
+                // se o servidor sabe que é suposto rolar, habilita;
+                // caso contrário, deixa o botão desactivado (até receber SSE)
+                throwBtn.disabled = !canRoll;
             }
-            if(payload.count){
-                redPieces = payload.count.red !== undefined ? payload.count.red : redPieces;
-                yellowPieces = payload.count.yellow !== undefined ? payload.count.yellow : yellowPieces;
-            }
-            if(payload.turn){
-                const localNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-                const turnNick = payload.turn;
-                const turnPlayerNum = (turnNick === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
-                if(turnPlayerNum !== currentPlayer){
-                    currentPlayer = turnPlayerNum;
-                    if(currentPlayerEl) currentPlayerEl.textContent = currentPlayer;
-                    flipBoard();
-                    TabStats.onTurnAdvance();
+        
+            // nextTurnBtn habilitado apenas quando não é a minha vez
+            if (nextTurnBtn) nextTurnBtn.disabled = isMyTurn;
+        
+            // debug
+            console.debug('[SSE] processed turn', { payloadTurn: payload.turn, turnPlayerNum, isMyTurn, isMovePhase, payloadDice: payload.dice, canRoll, throwBtnDisabled: throwBtn ? throwBtn.disabled : null });
+        }
+
+        // 5. INSTRUÇÕES E FEEDBACK
+        if (payload.step && payload.turn === localNick) {
+            // Verifica se temos um dado válido (do server ou local)
+            let hasServerDice = (payload.dice !== undefined && payload.dice !== null);
+            if(payload.dice === null) lastDiceValue = null;
+            const diceAvailable = hasServerDice || (lastDiceValue !== null);
+
+            if (payload.step === 'from') {
+                if (diceAvailable) {
+                    showMessage({ who: 'system', text: "A tua vez: Seleciona uma peça para mover." });
+                    if (throwBtn) throwBtn.disabled = true; 
+                } else {
+                    showMessage({ who: 'system', text: "Lança o dado." });
+                    if (throwBtn) throwBtn.disabled = false;
                 }
+            } else if (payload.step === 'to') {
+                showMessage({ who: 'system', text: "Seleciona o destino." });
             }
         }
+
+        // 6. DADO (COM MENSAGENS DE REPETIÇÃO)
+        if (payload.dice !== undefined) {
+            if (payload.dice === null) {
+                // Dado consumido/inválido
+            } else {
+                const val = payload.dice.value;
+                
+                // Só anima se for novo valor ou se for a primeira vez
+                window.tabGame.showRemoteRoll(val).then(() => {
+                    lastDiceValue = val;
+                    
+                    // --- NOVA LÓGICA DE FEEDBACK (Igual à IA) ---
+                    const isMyTurn = (payload.turn === localNick);
+                    const isExtra = (val === 1 || val === 4 || val === 6);
+                    const isTab = (val === 1);
+
+                    // Mensagem base: "Saiu X"
+                    if (isMyTurn) {
+                        showMessage({ who: 'player', player: humanPlayerNum, key: 'msg_dice_thrown', params: { value: val } });
+                    } else {
+                        // Mensagem para o oponente
+                        const oppNum = (humanPlayerNum === 1 ? 2 : 1);
+                        showMessage({ who: 'player', player: oppNum, key: 'msg_dice_thrown', params: { value: val } });
+                    }
+
+                    // Mensagens Especiais (Extra Turn / Tab)
+                    if (isExtra) {
+                        if (isMyTurn) {
+                            if (isTab) {
+                                showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: 1 } });
+                            }
+                            // Avisa que vai jogar de novo (Double)
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: val } });
+                        } else {
+                            showMessage({ who: 'system', key: 'msg_ai_extra_roll' }); // "Oponente ganhou extra roll"
+                        }
+                    }
+                    // ---------------------------------------------
+                });
+            }
+        }
+
+        // 7. MUST PASS
+        if (payload.mustPass && payload.turn === localNick) {
+            if(nextTurnBtn) nextTurnBtn.disabled = false;
+            if(throwBtn) throwBtn.disabled = true;
+            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' }); // "Não há movimentos, passa a vez"
+        }
+
+        // 8. VENCEDOR
+        if (payload.winner) {
+            const winnerNick = payload.winner;
+            let winnerNum = (winnerNick === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
+            showMessage({ who: 'system', key: 'msg_player_won', params: { player: winnerNum } });
+            endGame();
+        } else if (payload.error) {
+            console.warn("Server Error:", payload.error);
+        }
     }
-    function updateBoardFromRemote(boardData) {
-        if(!Array.isArray(boardData)) return;
-        const allCells = Array.from(gameBoard.querySelectorAll('.cell'));
+    // --- FUNÇÕES EM FALTA (Visual / Tabuleiro) ---
+
+    // 1. Converter índice do servidor (0..N) para coordenadas {r, c} do HTML
+    function serverIndexToLocalCell(index, totalCols, initialPlayerNick) {
+        const localNick = sessionStorage.getItem('tt_nick');
+        
+        // Matemática do Servidor: 
+        // 0 = Canto Inferior Direito do Jogador Inicial
+        const rowFromBottom = Math.floor(index / totalCols); // 0 é a linha de fundo
+        const colFromRight = index % totalCols;              // 0 é a direita
+        
+        // Coordenadas HTML (r=0 é topo, c=0 é esquerda)
+        let r = 3 - rowFromBottom;          
+        let c = (totalCols - 1) - colFromRight;
+
+        // ROTAÇÃO: Se eu NÃO sou o jogador inicial, rodo o tabuleiro 180º
+        // para ver as minhas peças em baixo
+        if (localNick !== initialPlayerNick) {
+            r = 3 - r;
+            c = (totalCols - 1) - c;
+        }
+
+        return { r, c };
+    }
+
+    // 2. Desenhar as peças recebidas do servidor
+    function updateBoardFromRemote(piecesArray, initialNick) {
+        if (!Array.isArray(piecesArray)) return;
+
+        // Limpar tabuleiro visual
+        const allCells = document.querySelectorAll('.cell');
         allCells.forEach(cell => {
-            const piece = cell.querySelector('.piece');
-            if (piece) piece.remove(); // remove existing pieces
-            cell.classList.remove('green-glow'); // clear highlights
+            const p = cell.querySelector('.piece');
+            if (p) p.remove();
+            // Removemos brilhos antigos para limpar o estado visual
+            cell.classList.remove('green-glow', 'selected');
         });
-        boardData.forEach(item => {
-            const r = item.position ? item.position.r : item.r;
-            const c = item.position ? item.position.c : item.c;
-            const color = item.color;
-            const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+
+        // Obter largura atual
+        const widthSelect = document.getElementById('width');
+        const cols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
+
+        // Desenhar cada peça do array
+        piecesArray.forEach((pieceData, index) => {
+            if (!pieceData) return; // Se for null, é casa vazia
+
+            const coords = serverIndexToLocalCell(index, cols, initialNick);
+            
+            // Encontrar a célula certa no HTML
+            // Nota: usamos querySelector no document para garantir que apanhamos a célula certa
+            const cell = document.querySelector(`.cell[data-r="${coords.r}"][data-c="${coords.c}"]`);
+
             if (cell) {
                 const piece = document.createElement('div');
                 piece.classList.add('piece');
-                const colorCLass =(item.color==='red') ? 'red' : 'yellow';
-                piece.classList.add(colorCLass);
-                piece.setAttribute('move-state','moved');
+                
+                // Mapear cores: O servidor manda "Blue" ou "Red"
+                // O teu CSS usa 'yellow' e 'red'
+                const serverColor = (pieceData.color || '').toLowerCase();
+                const cssColor = (serverColor === 'red') ? 'red' : 'yellow';
+                
+                piece.classList.add(cssColor);
+                
+                // Manter estado visual se a peça já se moveu
+                if (pieceData.inMotion) piece.setAttribute('move-state', 'moved');
+                
                 cell.appendChild(piece);
             }
         });
-        redPieces = boardData.querySelectorAll('.piece.red').length;
-        yellowPieces = boardData.querySelectorAll('.piece.yellow').length;
+        
+        // Atualizar contadores de peças (para o header)
+        if (typeof redPieces !== 'undefined') redPieces = document.querySelectorAll('.piece.red').length;
+        if (typeof yellowPieces !== 'undefined') yellowPieces = document.querySelectorAll('.piece.yellow').length;
     }
     // helper to update play and leave button state based on config validity and game state (if playing, play button disabled and leave button enabled, else the opposite)
     function updatePlayButtonState() {
@@ -426,17 +562,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // piece selection operator - only selects if game is active
+    // piece selection operator - only selects if game is active and dice has been rolled
     function selectPiece(piece) {
         if (!gameActive) return;
-        // if selecting the currently selected piece we deselect it
+
+        // só permitir seleccionar se houver dado disponível (para evitar confusão)
+        if (lastDiceValue == null) {
+            // opcional: mostrar dica
+            showMessage({ who: 'system', text: t('msg_roll_first') || 'Lança o dado primeiro.' });
+            return;
+        }
+
+        // se seleccionar a mesma peça novamente, desmarca
         if (selectedPiece == piece) {
             selectedPiece.classList.remove('selected');
             selectedPiece = null;
-            clearHighlights(); // clear highlights of moves for previously selected piece
+            clearHighlights();
             return;
         }
-        // current player selecting their own piece
+
+        // só permite seleccionar peças do jogador actual
         if ((currentPlayer == 1 && piece.classList.contains('red')) ||
             (currentPlayer == 2 && piece.classList.contains('yellow'))) {
             if (selectedPiece) selectedPiece.classList.remove('selected');
@@ -459,34 +604,94 @@ document.addEventListener("DOMContentLoaded", () => {
         if (vsAI && currentPlayer === aiPlayerNum) return;
         if (vsPlayer && currentPlayer !== humanPlayerNum) return;
         // PVP mode
-        if(vsPlayer && currentPlayer === humanPlayerNum){
+        if (vsPlayer && currentPlayer === humanPlayerNum) {
             const r = parseInt(cell.dataset.r, 10);
             const c = parseInt(cell.dataset.c, 10);
-            const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
-            const isMyPiece = pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains(humanPlayerNum===1))? 'red' : 'yellow');
-            if(isMyPiece){ // if it's my piece and another piece is already selected, deselect previous
-                const prev = document.querySelector('.cell.selected'); // previously selected cell
-                if(prev) prev.classList.remove('selected'); // deselect previous
-                pieceInCell.classList.add('selected'); // select current
+            const pieceInCell = cell.querySelector('.piece'); // peça na célula clicada
+            const isMyPiece = !!(pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) || (currentPlayer == 2 && pieceInCell.classList.contains('yellow'))));
+
+            // Se é a minha peça, apenas faço seleção local (não notifico o servidor).
+            if (isMyPiece) {
+                // selecionar/deselecionar localmente sem enviar notify
+                const prev = document.querySelector('.cell.selected');
+                if (prev) prev.classList.remove('selected');
+                pieceInCell.classList.add('selected');
                 selectedPiece = pieceInCell;
+                // mostra possíveis movimentos, mas apenas localmente
+                clearHighlights();
+                const state = pieceInCell.getAttribute('move-state');
+                const movesAllowed = (state === 'not-moved' && lastDiceValue !== 1) ? [] : getValidMoves(pieceInCell);
+                movesAllowed.forEach(dest => dest.classList.add('green-glow'));
+                return;
             }
+
+            // Se não é a minha peça (clicaste num destino ou numa peça adversária), ENVIAMOS notify ao servidor
+            // (o servidor é a autoridade e validará o movimento).
             const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
             const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
             const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
+
             try {
-                await Network.notify({ nick, password, game, cell: { r:r, c:c } });
-                if(!isMyPiece && selectedPiece){
+                const cols = parseInt(widthSelect.value, 10) || 9;
+                
+                // 1. Calcular Coordenadas Reais (Server-Side)
+                // Se eu não for o initial, o tabuleiro visual (r,c) está invertido.
+                // Tenho de "desinverter" para saber qual a linha/coluna verdadeira no servidor.
+                let serverR = r;
+                let serverC = c;
+
+                const initialNick = getInitialNick(); // CORREÇÃO: usar helper robusto
+
+                if (nick !== initialNick) {
+                    serverR = (rows - 1) - r;       // 3 - r
+                    serverC = (cols - 1) - c;       // (cols-1) - c
+                }
+
+                // 2. Calcular o Índice Linear Baseado no Servidor
+                // O servidor usa: 0 = Canto Inferior Direito do Initial
+                // Fórmula: (Linha a contar de baixo) * cols + (Coluna a contar da direita)
+                
+                const rowFromBottom = (rows - 1) - serverR; // 0 é a linha 3
+                const colFromRight = (cols - 1) - serverC;  // 0 é a coluna mais à direita
+                
+                const cellIndex = rowFromBottom * cols + colFromRight;
+
+                console.debug('[UI] notify adjusted:', { r, c, serverR, serverC, cellIndex });
+
+                await Network.notify({ nick, password, game, cell: cellIndex });
+
+                // Se o servidor aceitar e for uma jogada que captura, seleciona/limpa local conforme SSE (o servidor enviará updates)
+                if (selectedPiece) {
+                    // opcional: limpar seleção local após notify (o servidor enviará board actualizado)
                     selectedPiece.classList.remove('selected');
                     selectedPiece = null;
+                    clearHighlights();
                 }
             } catch (err) {
                 console.warn('Erro ao notificar jogada ao servidor:', err);
-                if(selectPiecedPiece){
+                try {
+                    const msg = String(err.message || '');
+                    const jsonStart = msg.indexOf('{');
+                    if (jsonStart !== -1) {
+                        const jsonStr = msg.slice(jsonStart);
+                        const parsed = JSON.parse(jsonStr);
+                        showMessage({ who: 'system', text: parsed.error || JSON.stringify(parsed) });
+                    } else {
+                        showMessage({ who: 'system', text: 'Erro ao notificar o servidor.' });
+                    }
+                } catch (e) {
+                    console.warn('Falha a interpretar erro do servidor:', e);
+                    showMessage({ who: 'system', text: 'Erro ao notificar o servidor.' });
+                }
+                // limpar seleção local de forma segura
+                if (selectedPiece) {
                     selectedPiece.classList.remove('selected');
                     selectedPiece = null;
+                    clearHighlights();
                 }
             }
             return;
+
         }
         const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
 
@@ -905,11 +1110,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // next turn button
     if (nextTurnBtn) {
         nextTurnBtn.addEventListener('click', async () => {
-            if(vsPlayer && currentPlayer === humanPlayerNum){
+            if (vsPlayer && currentPlayer === humanPlayerNum) {
                 const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
                 const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
                 const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
-                if(!nick || !password || !game){
+                if (!nick || !password || !game) {
                     alert("Você precisa estar autenticado para jogar contra outro jogador.");
                     return;
                 }
@@ -967,13 +1172,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const size = parseInt(widthSelect.value, 10);
             const group = 36;
             try {
-                const joinResult = await Network.join({group, nick, password, size});
+                const joinResult = await Network.join({ group, nick, password, size });
                 const gameId = joinResult.game;
                 sessionStorage.setItem('tt_game', gameId);
                 window.currentGameId = gameId;
                 if (!window.updateEventSource) {
                     try {
-                        window.updateEventSource = Network.createUpdateEventSource({ nick, game : gameId });
+                        window.updateEventSource = Network.createUpdateEventSource({ nick, game: gameId });
                         window.updateEventSource.onmessage = handleUpdateMessage;
                         window.updateEventSource.onerror = (err) => {
                             console.warn('Erro na conexão com o servidor de atualizações:', err);
@@ -990,9 +1195,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 setWaitingForPair(false);
                 updatePlayButtonState();
             }
-            
 
-            
+
+
 
             return;
         }
@@ -1030,53 +1235,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
     });
 
-    // throw dice button
+    // Substitui o bloco de event listener do throwBtn por este (mais logging)
     if (throwBtn) {
-        throwBtn.addEventListener('click', async () => {
+        throwBtn.addEventListener('click', async (e) => {
+            const lang = window.currentLang || 'pt';
+            console.debug('[UI] throwBtn clicked', {
+                gameActive, vsAI, vsPlayer, currentPlayer, humanPlayerNum, throwBtnDisabled: throwBtn.disabled
+            });
 
             if (vsAI && currentPlayer === aiPlayerNum) {
-                e.preventDefault();
+                console.debug('[UI] Ignoring throw: AI turn (local state)');
+                if (e && e.preventDefault) e.preventDefault();
                 return;
             }
             if (vsPlayer && currentPlayer !== humanPlayerNum) {
-                e.preventDefault();
+                console.debug('[UI] Ignoring throw: not our turn (local currentPlayer !== humanPlayerNum)', { currentPlayer, humanPlayerNum });
+                if (e && e.preventDefault) e.preventDefault();
                 return;
             }
-            if (!gameActive) return;
+            if (!gameActive) {
+                console.debug('[UI] Ignoring throw: gameActive=false');
+                return;
+            }
+
+            // PvP path: send POST /roll to server and expect SSE to broadcast result
             if (vsPlayer && currentPlayer === humanPlayerNum) {
                 const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
                 const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
                 const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
-                if (!nick || password == null || game == null || game == '') {
+                if (!nick || password == null || game == null || game === '') {
                     alert((lang === 'pt' ? 'Você precisa estar autenticado para jogar contra outro jogador.' : 'You need to be authenticated to play against another player.'));
                     return;
                 }
                 try {
+                    console.debug('[UI] Sending Network.roll', { nick, game });
                     throwBtn.disabled = true;
-                    await Network.roll({
-                        nick,
-                        password,
-                        game,
-                    });
+                    await Network.roll({ nick, password, game });
+                    console.debug('[UI] Network.roll resolved');
                     showMessage({ who: 'system', key: 'msg_roll_sent' });
                 } catch (err) {
-                    console.warn('Erro ao enviar jogada para o servidor:', err);
+                    console.warn('Erro ao enviar /roll:', err);
                     alert((lang === 'pt' ? 'Erro ao enviar jogada para o servidor. Por favor, tente novamente mais tarde.' : 'Error sending move to server. Please try again later.'));
                     throwBtn.disabled = false;
                 }
                 return;
-            } else if (vsAI || vsPlayer) {
+            }
+
+            // PvE or fallback to local dice
+            if (vsAI || vsPlayer) {
                 try {
+                    console.debug('[UI] Local dice (spawnAndLaunch) for player', currentPlayer);
                     const result = await window.tabGame.spawnAndLaunch();
                     processDiceResult(currentPlayer, result);
-
                 } catch (err) {
-                    console.warn('Erro ao lançar dados:', err);
+                    console.warn('Erro ao lançar dados localmente:', err);
                 }
             }
         });
     }
-
     // helper: enumerate legal moves
     function enumerateLegalMovesDOM(playerNum, diceValue) {
         const color = getColorForPlayerNum(playerNum); // 'red' ou 'yellow'
