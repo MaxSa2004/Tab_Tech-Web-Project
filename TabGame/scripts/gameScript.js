@@ -1188,7 +1188,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const pieceInCell = cell.querySelector('.piece'); 
 
-        // --- PvP LOGIC (Keep this as is if you are using online mode) ---
+        // --- PVP LOGIC ---
         if (vsPlayer && currentPlayer === humanPlayerNum) {
             const r = parseInt(cell.dataset.r, 10);
             const c = parseInt(cell.dataset.c, 10);
@@ -1223,13 +1223,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     selectedPiece.classList.remove('selected');
                     selectedPiece = null;
                     lastDiceValue = null; 
-                    serverDiceValue = null;
+                    
+                    // --- FIX START: Force reset server dice state locally ---
+                    // This allows the UI to know we are done with the 'move' phase and ready for 'roll'
+                    serverDiceValue = null; 
+                    // --- FIX END ---
 
                     // Send to server...
                     const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
                     const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
                     const game = sessionStorage.getItem('tt_game') || localStorage.getItem('tt_game');
-                    // ... (Network notify code omitted for brevity, assume standard notify) ...
+                    
                     const cols = parseInt(widthSelect.value, 10) || 9;
                     const initialNick = getInitialNick();
                     let serverR = r; let serverC = c;
@@ -1238,6 +1242,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     try { Network.notify({ nick, password, game, cell: cellIndex }); } catch (e) {}
 
                     // RE-ROLL CHECK FOR PVP
+                    // If it was 1, 4, or 6, update controls immediately to enable Throw Button
                     if (movedValue === 1 || movedValue === 4 || movedValue === 6) {
                         updatePvPControls(nick); 
                     }
@@ -1246,7 +1251,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // --- LOCAL / AI LOGIC (This is where your issue is) ---
+        // --- LOCAL / AI LOGIC ---
 
         // A. Select Piece (P1=Yellow, P2=Red)
         if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('yellow')) ||
@@ -1300,10 +1305,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Do NOT use lastDiceValue here, it is already null!
                     if (currentRoll === 4 || currentRoll === 6 || currentRoll === 1) {
                         
-                        // ENABLE THROW BUTTON
+                        // --- FIX: Explicitly Enable Throw Button ---
                         if (throwBtn) {
                             throwBtn.disabled = false;
-                            console.log("Extra roll granted! Button enabled."); // Debug
                         }
                         // DISABLE PASS BUTTON (User MUST roll)
                         if (nextTurnBtn) nextTurnBtn.disabled = true;
