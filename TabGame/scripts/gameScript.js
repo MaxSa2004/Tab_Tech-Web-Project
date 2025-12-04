@@ -93,136 +93,188 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     //BB
     // Main Server Message Handler (Fixed Skip Logic)
-    function handleUpdateMessage(ev) {
-        let payload;
-        try { payload = JSON.parse(ev.data); } catch (e) { return; }
+    
+    //takes as argument an event(ev)
+/**
+ * Main Server Message Handler (SSE/WebSocket Listener)
+ * Acts as the "Central Nervous System" of the client.
+ * * 1. Receives JSON payloads from the server.
+ * 2. Updates local state (current turn, dice value, board layout).
+ * 3. Triggers UI animations and updates DOM elements.
+ */
+//payload represents the packet of data sent by the server.
+function handleUpdateMessage(ev) {
+    let payload;
+    // Safety Check: Attempt to parse the incoming data. 
+    // If it's malformed JSON, we exit immediately to prevent a crash.
+    try { payload = JSON.parse(ev.data); } catch (e) { return; }
 
-        const localNick = sessionStorage.getItem('tt_nick');
+    // Identify "Who am I?": Retrieve the local user's nickname to compare against server data.
+    const localNick = sessionStorage.getItem('tt_nick');
 
-        // 1. SETUP
-        if (payload.initial) {
-            sessionStorage.setItem('tt_initial', payload.initial);
-            humanPlayerNum = (payload.initial === localNick) ? 1 : 2;
+    // =========================================================================
+    // 1. SETUP PHASE (Room Initialization)
+    // =========================================================================
 
-            if (!gameActive) {
-                gameActive = true;
-                waitingForPair = false;
-                setConfigEnabled(false);
-                if (playButton) playButton.disabled = true;
-                if (leaveButton) leaveButton.disabled = false;
-                showMessage({ who: 'system', key: 'msg_game_started' });
-            }
-        }
+    // Case A: I created the room (Initial setup)
+    if (payload.initial) {
+        sessionStorage.setItem('tt_initial', payload.initial);
+        // If I am the creator, I am Player 1 (Red). Otherwise, Player 2.
+        humanPlayerNum = (payload.initial === localNick) ? 1 : 2;
 
-        if (payload.players && !gameActive) {
-            const myColor = payload.players[localNick];
-            if (myColor) humanPlayerNum = (myColor.toLowerCase() === 'red') ? 1 : 2;
+        // If the game wasn't active yet, unlock the interface.
+        if (!gameActive) {
             gameActive = true;
             waitingForPair = false;
-            setConfigEnabled(false);
+            setConfigEnabled(false); // Lock game settings (width, difficulty)
             if (playButton) playButton.disabled = true;
             if (leaveButton) leaveButton.disabled = false;
+            showMessage({ who: 'system', key: 'msg_game_started' });
         }
-
-        if (payload.game) {
-            window.currentGameId = payload.game;
-            sessionStorage.setItem('tt_game', payload.game);
-        }
-
-        // 2. GAME UPDATES
-
-        // Turn Change
-        if (payload.turn !== undefined) {
-            if (serverTurnNick !== payload.turn) {
-                serverMustPass = false; // Reset pass flag ONLY on turn change
-                serverDiceValue = null;
-            }
-
-            serverTurnNick = payload.turn;
-            const isMyTurn = (serverTurnNick === localNick);
-            const newPlayerNum = isMyTurn ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
-
-            if (currentPlayer !== newPlayerNum) {
-                currentPlayer = newPlayerNum;
-                if (currentPlayerEl) currentPlayerEl.textContent = isMyTurn ? 'EU' : serverTurnNick;
-                selectedPiece = null;
-                clearHighlights();
-            }
-        }
-
-        // Must Pass Flag (Processing order matters)
-        if (payload.mustPass !== undefined) {
-            serverMustPass = payload.mustPass;
-            if (serverMustPass && serverTurnNick === localNick) {
-                showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-            }
-        }
-
-        // Dice Update
-        if (payload.dice !== undefined) {
-            if (payload.dice === null) {
-                serverDiceValue = null;
-                lastDiceValue = null;
-            } else {
-                const val = payload.dice.value;
-                serverDiceValue = val;
-                // REMOVED: serverMustPass = false; (This was causing the bug!)
-
-                if (lastDiceValue !== val) {
-                    window.tabGame.showRemoteRoll(val).then(() => {
-                        lastDiceValue = val;
-                        const isMyTurn = (serverTurnNick === localNick);
-                        showMessage({
-                            who: 'player',
-                            player: isMyTurn ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1),
-                            key: 'msg_dice_thrown',
-                            params: { value: val }
-                        });
-
-                        if (isMyTurn && (val === 1 || val === 4 || val === 6)) {
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: val } });
-                        }
-
-                        updatePvPControls(localNick);
-                    });
-                } else {
-                    lastDiceValue = val;
-                }
-            }
-        }
-
-        // Step Update
-        if (payload.step !== undefined) {
-            currentServerStep = payload.step;
-        }
-
-        // Board Update
-        if (payload.pieces) {
-            const initialNick = payload.initial || getInitialNick();
-            updateBoardFromRemote(payload.pieces, initialNick);
-        }
-
-        // Opponent Move Highlight
-        if (payload.cell && typeof payload.cell.square === 'number') {
-            const initialNick = payload.initial || getInitialNick();
-            const cols = parseInt(widthSelect?.value || '9', 10);
-            const { r, c } = serverIndexToLocalCell(payload.cell.square, cols, initialNick);
-            const domCell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-            if (domCell) {
-                domCell.classList.add('green-glow', 'pulse');
-                setTimeout(() => domCell.classList.remove('green-glow', 'pulse'), 900);
-            }
-        }
-
-        // Winner
-        if (payload.winner) {
-            const winnerNum = (payload.winner === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
-            showMessage({ who: 'system', key: 'msg_player_won', params: { player: winnerNum } });
-            endGame();
-        }
-
-        updatePvPControls(localNick);
     }
+
+    // Case B: Both players are connected (Players object received)
+    if (payload.players && !gameActive) {
+        const myColor = payload.players[localNick];
+        // Double-check color assignment from server to ensure correct Player Num
+        if (myColor) humanPlayerNum = (myColor.toLowerCase() === 'red') ? 1 : 2;
+        
+        // Unlock interface
+        gameActive = true;
+        waitingForPair = false;
+        setConfigEnabled(false);
+        if (playButton) playButton.disabled = true;
+        if (leaveButton) leaveButton.disabled = false;
+    }
+
+    // Persist the Game ID if the server sends it (useful for reconnects)
+    if (payload.game) {
+        window.currentGameId = payload.game;
+        sessionStorage.setItem('tt_game', payload.game);
+    }
+
+    // =========================================================================
+    // 2. GAME UPDATES (The Main Loop)
+    // =========================================================================
+
+    // --- A. Turn Management ---
+    if (payload.turn !== undefined) {
+        // Detect if the turn has physically changed to a new player
+        if (serverTurnNick !== payload.turn) {
+            serverMustPass = false; // Reset the "Forced Pass" flag for the new turn
+            serverDiceValue = null; // Reset server dice state
+        }
+
+        serverTurnNick = payload.turn;
+        
+        // Calculate logic: Is it my turn?
+        const isMyTurn = (serverTurnNick === localNick);
+        // Calculate numeric ID for the current player (1 or 2)
+        const newPlayerNum = isMyTurn ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
+
+        // Update Global State only if it actually changed
+        if (currentPlayer !== newPlayerNum) {
+            currentPlayer = newPlayerNum;
+            // Update UI Label: Show "EU" (Me) or the Opponent's Nickname
+            if (currentPlayerEl) currentPlayerEl.textContent = isMyTurn ? 'EU' : serverTurnNick;
+            
+            // Clean up UI from previous turn
+            selectedPiece = null;
+            clearHighlights();
+        }
+    }
+
+    // --- B. Forced Pass Logic ---
+    // If the server calculates the player has 0 valid moves, it sends mustPass: true
+    if (payload.mustPass !== undefined) {
+        serverMustPass = payload.mustPass;
+        // If it's me and I must pass, show a system message
+        if (serverMustPass && serverTurnNick === localNick) {
+            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+        }
+    }
+
+    // --- C. Dice Mechanics ---
+    if (payload.dice !== undefined) {
+        // Null means the dice was consumed or reset
+        if (payload.dice === null) {
+            serverDiceValue = null;
+            lastDiceValue = null;
+        } else {
+            const val = payload.dice.value;
+            serverDiceValue = val;
+            
+            // Only trigger the animation if this is a NEW roll value
+            if (lastDiceValue !== val) {
+                // Trigger visual dice roll (async animation)
+                window.tabGame.showRemoteRoll(val).then(() => {
+                    lastDiceValue = val;
+                    const isMyTurn = (serverTurnNick === localNick);
+                    
+                    // Log the roll in the chat window
+                    showMessage({
+                        who: 'player',
+                        player: isMyTurn ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1),
+                        key: 'msg_dice_thrown',
+                        params: { value: val }
+                    });
+
+                    // Special Rule: Rolls of 1, 4, or 6 usually grant an extra turn/roll
+                    if (isMyTurn && (val === 1 || val === 4 || val === 6)) {
+                        showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: val } });
+                    }
+
+                    // Re-evaluate button states (Enable/Disable Throw button) based on new roll
+                    updatePvPControls(localNick);
+                });
+            } else {
+                // If value is same (re-sent by server), just update state without animation
+                lastDiceValue = val;
+            }
+        }
+    }
+
+    // --- D. Game Phase Synchronization ---
+    // Syncs the specific step of the turn: 'from' (select piece) -> 'to' (select destination) -> 'take' (capture)
+    if (payload.step !== undefined) {
+        currentServerStep = payload.step;
+    }
+
+    // --- E. Board Synchronization ---
+    // Physical update of pieces on the board based on server array
+    if (payload.pieces) {
+        const initialNick = payload.initial || getInitialNick();
+        updateBoardFromRemote(payload.pieces, initialNick);
+    }
+
+    // --- F. Visual Feedback (Opponent Move) ---
+    // If the opponent clicked a cell, highlight it briefly so the local player sees what happened
+    if (payload.cell && typeof payload.cell.square === 'number') {
+        const initialNick = payload.initial || getInitialNick();
+        const cols = parseInt(widthSelect?.value || '9', 10);
+        
+        // Convert server index (0..N) to local grid coordinates (row, col)
+        // This handles board rotation (Player 2 sees board inverted)
+        const { r, c } = serverIndexToLocalCell(payload.cell.square, cols, initialNick);
+        
+        const domCell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+        if (domCell) {
+            domCell.classList.add('green-glow', 'pulse');
+            // Remove the glow after 900ms
+            setTimeout(() => domCell.classList.remove('green-glow', 'pulse'), 900);
+        }
+    }
+
+    // --- G. Victory Condition ---
+    if (payload.winner) {
+        const winnerNum = (payload.winner === localNick) ? humanPlayerNum : (humanPlayerNum === 1 ? 2 : 1);
+        showMessage({ who: 'system', key: 'msg_player_won', params: { player: winnerNum } });
+        endGame(); // Locks the board and shows summary
+    }
+
+    // Final UI Refresh: Ensure buttons are in the correct state after all processing
+    updatePvPControls(localNick);
+}
 
     /*Rita
     function handleUpdateMessage(ev) {
