@@ -1,5 +1,7 @@
-// generic functions: postJSON, getJSON
+// generic functions: postJSON, getJSON with SSE
 // specific functions: register, join, leave, roll, pass, notify, update, ranking
+// o cliente envia o request 
+// o servidor devolve a resposta (status e payload)
 
 const Network = (function () {
     const BASE = 'http://twserver.alunos.dcc.fc.up.pt:8008';
@@ -60,7 +62,7 @@ const Network = (function () {
     }
 
 
-    // pass, args: nick, password, game, cell
+    // pass, args: nick, password, game
     async function pass({nick, password, game}){
         if(!nick || password == null || game == null) throw new Error('pass: argumentos obrigatórios (nick, password, game)');
         return postJSON('/pass', {nick, password, game});
