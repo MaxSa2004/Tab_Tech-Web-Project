@@ -59,8 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // helper function to get color by player number
-    //BB: Mudei a ordem do yellow e red
-    function getColorForPlayerNum(n) { return n === 1 ? 'yellow' : 'red'; }
+    function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
     // helper function to check if it's human's turns (our turn)
     function isHumanTurn() {
         return currentPlayer === humanPlayerNum;
@@ -777,7 +776,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 piece.classList.add('piece');
 
                 // Mapear cores: O servidor manda "Blue" ou "Red"
-                // O teu CSS usa 'yellow' e 'red'
                 const serverColor = (pieceData.color || '').toLowerCase();
                 const cssColor = (serverColor === 'red') ? 'red' : 'yellow';
 
@@ -1059,11 +1057,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 piece.setAttribute('move-state', 'not-moved');
                 piece.classList.add('piece');
 
-                // --- MUDANÇA AQUI ---
-                // Linha 0 (Topo) agora é RED (Player 2)
-                if (r == 0) { piece.classList.add('red'); cell.appendChild(piece); }
-                // Linha 3 (Fundo) agora é YELLOW (Player 1 - Você)
-                if (r == 3) { piece.classList.add('yellow'); cell.appendChild(piece); }
+                // (Player 2)
+                if (r == 0) { piece.classList.add('yellow'); cell.appendChild(piece); }
+                // (Player 1 - Você)
+                if (r == 3) { piece.classList.add('red'); cell.appendChild(piece); }
 
                 cell.addEventListener('click', () => handleCellClick(cell));
                 cell.appendChild(arrow);
@@ -1131,10 +1128,9 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // --- MUDANÇA AQUI ---
-        // Player 1 seleciona Yellow, Player 2 seleciona Red
-        if ((currentPlayer == 1 && piece.classList.contains('yellow')) ||
-            (currentPlayer == 2 && piece.classList.contains('red'))) {
+        // Player 1 seleciona Red, Player 2 seleciona Yellow
+        if ((currentPlayer == 1 && piece.classList.contains('red')) ||
+            (currentPlayer == 2 && piece.classList.contains('yellow'))) {
 
             if (selectedPiece) selectedPiece.classList.remove('selected');
             selectedPiece = piece;
@@ -1192,8 +1188,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (vsPlayer && currentPlayer === humanPlayerNum) {
             const r = parseInt(cell.dataset.r, 10);
             const c = parseInt(cell.dataset.c, 10);
-            // P1 = Yellow, P2 = Red check
-            const isMyPiece = !!(pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('yellow')) || (currentPlayer == 2 && pieceInCell.classList.contains('red'))));
+            // P1 = Red, P2 = Yellow check
+            const isMyPiece = !!(pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) || (currentPlayer == 2 && pieceInCell.classList.contains('yellow'))));
 
             if (isMyPiece) {
                 // Select piece logic...
@@ -1253,9 +1249,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- LOCAL / AI LOGIC ---
 
-        // A. Select Piece (P1=Yellow, P2=Red)
-        if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('yellow')) ||
-            (currentPlayer == 2 && pieceInCell.classList.contains('red')))) {
+        // A. Select Piece (P1=Red, P2=Yellow)
+        if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
+            (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
             
             selectPiece(pieceInCell);
             if (!selectedPiece) return;
