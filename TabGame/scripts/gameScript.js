@@ -766,88 +766,98 @@ function handleUpdateMessage(ev) {
         }
     }
     // 1. Converter índice do servidor (0..N) para coordenadas {r, c} do HTML
-    function serverIndexToLocalCell(index, totalCols, initialPlayerNick) {
-        const localNick = sessionStorage.getItem('tt_nick');
+    // serverIndexToLocalCell: converts server linear index -> local {r,c} and falls back to stored initial if missing
+function serverIndexToLocalCell(index, totalCols, initialPlayerNick) {
+    const localNick = sessionStorage.getItem('tt_nick');
 
-        // Matemática do Servidor: 
-        // 0 = Canto Inferior Direito do Jogador Inicial
-        const rowFromBottom = Math.floor(index / totalCols); // 0 é a linha de fundo
-        const colFromRight = index % totalCols;              // 0 é a direita
+    // Prefer the explicit initialNick passed in; fallback to stored initial from previous SSEs
+    const initNick = initialPlayerNick || sessionStorage.getItem('tt_initial') || null;
 
-        // Coordenadas HTML (r=0 é topo, c=0 é esquerda)
-        let r = 3 - rowFromBottom;
-        let c = (totalCols - 1) - colFromRight;
+    // Server indexing math:
+    // 0 = bottom-right corner of the player who created the game (initial)
+    const rowFromBottom = Math.floor(index / totalCols);
+    const colFromRight = index % totalCols;
 
-        // ROTAÇÃO: Se eu NÃO sou o jogador inicial, rodo o tabuleiro 180º
-        // para ver as minhas peças em baixo
-        if (localNick !== initialPlayerNick) {
-            r = 3 - r;
-            c = (totalCols - 1) - c;
+    // HTML coordinates: r=0 top, c=0 left
+    let r = 3 - rowFromBottom;
+    let c = (totalCols - 1) - colFromRight;
+
+    // If we know who the initial player is, rotate 180° for non-initial viewers.
+    // Fallback: if initNick is not known, assume no rotation (safer default).
+    if (initNick && localNick !== initNick) {
+        r = 3 - r;
+        c = (totalCols - 1) - c;
+    }
+
+    return { r, c };
+}
+
+// updateBoardFromRemote: draw pieces then ensure the board is oriented so the local player's pieces are at the bottom
+function updateBoardFromRemote(piecesArray, initialNick) {
+    if (!Array.isArray(piecesArray)) return;
+
+    // Robust fallback for initial (use the one provided or stored)
+    const gameCreator = initialNick || sessionStorage.getItem('tt_initial') || null;
+
+    // Clear existing pieces & visual hints
+    const allCells = document.querySelectorAll('.cell');
+    allCells.forEach(cell => {
+        const p = cell.querySelector('.piece');
+        if (p) p.remove();
+        cell.classList.remove('green-glow', 'selected');
+    });
+
+    // Determine current columns
+    const widthSelectEl = document.getElementById('width');
+    const cols = widthSelectEl ? parseInt(widthSelectEl.value, 10) : 9;
+
+    // Draw pieces using the server -> local coordinate helper
+    piecesArray.forEach((pieceData, index) => {
+        if (!pieceData) return; // empty cell
+        const coords = serverIndexToLocalCell(index, cols, gameCreator);
+        const cell = document.querySelector(`.cell[data-r="${coords.r}"][data-c="${coords.c}"]`);
+        if (!cell) return;
+
+        const piece = document.createElement('div');
+        piece.classList.add('piece');
+
+        const serverColor = (pieceData.color || '').toLowerCase();
+        const cssColor = (serverColor === 'red') ? 'red' : 'yellow';
+        piece.classList.add(cssColor);
+
+        let moveState = 'not-moved';
+        if (pieceData.reachedLastRow) moveState = 'row-four';
+        else if (pieceData.inMotion) moveState = 'moved';
+        piece.setAttribute('move-state', moveState);
+
+        cell.appendChild(piece);
+    });
+
+    // Update counts
+    redPieces = document.querySelectorAll('.piece.red').length;
+    yellowPieces = document.querySelectorAll('.piece.yellow').length;
+
+    // --- ORIENT BOARD FOR LOCAL PLAYER ---
+    // Local player's color based on humanPlayerNum (1 = red, 2 = yellow)
+    const localColor = (humanPlayerNum === 1) ? 'red' : 'yellow';
+
+    // Check whether local player's pieces are already at bottom row (r === 3)
+    const bottomHasLocal = Array.from(document.querySelectorAll('.cell[data-r="3"] .piece'))
+        .some(p => p.classList.contains(localColor));
+    // Also check if they are at the top row (r === 0) — if so, we should flip
+    const topHasLocal = Array.from(document.querySelectorAll('.cell[data-r="0"] .piece'))
+        .some(p => p.classList.contains(localColor));
+
+    // If top contains the local player's pieces and bottom doesn't, flip the board.
+    // This corrects the situation where both clients see their pieces on top.
+    if (!bottomHasLocal && topHasLocal) {
+        try {
+            flipBoard();
+        } catch (e) {
+            console.warn('Failed to orient board for local player:', e);
         }
-
-        return { r, c };
     }
-
-    // 2. Desenhar as peças recebidas do servidor
-    //BB
-    function updateBoardFromRemote(piecesArray, initialNick) {
-        if (!Array.isArray(piecesArray)) return;
-
-        // --- SAFETY CHANGE START ---
-        // Fallback: If initialNick is missing, try to get it from storage.
-        // This ensures the board always rotates correctly for the second player.
-        const gameCreator = initialNick || sessionStorage.getItem('tt_initial');
-        // --- SAFETY CHANGE END ---
-
-        // Limpar tabuleiro visual
-        const allCells = document.querySelectorAll('.cell');
-        allCells.forEach(cell => {
-            const p = cell.querySelector('.piece');
-            if (p) p.remove();
-            // Removemos brilhos antigos para limpar o estado visual
-            cell.classList.remove('green-glow', 'selected');
-        });
-
-        // Obter largura atual
-        const widthSelect = document.getElementById('width');
-        const cols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
-
-        // Desenhar cada peça do array
-        piecesArray.forEach((pieceData, index) => {
-            if (!pieceData) return; // Se for null, é casa vazia
-
-            // USE gameCreator INSTEAD OF initialNick HERE
-            const coords = serverIndexToLocalCell(index, cols, gameCreator);
-
-            // Encontrar a célula certa no HTML
-            // Nota: usamos querySelector no document para garantir que apanhamos a célula certa
-            const cell = document.querySelector(`.cell[data-r="${coords.r}"][data-c="${coords.c}"]`);
-
-            if (cell) {
-                const piece = document.createElement('div');
-                piece.classList.add('piece');
-
-                // Mapear cores: O servidor manda "Blue" ou "Red"
-                const serverColor = (pieceData.color || '').toLowerCase();
-                const cssColor = (serverColor === 'red') ? 'red' : 'yellow';
-
-                piece.classList.add(cssColor);
-
-                let moveState = 'not-moved';
-                if (pieceData.reachedLastRow) {
-                    moveState = 'row-four';
-                } else if (pieceData.inMotion) {
-                    moveState = 'moved';
-                }
-                piece.setAttribute('move-state', moveState);
-                cell.appendChild(piece);
-            }
-        });
-
-        // Atualizar contadores de peças (para o header)
-        if (typeof redPieces !== 'undefined') redPieces = document.querySelectorAll('.piece.red').length;
-        if (typeof yellowPieces !== 'undefined') yellowPieces = document.querySelectorAll('.piece.yellow').length;
-    }
+}
     /*Rita
     
     function updateBoardFromRemote(piecesArray, initialNick) {
