@@ -104,7 +104,7 @@ window.GameState = (function () {
         },
 
         nextTurn: function() {
-            this.currentPlayer = this.currentPlayer === semver? 2 : 1; // fixed below; ignore this line if accidental
+            // this.currentPlayer = this.currentPlayer === semver? 2 : 1; // fixed below; ignore this line if accidental
             this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
             const { currentPlayerEl } = this.elements;
             

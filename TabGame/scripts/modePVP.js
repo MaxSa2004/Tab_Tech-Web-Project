@@ -1,7 +1,10 @@
-// PvP controller: fixed-view (human at bottom), local move highlighting & server sync.
-
 window.PVPController = (function () {
     let S, UI, Msg, Dice, Net;
+
+    // Estado de seleção e espera de confirmação do servidor
+    let waitingServer = false;
+    let allowedDestSet = null;      // Set de índices (servidor) válidos para o destino
+    let selectedOrigin = null;      // { r, c, idx }
 
     function init(GameState, GameUI, Messages, DiceModule, Network) {
         S = GameState; UI = GameUI; Msg = Messages; Dice = DiceModule; Net = Network;
@@ -13,7 +16,10 @@ window.PVPController = (function () {
         S.vsPlayer = true; S.vsAI = false;
         S.serverSelectedIndices = new Set();
         S.myServerColor = null;
-        S.oppServerColor = null;
+
+        waitingServer = false;
+        allowedDestSet = null;
+        selectedOrigin = null;
 
         if (UI.updatePlayLeaveButtons) UI.updatePlayLeaveButtons();
         Msg.system('msg_waiting_opponent');
@@ -38,100 +44,29 @@ window.PVPController = (function () {
         });
     }
 
-    // ----- Mapping server <-> view (server indices are from initial player's perspective)
-    // IMPORTANT: Flip é apenas visual. data-r/data-c continuam com 0 = topo, 3 = base.
-    // Por isso, SEMPRE usar a convenção do servidor independentemente de S.viewFlipped.
-    // ...
-
-    // Flag: sou eu o jogador inicial?
-    // Define-a quando chega payload.initial
-    // S.isInitialMe = boolean
-
+    // Mapeamento CONSISTENTE com servidor: top-left, row-major
+    function viewCellToServerIndex(r, c, totalCols) { return r * totalCols + c; }
     function serverIndexToViewCell(index, totalCols) {
-        const rows = S.rows;
-        const rowFromBottom = Math.floor(index / totalCols);
-        const colFromRight = index % totalCols;
-
-        if (S.isInitialMe) {
-            // Perspetiva do inicial → vista do cliente (tua base em baixo)
-            return {
-                r: (rows - 1) - rowFromBottom,
-                c: (totalCols - 1) - colFromRight
-            };
-        } else {
-            // Somos o segundo: a nossa base (em baixo) é o topo para o servidor inicial
-            // Logo mapeamos diretamente sem inversão
-            return {
-                r: rowFromBottom,
-                c: colFromRight
-            };
-        }
-    }
-
-    function viewCellToServerIndex(r, c, totalCols) {
-        const rows = S.rows;
-        let rowFromBottom, colFromRight;
-
-        if (S.isInitialMe) {
-            // Cliente → servidor (inversão padrão)
-            rowFromBottom = (rows - 1) - r;
-            colFromRight = (totalCols - 1) - c;
-        } else {
-            // Somos o segundo: cliente em baixo = topo para servidor inicial
-            // Mapeia diretamente
-            rowFromBottom = r;
-            colFromRight = c;
-        }
-
-        return rowFromBottom * totalCols + colFromRight;
-    }
-
-
-
-    function applyFixedOrientationIfNeeded() {
-        const shouldFlip = (S.humanPlayerNum === 2);
-        S.viewFlipped = shouldFlip;
-        if (!!S.boardIsFlipped !== shouldFlip) {
-            try { if (typeof UI.flipBoard === 'function') UI.flipBoard(); } catch { }
-            S.boardIsFlipped = shouldFlip;
-        }
-    }
-
-    function updateStatusPanel() {
-        const who = (S.elements?.currentPlayerEl?.textContent || '').trim();
-        const step = S.currentServerStep || '—';
-        const dice = (S.lastDiceValue != null) ? String(S.lastDiceValue) : '—';
-        if (typeof UI.setStatusPanel === 'function') {
-            UI.setStatusPanel({ turnLabel: who || '—', stepLabel: step, diceLabel: dice });
-        }
+        const r = Math.floor(index / totalCols);
+        const c = index % totalCols;
+        return { r, c };
     }
 
     function handleUpdateMessage(ev) {
         let payload; try { payload = JSON.parse(ev.data); } catch { return; }
         const localNick = sessionStorage.getItem('tt_nick');
 
-        // Dentro de handleUpdateMessage(ev):
         if (payload.initial) {
             sessionStorage.setItem('tt_initial', payload.initial);
             const isMe = (payload.initial.toLowerCase() === localNick.toLowerCase());
             S.humanPlayerNum = isMe ? 1 : 2;
-            S.isInitialMe = isMe; // <<< importante
             console.log(`[PvP] Initial: P${S.humanPlayerNum}`);
         }
-
-        // ...
 
         if (payload.players) {
             const playersMap = payload.players || {};
             const myColor = playersMap[localNick];
-            if (myColor) {
-                S.myServerColor = String(myColor).toLowerCase();
-                S.oppServerColor = (S.myServerColor === 'red' ? 'blue' : 'red');
-            }
-
-            const initialNick = sessionStorage.getItem('tt_initial');
-            const p1Color = playersMap[initialNick];
-            S.serverColorInverted = (p1Color && String(p1Color).toLowerCase() === 'blue');
+            if (myColor) S.myServerColor = String(myColor).toLowerCase();
 
             if (!S.gameActive) {
                 S.setGameActive(true);
@@ -140,9 +75,7 @@ window.PVPController = (function () {
                 if (window.clearMessages) window.clearMessages();
                 Msg.system('msg_game_started');
 
-                applyFixedOrientationIfNeeded();
                 UI.renderBoard(S.getCols());
-                updateStatusPanel();
                 if (window.__refreshCaptured) window.__refreshCaptured();
             }
         }
@@ -157,8 +90,11 @@ window.PVPController = (function () {
             S.currentPlayer = isMyTurn ? S.humanPlayerNum : (S.humanPlayerNum === 1 ? 2 : 1);
             if (S.elements.currentPlayerEl) S.elements.currentPlayerEl.textContent = isMyTurn ? 'EU' : S.serverTurnNick;
             Msg.system('msg_turn_of', { player: S.currentPlayer });
+
+            // Reset seleção a cada mudança de turno
+            clearSelection();
+
             UI.clearHighlights();
-            if (S.selectedPiece) { S.selectedPiece.classList.remove('selected'); S.selectedPiece = null; }
             updatePvPControls();
         }
 
@@ -189,6 +125,7 @@ window.PVPController = (function () {
                         Msg.system('msg_dice_thrown_double', { value: val });
                     }
 
+                    // Se é o meu turno e tenho extra, valida se há moves
                     if (isMyTurn && keepPlaying) {
                         const legalMoves = Rules.enumerateLegalMovesDOM(S, playerNum, val);
                         if (legalMoves.length === 0) {
@@ -198,29 +135,18 @@ window.PVPController = (function () {
                         }
                     }
                     updatePvPControls();
-                    updateStatusPanel();
                 });
             }
             updatePvPControls();
         }
 
-        // Step pode vir mal definido; guardar como está ou null
-        if (typeof payload.step === 'string') {
-            S.currentServerStep = payload.step; // 'from' | 'to' | 'take'
-        } else {
-            S.currentServerStep = null;
-        }
-
-        if (payload.pieces) {
-            updateBoardFromRemote(payload.pieces);
-            if (S.selectedPiece) { S.selectedPiece.classList.remove('selected'); S.selectedPiece = null; }
-            UI.clearHighlights();
-        }
+        S.currentServerStep = (typeof payload.step === 'string') ? payload.step : null;
 
         if (Array.isArray(payload.selected)) {
             const cols = S.getCols();
             S.serverSelectedIndices = new Set(payload.selected);
 
+            // Realçar sugestões do servidor apenas se NÃO for o meu turno (para não duplicar highlight)
             const isMyTurn = (S.serverTurnNick === localNick);
             if (!isMyTurn) {
                 UI.clearHighlights();
@@ -230,6 +156,17 @@ window.PVPController = (function () {
                     if (cell) cell.classList.add('green-glow');
                 });
             }
+        } else {
+            S.serverSelectedIndices = new Set();
+        }
+
+        if (payload.pieces) {
+            updateBoardFromRemote(payload.pieces);
+            waitingServer = false;
+
+            // Após atualização do servidor, limpa seleção e highlights
+            clearSelection();
+            UI.clearHighlights();
         }
 
         if (payload.winner) {
@@ -238,22 +175,27 @@ window.PVPController = (function () {
             try { TabStats.setWinner(winnerNum); } catch { }
             Rules.endGame(S);
         }
+
         updatePvPControls();
-        updateStatusPanel();
     }
 
     function onCellClick(r, c, cellDOM) {
-        if (!S.gameActive) return;
+        if (!S.gameActive || waitingServer) return;
+
         const localNick = sessionStorage.getItem('tt_nick');
-        if (S.serverTurnNick !== localNick) return;
+        if (S.serverTurnNick !== localNick) return; // só jogas no teu turno
 
         const cols = S.getCols();
+        const cellIndex = viewCellToServerIndex(r, c, cols);
         const game = sessionStorage.getItem('tt_game');
         const password = sessionStorage.getItem('tt_password');
 
-        let step = S.currentServerStep;
-        if (!step || typeof step !== 'string') {
-            step = S.selectedPiece ? 'to' : 'from';
+        // Se servidor pede 'take', apenas destino
+        if (S.currentServerStep === 'take') {
+            waitingServer = true;
+            Net.notify({ nick: localNick, password, game, cell: cellIndex })
+                .catch(err => { waitingServer = false; console.warn('notify error:', err); });
+            return;
         }
 
         const pieceInCell = cellDOM.querySelector('.piece');
@@ -262,48 +204,78 @@ window.PVPController = (function () {
             (S.currentPlayer == 2 && pieceInCell.classList.contains('yellow'))
         ));
 
-        if (step === 'from') {
+        // 1) NADA selecionado ainda: selecionar peça minha (FROM)
+        if (!S.selectedPiece) {
             if (!isMyPiece) return;
+            selectPieceAt(r, c, pieceInCell);
 
-            if (S.selectedPiece && S.selectedPiece !== pieceInCell) S.selectedPiece.classList.remove('selected');
-            pieceInCell.classList.add('selected');
-            S.selectedPiece = pieceInCell;
-
-            UI.clearHighlights();
-            const state = pieceInCell.getAttribute('move-state');
-            const roll = parseInt(S.lastDiceValue, 10);
-            const movesAllowed = (state === 'not-moved' && roll !== 1) ? [] : Rules.getValidMoves(S, pieceInCell);
-            movesAllowed.forEach(dest => dest.classList.add('green-glow'));
-
-            const fromIdxServer = viewCellToServerIndex(r, c, cols);
-            console.debug('[PvP] FROM click', { r, c, fromIdxServer });
-            Net.notify({ nick: localNick, password, game, cell: fromIdxServer })
-                .catch(err => console.warn('notify error:', err));
-            updateStatusPanel();
+            // envia FROM ao servidor
+            Net.notify({ nick: localNick, password, game, cell: cellIndex })
+                .catch(err => console.warn('notify error (from):', err));
             return;
         }
 
-        if (step === 'to' || step === 'take') {
-            if (!S.selectedPiece) return;
-
-            const destIdxServer = viewCellToServerIndex(r, c, cols);
-            const serverOptions = S.serverSelectedIndices ? Array.from(S.serverSelectedIndices) : [];
-            console.debug('[PvP] TO/TAKE click', { r, c, destIdxServer, serverOptions });
-
-            if (!S.serverSelectedIndices || !S.serverSelectedIndices.has(destIdxServer)) {
-                return;
-            }
-
-            const state = S.selectedPiece.getAttribute('move-state');
-            const roll = parseInt(S.lastDiceValue, 10);
-            if (state === 'not-moved' && roll !== 1) return;
-
+        // 2) Já existe uma seleção
+        // a) Se clicaste na mesma origem, des-seleciona
+        if (selectedOrigin && selectedOrigin.idx === cellIndex) {
+            clearSelection();
             UI.clearHighlights();
-            Net.notify({ nick: localNick, password, game, cell: destIdxServer })
-                .catch(err => console.warn('notify error:', err));
-            updateStatusPanel();
             return;
         }
+
+        // b) Clicaste noutra peça tua -> muda seleção
+        if (isMyPiece) {
+            selectPieceAt(r, c, pieceInCell);
+            Net.notify({ nick: localNick, password, game, cell: cellIndex })
+                .catch(err => console.warn('notify error (from-switch):', err));
+            return;
+        }
+
+        // c) Clicaste num destino potencial -> só aceita se for destino válido
+        const serverAllows = S.serverSelectedIndices && S.serverSelectedIndices.has(cellIndex);
+        const localAllows = allowedDestSet && allowedDestSet.has(cellIndex);
+        if (!(serverAllows || localAllows)) return;
+
+        // Envia TO ao servidor, NÃO move localmente. Aguarda payload.pieces.
+        waitingServer = true;
+        Net.notify({ nick: localNick, password, game, cell: cellIndex })
+            .then(() => {
+                // aguardamos update 'pieces' para refletir o movimento
+            })
+            .catch(err => { waitingServer = false; console.warn('notify error (to):', err); });
+    }
+
+    function selectPieceAt(r, c, pieceEl) {
+        if (S.selectedPiece) S.selectedPiece.classList.remove('selected');
+        pieceEl.classList.add('selected');
+        S.selectedPiece = pieceEl;
+
+        selectedOrigin = { r, c, idx: viewCellToServerIndex(r, c, S.getCols()) };
+
+        UI.clearHighlights();
+        allowedDestSet = new Set();
+
+        const roll = parseInt(S.lastDiceValue, 10);
+        // regra Tâb: não sai da base sem 1
+        const state = pieceEl.getAttribute('move-state');
+        if (state === 'not-moved' && roll !== 1) return;
+
+        const movesAllowed = Rules.getValidMoves(S, pieceEl, roll);
+        movesAllowed.forEach(dest => {
+            dest.classList.add('green-glow');
+            const dr = parseInt(dest.dataset.r, 10);
+            const dc = parseInt(dest.dataset.c, 10);
+            allowedDestSet.add(viewCellToServerIndex(dr, dc, S.getCols()));
+        });
+    }
+
+    function clearSelection() {
+        if (S.selectedPiece) {
+            S.selectedPiece.classList.remove('selected');
+            S.selectedPiece = null;
+        }
+        selectedOrigin = null;
+        allowedDestSet = null;
     }
 
     function updatePvPControls() {
@@ -311,7 +283,7 @@ window.PVPController = (function () {
         const isMyTurn = (S.serverTurnNick === localNick);
         const awaitingRoll = (S.serverDiceValue === null);
         if (S.elements.throwBtn) {
-            const canThrow = isMyTurn && awaitingRoll && !S.serverMustPass;
+            const canThrow = isMyTurn && awaitingRoll && !S.serverMustPass && !waitingServer;
             S.elements.throwBtn.disabled = !canThrow;
         }
         if (S.elements.nextTurnBtn) S.elements.nextTurnBtn.disabled = !(isMyTurn && S.serverMustPass);
@@ -328,28 +300,17 @@ window.PVPController = (function () {
 
         piecesArray.forEach((pieceData, index) => {
             if (!pieceData) return;
-            const coords = serverIndexToViewCell(index, cols);
-            const cell = document.querySelector(`.cell[data-r="${coords.r}"][data-c="${coords.c}"]`);
+            const { r, c } = serverIndexToViewCell(index, cols);
+            const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
             if (!cell) return;
 
             const piece = document.createElement('div');
             piece.classList.add('piece');
 
-            // TU SEMPRE VERMELHO na UI, ADVERSÁRIO AMARELO
-            let srvColor = (pieceData.color || '').toLowerCase();
-            let isMine = false;
-            if (S.myServerColor) {
-                isMine = (srvColor === S.myServerColor);
-            } else {
-                let serverColorAdj = srvColor;
-                if (S.serverColorInverted) {
-                    if (serverColorAdj === 'blue') serverColorAdj = 'red';
-                    else if (serverColorAdj === 'red') serverColorAdj = 'blue';
-                }
-                isMine = (S.humanPlayerNum === 1 ? serverColorAdj === 'red' : serverColorAdj === 'blue');
-            }
-
-            if (isMine) piece.classList.add('red'); else piece.classList.add('yellow');
+            // Minhas vermelhas, oponente amarelas, conforme cor do servidor
+            const srvColor = String(pieceData.color || '').toLowerCase();
+            const isMine = (S.myServerColor && srvColor === S.myServerColor);
+            piece.classList.add(isMine ? 'red' : 'yellow');
 
             let moveState = 'not-moved';
             if (pieceData.reachedLastRow) moveState = 'row-four';
@@ -361,7 +322,6 @@ window.PVPController = (function () {
 
         S.redPieces = document.querySelectorAll('.piece.red').length;
         S.yellowPieces = document.querySelectorAll('.piece.yellow').length;
-        updateStatusPanel();
     }
 
     function onThrow() {
