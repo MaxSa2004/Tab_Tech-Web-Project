@@ -29,14 +29,12 @@ window.GameUI = (function () {
         if (widthSelect) widthSelect.addEventListener('change', () => onWidthChange && onWidthChange(parseInt(widthSelect.value, 10))); updatePlayLeaveButtons();
 
         if (modeSelect) modeSelect.addEventListener('change', () => {
-            // re-apply config enable rules and play/leave state
             GameState.setConfigEnabled(true);
             updatePlayLeaveButtons();
         });
         if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayLeaveButtons);
         if (firstToPlayCheckbox) firstToPlayCheckbox.addEventListener('change', updatePlayLeaveButtons);
 
-        // Ensure initial state is correct
         updatePlayLeaveButtons();
     }
 
@@ -56,27 +54,55 @@ window.GameUI = (function () {
         gameBoard.style.setProperty('--cols', cols);
         gameBoard.innerHTML = '';
 
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
+        // Loops VISUAIS (0 é topo do ecrã, 3 é fundo do ecrã)
+        for (let visualR = 0; visualR < rows; visualR++) {
+            for (let visualC = 0; visualC < cols; visualC++) {
+                
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                cell.dataset.r = r;
-                cell.dataset.c = c;
 
+                // CÁLCULO DA LÓGICA (PERSPECTIVA)
+                // Se eu sou o Player 2, inverto a lógica para bater certo com o visual.
+                // Ex: Visual Fundo (Row 3) deve corresponder à minha Base Lógica (Row 0).
+                
+                let logicR = visualR;
+                let logicC = visualC;
+
+                if (S.humanPlayerNum === 2) {
+                    logicR = (rows - 1) - visualR;       // Inverte Linhas
+                    logicC = (cols - 1) - visualC;       // Inverte Colunas
+                }
+
+                // Guardamos a coordenada LÓGICA no HTML.
+                // Assim, quando clicas, o JS recebe a coordenada certa para o servidor.
+                cell.dataset.r = logicR;
+                cell.dataset.c = logicC;
+
+                // SETAS (Baseadas na Posição VISUAL)
+                // Queremos que a base (fundo) aponte sempre para a direita, seja eu P1 ou P2.
                 const arrow = document.createElement('i');
-                if (r === 0) arrow.className = 'arrow ' + (c === 0 ? 'down' : 'left');
-                else if (r === 1) arrow.className = 'arrow ' + (c === cols - 1 ? 'up down' : 'right');
-                else if (r === 2) arrow.className = 'arrow ' + (c === 0 ? 'up' : 'left');
-                else if (r === 3) arrow.className = 'arrow ' + (c === cols - 1 ? 'up' : 'right');
+                let dir = '';
+                
+                // Usamos visualR e visualC para desenhar as setas fixas
+                if (visualR === 0) dir = (visualC === 0 ? 'down' : 'left');
+                else if (visualR === 1) dir = (visualC === cols - 1 ? 'up down' : 'right');
+                else if (visualR === 2) dir = (visualC === 0 ? 'up' : 'left');
+                else if (visualR === 3) dir = (visualC === cols - 1 ? 'up' : 'right');
+                
+                arrow.className = 'arrow ' + dir;
 
+                // PEÇAS (Baseadas na Lógica)
                 const piece = document.createElement('div');
                 piece.setAttribute('move-state', 'not-moved');
                 piece.classList.add('piece');
 
-                if (r === 0) { piece.classList.add('yellow'); cell.appendChild(piece); }
-                if (r === 3) { piece.classList.add('red'); cell.appendChild(piece); }
+                // Colocamos as peças nas suas linhas LÓGICAS
+                // Row 0 lógica recebe amarelo. Row 3 lógica recebe vermelho.
+                // O HTML (visualR) encarrega-se de mostrar onde deve.
+                if (logicR === 0) { piece.classList.add('yellow'); cell.appendChild(piece); }
+                if (logicR === 3) { piece.classList.add('red'); cell.appendChild(piece); }
 
-                cell.addEventListener('click', () => onCellClick && onCellClick(r, c, cell));
+                cell.addEventListener('click', () => onCellClick && onCellClick(logicR, logicC, cell));
                 cell.appendChild(arrow);
                 gameBoard.appendChild(cell);
             }
@@ -88,81 +114,40 @@ window.GameUI = (function () {
         gameBoard.querySelectorAll('.cell.green-glow').forEach(c => c.classList.remove('green-glow', 'pulse'));
     }
 
-    // Dentro de game_UI.js
-
     function movePieceTo(piece, destCell) {
-        // 1. Verificar se existe peça no destino (Captura)
         const existingPiece = destCell.querySelector('.piece');
 
         if (existingPiece) {
-            // Determinar a cor da peça que vai morrer
             const isRedDying = existingPiece.classList.contains('red');
             const colorName = isRedDying ? 'red' : 'yellow';
 
             console.log(`[UI] Captura detetada! Peça ${colorName} foi comida.`);
-
-            // Atualizar Stats
             try { TabStats.onCapture(S.currentPlayer, colorName); } catch { }
 
-            // 2. Atualizar contadores no GameState (S) e mostrar mensagem
-            // Importante: Usamos o objeto global Messages para garantir que funciona
             if (isRedDying) {
-                S.redPieces--; // Atualiza estado global
-                // Usa window.Messages para garantir acesso
+                S.redPieces--; 
                 if (window.Messages) window.Messages.system('red_pieces', { count: S.redPieces });
                 Rules.sendCapturedPieceToContainer(existingPiece, S.currentPlayer, S);
             } else {
-                S.yellowPieces--; // Atualiza estado global
+                S.yellowPieces--; 
                 if (window.Messages) window.Messages.system('yellow_pieces', { count: S.yellowPieces });
                 Rules.sendCapturedPieceToContainer(existingPiece, S.currentPlayer, S);
             }
         }
 
-        // 3. Lógica de movimento visual (igual ao que tinhas)
         const destRow = parseInt(destCell.dataset.r, 10);
         const currentState = piece.getAttribute('move-state');
 
-        // Se chegou à última linha, muda o estado
         if (destRow === 0 || currentState === 'row-four') {
             piece.setAttribute('move-state', 'row-four');
         }
 
         destCell.appendChild(piece);
-
         try { TabStats.onMove(S.currentPlayer); } catch { }
     }
 
     function flipBoard() {
-        S.lastDiceValue = null;
-        const { throwBtn, nextTurnBtn } = S.elements;
-        if (throwBtn) throwBtn.disabled = (S.vsAI && (S.currentPlayer === S.aiPlayerNum));
-        if (nextTurnBtn) nextTurnBtn.disabled = true;
-
-        const cols = S.getCols();
-        const cells = Array.from(S.elements.gameBoard.querySelectorAll('.cell'));
-        if (S.selectedPiece) { S.selectedPiece.classList.remove('selected'); S.selectedPiece = null; }
-
-        const newPositions = [];
-        cells.forEach(cell => {
-            const piece = cell.querySelector('.piece');
-            if (piece) {
-                const r = parseInt(cell.dataset.r, 10);
-                const c = parseInt(cell.dataset.c, 10);
-                const newR = S.rows - 1 - r;
-                const newC = cols - 1 - c;
-                newPositions.push({ piece, newR, newC });
-            }
-        });
-
-        cells.forEach(cell => {
-            const piece = cell.querySelector('.piece');
-            if (piece) piece.remove();
-        });
-
-        newPositions.forEach(({ piece, newR, newC }) => {
-            const dest = S.elements.gameBoard.querySelector(`.cell[data-r="${newR}"][data-c="${newC}"]`);
-            if (dest) dest.appendChild(piece);
-        });
+        
     }
 
     // UI events wiring
