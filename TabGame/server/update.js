@@ -6,8 +6,8 @@
   - keeps connection alive with comments keepalive
 */
 
-const utils = require("../lib/utils");
-const storage = require("../lib/storage");
+const utils = require("./utils");
+const storage = require("./storage");
 
 /**
  * snapshotForClient - build a serializable snapshot of a game's state to send to a client.

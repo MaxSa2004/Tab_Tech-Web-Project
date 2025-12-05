@@ -13,8 +13,8 @@ const path = require("path");
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8136;
 const PUBLIC_DIR = path.join(__dirname, "public");
 
-const router = require("./lib/router");
-const utils = require("./lib/utils");
+const router = require("./router");
+const utils = require("./utils");
 
 // Initialize router with runtime configuration (public directory)
 router.init({ publicDir: PUBLIC_DIR });

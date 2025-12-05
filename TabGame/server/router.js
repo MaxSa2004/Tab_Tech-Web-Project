@@ -5,9 +5,9 @@
   Exposes init({ publicDir }) and handleRequest(req, res).
 */
 
-const handlersAuth = require("../handlers/auth");
-const handlersGame = require("../handlers/game");
-const handlersUpdate = require("../handlers/update");
+const handlersAuth = require("./auth");
+const handlersGame = require("./game");
+const handlersUpdate = require("./update");
 const utils = require("./utils");
 
 let PUBLIC_DIR = null;
