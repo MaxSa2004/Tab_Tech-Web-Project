@@ -11,8 +11,8 @@
   Uses storage.js singletons and utils for parsing/response.
 */
 
-const utils = require("../lib/utils");
-const storage = require("../lib/storage");
+const utils = require("./utils");
+const storage = require("./storage");
 
 /**
  * ensureGame - create a new game object if it doesn't exist.

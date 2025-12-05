@@ -6,8 +6,8 @@
   - POST /login     (explicit login)
 */
 
-const utils = require("../lib/utils");
-const storage = require("../lib/storage");
+const utils = require("./utils");
+const storage = require("./storage");
 
 /**
  * handleRegister - register a new user or accept existing user if password matches.
