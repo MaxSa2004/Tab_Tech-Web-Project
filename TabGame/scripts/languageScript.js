@@ -156,7 +156,8 @@ const i18n = { // internationalization
     // leaderboard sort
     leader_sort_desc: "Ordenar: Descendente",
     leader_sort_asc: "Ordenar: Ascendente",
-    msg_roll_first: "Não podes mover uma peça sem lançar o dado."
+    msg_roll_first: "Não podes mover uma peça sem lançar o dado.",
+    msg_waiting_opponent: "A aguardar por um oponente..."
   },
   en: { // list of id:text pairs for English
     title: 'Tâb Game',
@@ -349,7 +350,8 @@ const i18n = { // internationalization
     // leaderboard sort
     leader_sort_desc: "Sort: Descending",
     leader_sort_asc: "Sort: Ascending",
-    msg_roll_first: "You can't move a piece without rolling the dice."
+    msg_roll_first: "You can't move a piece without rolling the dice.",
+    msg_waiting_opponent: "Waiting for an opponent..."
   }
 };
 
