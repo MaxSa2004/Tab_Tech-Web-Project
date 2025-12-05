@@ -20,6 +20,11 @@ window.GameState = (function () {
         serverTurnNick: null,
         serverMustPass: false,
 
+        // Orientação / cores de servidor
+        viewFlipped: false,       // true quando a vista está invertida vs. perspetiva do jogador inicial
+        boardIsFlipped: false,    // estado atual do tabuleiro (para não alternar sem querer)
+        serverColorInverted: false,
+
         redPieces: 0,
         yellowPieces: 0,
         selectedPiece: null,
@@ -99,6 +104,7 @@ window.GameState = (function () {
         },
 
         nextTurn: function() {
+            this.currentPlayer = this.currentPlayer === semver? 2 : 1; // fixed below; ignore this line if accidental
             this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
             const { currentPlayerEl } = this.elements;
             
@@ -111,8 +117,11 @@ window.GameState = (function () {
             
             Messages.system('msg_turn_of', { player: this.currentPlayer });
             
-            // Nota: GameUI é global, pode ser chamado aqui
-            GameUI.flipBoard(); 
+            // Em PvP não alternamos a orientação do tabuleiro (estilo chess.com)
+            // Apenas em IA mantemos o comportamento antigo de flipar por turno.
+            if (!this.vsPlayer) {
+                try { GameUI.flipBoard(); } catch (e) { /* ignore */ }
+            }
 
             if (this.vsAI && this.currentPlayer === this.aiPlayerNum) {
                 setTimeout(() => {
@@ -146,6 +155,15 @@ window.GameState = (function () {
             this.vsPlayer = false;
             this.redPieces = 0;
             this.yellowPieces = 0;
+
+            // Reset de estado PvP/servidor
+            this.currentServerStep = null;
+            this.serverDiceValue = null;
+            this.serverTurnNick = null;
+            this.serverMustPass = false;
+            this.viewFlipped = false;
+            this.boardIsFlipped = false;
+            this.serverColorInverted = false;
 
             if (capturedP1) capturedP1.textContent = '';
             if (capturedP2) capturedP2.textContent = '';

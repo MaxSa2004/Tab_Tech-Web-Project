@@ -48,6 +48,12 @@ window.Rules = (function () {
             .from(S.elements.gameBoard.querySelectorAll(`.piece.${playerClass}`))
             .some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
 
+        // Conversão com Tâb (1): sair da base r=3 para r=2 na mesma coluna.
+        if (r === 3 && moveState === 'not-moved' && diceValue === 1) {
+            const upCell = S.elements.gameBoard.querySelector(`.cell[data-r="2"][data-c="${c}"]`);
+            if (upCell) return [upCell];
+        }
+
         if (r === 1) {
             let remaining = diceValue;
             let currentC = c;
@@ -95,6 +101,7 @@ window.Rules = (function () {
             return targets.map(t => t.cell);
         }
 
+        // Movimento geral seguindo setas
         let currentCell = startCell;
         for (let step = 0; step < diceValue; step++) {
             const arrow = currentCell.querySelector('.arrow');

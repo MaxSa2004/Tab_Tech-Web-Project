@@ -838,6 +838,15 @@ body.modal-open {
   /* centers the wrapper itself */
 }
 
+/* Para o jogador B */
+.game-board.flipped {
+  transform: rotate(180deg);
+  transform-origin: 50% 50%;
+}
+.game-board.flipped .piece {
+  transform: rotate(180deg); /* para manter a orientação das peças */
+}
+
 /* config row */
 .config {
   display: flex;
