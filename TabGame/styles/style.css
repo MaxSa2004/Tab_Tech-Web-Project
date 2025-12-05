@@ -108,7 +108,8 @@ button {
 /* buttons along top header */
 #myBtnInstructions,
 #myBtnClassifications,
-#myBtnExtra {
+#myBtnExtra,
+#myBtnServer {
   background: var(--panel-bg);
   color: var(--muted);
   border: 1px solid #e3e7ee;
@@ -838,15 +839,6 @@ body.modal-open {
   /* centers the wrapper itself */
 }
 
-/* Para o jogador B */
-.game-board.flipped {
-  transform: rotate(180deg);
-  transform-origin: 50% 50%;
-}
-.game-board.flipped .piece {
-  transform: rotate(180deg); /* para manter a orientação das peças */
-}
-
 /* config row */
 .config {
   display: flex;
@@ -1137,4 +1129,172 @@ main {
 
 .visible-by-js {
   display:flex !important;
+}
+
+/* --- LEADERBOARD TABS & SCROLLING --- */
+
+/* Tabs Container */
+.ladder-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+/* Tab Buttons */
+.tab-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8; /* var(--muted) */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Active Tab */
+.tab-btn.active {
+  background: #0b79f7; /* Primary Blue */
+  color: #ffffff;
+  border-color: #0b79f7;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(11, 121, 247, 0.4);
+}
+
+/* SCROLL CONTAINER - FIXED SIZE */
+/* SCROLL CONTAINER - UPDATED */
+.ladder-scroll-wrapper {
+  /* Change this from 260px to ~190px (Adjust this number until the black space is gone) */
+  height: 190px;
+  min-height: 190px;
+  max-height: 190px;
+
+  /* Keep overflow-y: scroll to prevent the text from "jumping" left/right */
+  overflow-y: scroll; 
+  
+  /* Visuals */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 5px;
+  width: 100%;
+}
+
+/* Custom Scrollbar Styling */
+.ladder-scroll-wrapper::-webkit-scrollbar {
+  width: 8px; /* Slightly wider for better visibility */
+}
+
+/* Track (Always visible now, to stabilize width) */
+.ladder-scroll-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+/* Handle */
+.ladder-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: #0b79f7; /* Blue */
+  border-radius: 4px;
+}
+
+.ladder-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #066ed6; /* Darker Blue */
+}
+
+.ladder-nav--results-players {
+  color: #ffffff;
+}
+
+.ladder-nav--results-players .results-user {
+  color: #ffffff;
+  font-weight: 500;
+}
+.ladder-nav--results-players.dim {
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* --- SERVER DROPDOWN STYLES --- */
+
+.server-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* The hidden menu */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0; /* Aligns to the right edge of the button */
+  top: 105%; /* Pushes it just below the button */
+  background-color: #ffffff;
+  min-width: 180px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  border: 1px solid #e3e7ee;
+  z-index: 1500;
+  padding: 8px 0;
+  overflow: hidden;
+}
+
+/* Toggle class to show the menu */
+.dropdown-content.show {
+  display: block;
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* The "Choose Server" header text inside */
+.dropdown-label {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+}
+
+/* The links/options */
+.server-option {
+  color: #05202b;
+  padding: 10px 16px;
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  transition: background 0.1s;
+}
+
+.server-option:hover {
+  background-color: #f1f5f9;
+  color: #0b79f7; /* Blue on hover */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* --- SERVER SELECTION STATE --- */
+
+/* Style for the active/chosen server */
+.server-option.selected {
+  background-color: #f0f9ff; /* Light blue background */
+  color: #0b79f7; /* Blue text */
+  font-weight: 600;
+  position: relative; /* Needed for the checkmark */
+}
+
+/* Add a checkmark icon to the right */
+.server-option.selected::after {
+  content: "✔";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #0b79f7;
 }
