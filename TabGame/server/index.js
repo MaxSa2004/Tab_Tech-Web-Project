@@ -141,14 +141,50 @@ function snapshotForClient(gameId) {
 
 // ---- Handlers ----
 async function handleRegister(req, res) {
+  // - If nick does not exist: create and return 201.
+  // - If nick exists and password matches: return 200 (treat as login).
+  // - If nick exists and password differs: return 401 (invalid credentials).
   try {
     const body = await parseJSONBody(req);
     const { nick, password } = body;
     if (!isNonEmptyString(nick) || !isNonEmptyString(password))
       return sendError(res, 400, "nick and password required");
-    if (users.has(nick)) return sendError(res, 409, "nick already registered");
-    users.set(nick, { password, wins: 0, plays: 0 });
-    sendJSON(res, 201, { ok: true, nick });
+
+    const existing = users.get(nick);
+    if (!existing) {
+      // create user
+      users.set(nick, { password, wins: 0, plays: 0 });
+      return sendJSON(res, 201, { ok: true, nick, message: "registered" });
+    }
+
+    // user exists — check password
+    if (existing.password === password) {
+      // treat as successful login
+      return sendJSON(res, 200, {
+        ok: true,
+        nick,
+        message: "already registered, logged in",
+      });
+    }
+
+    // password mismatch
+    return sendError(res, 401, "invalid credentials");
+  } catch (err) {
+    sendError(res, 400, err.message);
+  }
+}
+
+// KEEPING login route (optional) for explicit login calls
+async function handleLogin(req, res) {
+  try {
+    const body = await parseJSONBody(req);
+    const { nick, password } = body;
+    if (!isNonEmptyString(nick) || !isNonEmptyString(password))
+      return sendError(res, 400, "nick and password required");
+    const user = users.get(nick);
+    if (!user || user.password !== password)
+      return sendError(res, 401, "invalid credentials");
+    sendJSON(res, 200, { ok: true, nick });
   } catch (err) {
     sendError(res, 400, err.message);
   }
@@ -447,6 +483,9 @@ const server = http.createServer((req, res) => {
 
   if (pathname === "register" && req.method === "POST")
     return handleRegister(req, res);
+  // login route still available if client wants explicit login
+  if (pathname === "login" && req.method === "POST")
+    return handleLogin(req, res);
   if (pathname === "join" && req.method === "POST") return handleJoin(req, res);
   if (pathname === "leave" && req.method === "POST")
     return handleLeave(req, res);
@@ -468,6 +507,7 @@ const server = http.createServer((req, res) => {
         ok: true,
         endpoints: [
           "register",
+          "login",
           "join",
           "leave",
           "roll",
