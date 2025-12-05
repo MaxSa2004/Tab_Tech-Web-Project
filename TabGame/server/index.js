@@ -174,22 +174,6 @@ async function handleRegister(req, res) {
   }
 }
 
-// KEEPING login route (optional) for explicit login calls
-async function handleLogin(req, res) {
-  try {
-    const body = await parseJSONBody(req);
-    const { nick, password } = body;
-    if (!isNonEmptyString(nick) || !isNonEmptyString(password))
-      return sendError(res, 400, "nick and password required");
-    const user = users.get(nick);
-    if (!user || user.password !== password)
-      return sendError(res, 401, "invalid credentials");
-    sendJSON(res, 200, { ok: true, nick });
-  } catch (err) {
-    sendError(res, 400, err.message);
-  }
-}
-
 async function handleJoin(req, res) {
   try {
     const body = await parseJSONBody(req);
@@ -483,14 +467,14 @@ const server = http.createServer((req, res) => {
 
   if (pathname === "register" && req.method === "POST")
     return handleRegister(req, res);
-  // login route still available if client wants explicit login
-  if (pathname === "login" && req.method === "POST")
-    return handleLogin(req, res);
-  if (pathname === "join" && req.method === "POST") return handleJoin(req, res);
+  if (pathname === "join" && req.method === "POST")
+    return handleJoin(req, res);
   if (pathname === "leave" && req.method === "POST")
     return handleLeave(req, res);
-  if (pathname === "roll" && req.method === "POST") return handleRoll(req, res);
-  if (pathname === "pass" && req.method === "POST") return handlePass(req, res);
+  if (pathname === "roll" && req.method === "POST")
+    return handleRoll(req, res);
+  if (pathname === "pass" && req.method === "POST")
+    return handlePass(req, res);
   if (pathname === "notify" && req.method === "POST")
     return handleNotify(req, res);
   if (pathname === "update" && req.method === "GET")
@@ -507,13 +491,12 @@ const server = http.createServer((req, res) => {
         ok: true,
         endpoints: [
           "register",
-          "login",
           "join",
           "leave",
           "roll",
           "pass",
           "notify",
-          "update (SSE)",
+          "update", // SSE
           "ranking",
         ],
       })
