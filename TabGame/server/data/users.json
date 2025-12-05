@@ -1,0 +1,17 @@
+{
+  "max": {
+    "password": "e5a2c41784f88e74fa4957158257538b:cc5229550af08ef4d60891f4583c59e51c19b941aac6a7ff28a965499ab665689fea884199ca1f3698a0e08e62c2338ac7d5ae1cf70263ad534b762ab7f5a407",
+    "victories": 0,
+    "games": 0
+  },
+  "bob": {
+    "password": "9b2c2ea4161129050bb40d59458ec0c7:321f02470712bb87dee1cf4084658cb2289381d88b5a1b55333e2733a95cafb889a3c49e5b390cbd475ef6306ff1c766ec2f6f986c6a6b3faebbd6a8f9c6992c",
+    "victories": 0,
+    "games": 0
+  },
+  "test": {
+    "password": "3d54e9b107fc26aec5472c4f566ccc63:29cb4e89d2933ce0b0a5ff1f7b7bb0848344539083a178fcea40121eb9588c65d8e54a9e6d4f172520320c8691ebd20338eaa9dcc902291a9cd2df96d1b644ba",
+    "victories": 0,
+    "games": 0
+  }
+}

@@ -2,20 +2,28 @@
 
 /*
   Authentication endpoints.
-  - POST /register  (idempotent: create or login-if-same-password)
-  - POST /login     (explicit login)
+  - POST /register
+  - POST /login
+
+  Now stores counters under fields:
+    - games
+    - victories
+  Passwords must be hashed before storing (use storage.hashPassword()).
 */
 
 const utils = require("./utils");
 const storage = require("./storage");
 
 /**
- * handleRegister - register a new user or accept existing user if password matches.
- * Behavior:
- * - If nick does not exist: create and return 201.
- * - If nick exists and password matches: return 200 (treat as login).
- * - If nick exists and password differs: return 401 (invalid credentials).
- * Request body (JSON): { nick, password }
+ * handleRegister
+ * - Registers a new user with a hashed password, or returns 200 if the user already exists and password matches.
+ * - Request body (JSON): { nick, password }
+ * - Validates input, hashes the password using storage.hashPassword, stores user record with { password, victories:0, games:0 }.
+ * - Returns:
+ *   - 201 with { ok:true, nick, message:'registered' } when user created
+ *   - 200 with { ok:true, nick, message:'already registered, logged in' } when password matches existing user
+ *   - 400 when input invalid
+ *   - 401 when credentials invalid
  */
 async function handleRegister(req, res) {
   try {
@@ -25,10 +33,11 @@ async function handleRegister(req, res) {
       return utils.sendError(res, 400, "nick and password required");
     }
 
-    const existing = storage.users.get(nick);
+    const existing = storage.getUser(nick);
     if (!existing) {
-      // create new user record in memory
-      storage.users.set(nick, { password, wins: 0, plays: 0 });
+      const hashed = storage.hashPassword(password);
+      storage.setUser(nick, { password: hashed, victories: 0, games: 0 });
+      // optional: await storage.saveUsers();
       return utils.sendJSON(res, 201, {
         ok: true,
         nick,
@@ -36,8 +45,7 @@ async function handleRegister(req, res) {
       });
     }
 
-    // If user exists and password matches, treat as successful login
-    if (existing.password === password) {
+    if (storage.verifyPassword(nick, password)) {
       return utils.sendJSON(res, 200, {
         ok: true,
         nick,
@@ -45,7 +53,6 @@ async function handleRegister(req, res) {
       });
     }
 
-    // Password mismatch -> unauthorized
     return utils.sendError(res, 401, "invalid credentials");
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -53,9 +60,13 @@ async function handleRegister(req, res) {
 }
 
 /**
- * handleLogin - explicit login endpoint.
- * Validates that the nick exists and the provided password matches the stored password.
- * Request body (JSON): { nick, password }
+ * handleLogin
+ * - Explicit login. Request body: { nick, password }
+ * - Validates input and verifies password using storage.verifyPassword.
+ * - Returns:
+ *   - 200 with { ok:true, nick } on success
+ *   - 400 when input invalid
+ *   - 401 when credentials invalid
  */
 async function handleLogin(req, res) {
   try {
@@ -64,8 +75,7 @@ async function handleLogin(req, res) {
     if (!utils.isNonEmptyString(nick) || !utils.isNonEmptyString(password)) {
       return utils.sendError(res, 400, "nick and password required");
     }
-    const user = storage.users.get(nick);
-    if (!user || user.password !== password) {
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password)) {
       return utils.sendError(res, 401, "invalid credentials");
     }
     return utils.sendJSON(res, 200, { ok: true, nick });

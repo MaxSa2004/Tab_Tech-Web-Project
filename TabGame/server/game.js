@@ -1,24 +1,19 @@
 "use strict";
 
 /*
-  Game-related endpoints:
-  - POST /join
-  - POST /leave
-  - POST /roll
-  - POST /pass
-  - POST /notify
-  - GET  /ranking
-  Uses storage.js singletons and utils for parsing/response.
+  Game-related endpoints (join/leave/roll/pass/notify/ranking).
+  Uses storage.js for persistent counters under 'games' and 'victories'.
+  Authentication uses storage.verifyPassword().
 */
 
 const utils = require("./utils");
 const storage = require("./storage");
 
 /**
- * ensureGame - create a new game object if it doesn't exist.
- * @param {string} gameId
- * @param {number} size
- * @returns {Object} game object
+ * ensureGame
+ * - Create and return a game object for the given gameId if it doesn't exist.
+ * - Each game object contains: { size, players:[], turnIndex, pieces: Map<nick,array>, winner }
+ * - Returns the game object (existing or newly created).
  */
 function ensureGame(gameId, size = 6) {
   if (!storage.games.has(gameId)) {
@@ -34,9 +29,8 @@ function ensureGame(gameId, size = 6) {
 }
 
 /**
- * getTurnNick - return the nick of the player whose turn it is.
- * @param {Object} game
- * @returns {string|null}
+ * getTurnNick
+ * - Returns the nick of the player whose turn it currently is, or null if no players.
  */
 function getTurnNick(game) {
   if (!game.players.length) return null;
@@ -44,9 +38,10 @@ function getTurnNick(game) {
 }
 
 /**
- * nextTurn - advance the turn index and return the next player's nick.
- * @param {Object} game
- * @returns {string|null}
+ * nextTurn
+ * - Advances the game's turnIndex to the next player and returns that player's nick.
+ * - Wraps around using modulo arithmetic.
+ * - If there are no players returns null.
  */
 function nextTurn(game) {
   if (!game.players.length) return null;
@@ -55,11 +50,10 @@ function nextTurn(game) {
 }
 
 /**
- * broadcastGameEvent - broadcast an event payload to all SSE clients listening to a game.
- * Uses storage.sseClients map.
- * @param {string} gameId
- * @param {string} eventName
- * @param {Object} data
+ * broadcastGameEvent
+ * - Sends an SSE event to every connected SSE client whose key ends with `:gameId`.
+ * - eventName: string name of the event (e.g., 'join', 'roll').
+ * - data: payload object (will be JSON.stringified).
  */
 function broadcastGameEvent(gameId, eventName, data) {
   for (const [key, res] of storage.sseClients.entries()) {
@@ -72,9 +66,13 @@ function broadcastGameEvent(gameId, eventName, data) {
 }
 
 /**
- * handleJoin - join a player to a game (creates game if needed).
- * Request body: { nick, password, size, game }
- * Validates credentials and returns current players/pieces/turn info.
+ * handleJoin
+ * - POST /join
+ * - Body: { nick, password, size, game }
+ * - Validates credentials using storage.verifyPassword, creates or joins the player into the game.
+ * - Initializes player's pieces array if joining for the first time.
+ * - Increments persistent 'games' counter for the nick via storage.incrementGames.
+ * - Broadcasts a 'join' SSE event and returns game snapshot.
  */
 async function handleJoin(req, res) {
   try {
@@ -90,16 +88,19 @@ async function handleJoin(req, res) {
     const sizeInt = utils.toInt(size);
     if (!Number.isInteger(sizeInt) || sizeInt < 1)
       return utils.sendError(res, 400, "size must be integer >= 1");
-    const user = storage.users.get(nick);
-    if (!user || user.password !== password)
+
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
     const g = ensureGame(game, sizeInt);
     if (!g.players.includes(nick)) {
       g.players.push(nick);
-      // initialize player's pieces to zero positions
       g.pieces.set(nick, Array(g.size).fill(0));
-      user.plays = (user.plays || 0) + 1;
+      try {
+        storage.incrementGames(nick);
+      } catch (e) {
+        console.warn("Warning: failed to persist games counter for", nick, e);
+      }
     }
 
     const resp = {
@@ -123,9 +124,13 @@ async function handleJoin(req, res) {
 }
 
 /**
- * handleLeave - remove a player from a game.
- * Request body: { nick, password, game }
- * Updates game state and possibly marks a winner if only one player remains.
+ * handleLeave
+ * - POST /leave
+ * - Body: { nick, password, game }
+ * - Validates credentials and removes the player from the game.
+ * - If only one player remains, that player is declared winner and their persistent
+ *   'victories' counter is incremented via storage.incrementVictories.
+ * - Broadcasts a 'leave' SSE event and returns updated game info.
  */
 async function handleLeave(req, res) {
   try {
@@ -138,20 +143,25 @@ async function handleLeave(req, res) {
     ) {
       return utils.sendError(res, 400, "nick, password, game required");
     }
-    const user = storage.users.get(nick);
-    if (!user || user.password !== password)
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
+
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
 
     g.players = g.players.filter((p) => p !== nick);
     g.pieces.delete(nick);
     if (g.turnIndex >= g.players.length) g.turnIndex = 0;
+
     if (g.players.length === 1) {
       g.winner = g.players[0];
-      const winnerUser = storage.users.get(g.winner);
-      if (winnerUser) winnerUser.wins = (winnerUser.wins || 0) + 1;
+      try {
+        storage.incrementVictories(g.winner);
+      } catch (e) {
+        console.warn("Warning: failed to persist victory for", g.winner, e);
+      }
     }
+
     broadcastGameEvent(game, "leave", {
       players: g.players.slice(),
       winner: g.winner || null,
@@ -168,9 +178,12 @@ async function handleLeave(req, res) {
 }
 
 /**
- * handleRoll - perform a dice roll for the current player.
- * Request body: { nick, password, game, cell }
- * Validates turn, updates piece position, optionally marks winner, broadcasts update.
+ * handleRoll
+ * - POST /roll
+ * - Body: { nick, password, game, cell }
+ * - Validates credentials and current turn, performs a dice roll (1..6),
+ *   updates the specified piece, checks for a winner and increments victories if needed.
+ * - Broadcasts a 'roll' SSE event and returns the roll result and updated state.
  */
 async function handleRoll(req, res) {
   try {
@@ -185,16 +198,16 @@ async function handleRoll(req, res) {
     const cellInt = utils.toInt(cell);
     if (!Number.isInteger(cellInt) || cellInt < 0)
       return utils.sendError(res, 400, "cell must be integer >= 0");
-    const user = storage.users.get(nick);
-    if (!user || user.password !== password)
+
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
+
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
     if (g.winner) return utils.sendError(res, 409, "game finished");
     if (getTurnNick(g) !== nick)
       return utils.sendError(res, 403, "not your turn");
 
-    // Roll dice 1..6
     const dice = Math.floor(Math.random() * 6) + 1;
     const pieces = g.pieces.get(nick) || Array(g.size).fill(0);
     const pieceIndex = Math.min(cellInt, pieces.length - 1);
@@ -203,14 +216,16 @@ async function handleRoll(req, res) {
     pieces[pieceIndex] = to;
     g.pieces.set(nick, pieces);
 
-    // Winner detection: demo rule (piece reaches finishLine)
     const finishLine = g.size * 10;
     let winner = null;
     if (to >= finishLine) {
       winner = nick;
       g.winner = nick;
-      const u = storage.users.get(nick);
-      if (u) u.wins = (u.wins || 0) + 1;
+      try {
+        storage.incrementVictories(nick);
+      } catch (e) {
+        console.warn("Warning: failed to persist victory for", nick, e);
+      }
     }
     const next = winner ? null : nextTurn(g);
 
@@ -237,9 +252,10 @@ async function handleRoll(req, res) {
 }
 
 /**
- * handlePass - current player passes their turn.
- * Request body: { nick, password, game }
- * Validates credentials and turn, advances to next player.
+ * handlePass
+ * - POST /pass
+ * - Body: { nick, password, game }
+ * - Validates credentials and current turn, advances to next player and broadcasts 'pass' event.
  */
 async function handlePass(req, res) {
   try {
@@ -251,9 +267,10 @@ async function handlePass(req, res) {
       !utils.isNonEmptyString(game)
     )
       return utils.sendError(res, 400, "nick, password, game required");
-    const user = storage.users.get(nick);
-    if (!user || user.password !== password)
+
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
+
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
     if (g.winner) return utils.sendError(res, 409, "game finished");
@@ -270,9 +287,10 @@ async function handlePass(req, res) {
 }
 
 /**
- * handleNotify - accept a client-notified move.
- * Request body: { nick, password, game, cell }
- * Updates the player's pieces based on the provided cell.
+ * handleNotify
+ * - POST /notify
+ * - Body: { nick, password, game, cell }
+ * - Validates credentials, updates player's piece position to provided cell, broadcasts 'notify' event.
  */
 async function handleNotify(req, res) {
   try {
@@ -287,9 +305,10 @@ async function handleNotify(req, res) {
     const cellInt = utils.toInt(cell);
     if (!Number.isInteger(cellInt) || cellInt < 0)
       return utils.sendError(res, 400, "cell must be integer >= 0");
-    const user = storage.users.get(nick);
-    if (!user || user.password !== password)
+
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
+
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
 
@@ -317,21 +336,34 @@ async function handleNotify(req, res) {
 }
 
 /**
- * handleRanking - return a simple ranking table computed from users map.
- * GET query params: ?nick=...
+ * handleRanking
+ * - GET /ranking?nick=...
+ * - Validates query 'nick' param (keeps same validation as before).
+ * - Returns ranking using storage.getRanking(limit) which provides { nick, victories, games } entries.
  */
-function handleRanking(req, res) {
-  const q = utils.parseUrlEncoded(req.url);
-  const { nick } = q;
-  if (!utils.isNonEmptyString(nick))
-    return utils.sendError(res, 400, "nick query required");
-  const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
-    nick: n,
-    wins: u.wins || 0,
-    plays: u.plays || 0,
-  }));
-  ranking.sort((a, b) => b.wins - a.wins);
-  return utils.sendJSON(res, 200, { ok: true, ranking });
+async function handleRanking(req, res) {
+  try {
+    const q = utils.parseUrlEncoded(req.url);
+    const { nick } = q;
+    if (!utils.isNonEmptyString(nick))
+      return utils.sendError(res, 400, "nick query required");
+
+    try {
+      const ranking = storage.getRanking(20); // array of { nick, victories, games }
+      return utils.sendJSON(res, 200, { ok: true, ranking });
+    } catch (e) {
+      console.warn("Warning: getRanking failed, falling back", e);
+      const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
+        nick: n,
+        victories: u.victories || 0,
+        games: u.games || 0,
+      }));
+      ranking.sort((a, b) => b.victories - a.victories);
+      return utils.sendJSON(res, 200, { ok: true, ranking });
+    }
+  } catch (err) {
+    return utils.sendError(res, 400, err.message);
+  }
 }
 
 module.exports = {
