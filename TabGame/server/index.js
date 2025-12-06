@@ -4,7 +4,7 @@
   Main entrypoint:
   - wires modules together
   - creates HTTP server and starts listening
-  - keeps configuration (PORT, PUBLIC_DIR)
+  - configuration (PORT, PUBLIC_DIR)
 */
 
 const http = require("http");
@@ -23,17 +23,17 @@ router.init({ publicDir: PUBLIC_DIR });
 const server = http.createServer((req, res) => {
   // Handle simple CORS preflight for all endpoints
   if (req.method === "OPTIONS") {
-    utils.setCorsHeaders(res);
-    res.writeHead(204);
+    utils.setCorsHeaders(res); // CORS = Cross-Origin Resource Sharing
+    res.writeHead(200);
     res.end();
     return;
   }
 
-  // Delegate the request to router
+  // request sent to router
   router.handleRequest(req, res);
 });
 
-// Start listening on configured port and localhost
+// start listening on configured port and localhost
 server.listen(PORT, "localhost", () => {
   console.log(`Server running at http://localhost:${PORT}/`);
 });

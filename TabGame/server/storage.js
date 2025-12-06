@@ -31,12 +31,12 @@ const SCRYPT_SALT_BYTES = 16;
 
 // ------------------ Persistence helpers ------------------
 
-/**
- * loadUsersFromDiskSync
- * - Reads the users JSON file synchronously at startup.
- * - Supports new fields (victories/games) and legacy fields (wins/plays).
- * - Populates the in-memory `users` Map with normalized records.
- * - No return value; logs errors to console.
+/*
+ loadUsersFromDiskSync
+ - Reads the users JSON file synchronously at startup.
+ - Supports new fields (victories/games) and legacy fields (wins/plays).
+ - Populates the in-memory `users` Map with normalized records.
+ - No return value; logs errors to console.
  */
 function loadUsersFromDiskSync() {
   try {
@@ -101,11 +101,11 @@ async function saveUsersToDisk() {
 
 let _saveTimer = null;
 
-/**
- * scheduleSaveUsers
- * - Debounces saves to avoid excessive disk writes.
- * - delay: milliseconds to wait before calling saveUsersToDisk.
- * - Cancels previous timer if any and schedules a new one.
+/*
+scheduleSaveUsers
+  - Debounces saves to avoid excessive disk writes.
+  - delay: milliseconds to wait before calling saveUsersToDisk.
+  - Cancels previous timer if any and schedules a new one.
  */
 function scheduleSaveUsers(delay = 200) {
   if (_saveTimer) clearTimeout(_saveTimer);
@@ -117,24 +117,10 @@ function scheduleSaveUsers(delay = 200) {
   }, delay);
 }
 
-/**
- * saveUsers
- * - Forces an immediate asynchronous save.
- * - Cancels any pending debounced save and returns the Promise from saveUsersToDisk.
- * - Useful when you need durability before replying or in tests.
- */
-/*async function saveUsers() {
-  if (_saveTimer) {
-    clearTimeout(_saveTimer);
-    _saveTimer = null;
-  }
-  return saveUsersToDisk();
-}*/
-
-/**
- * flushUsersSync
- * - Synchronously writes the users file (used on process exit).
- * - Ensures data is flushed to disk when the process terminates.
+/*
+flushUsersSync
+  - Synchronously writes the users file (used on process exit).
+  - Ensures data is flushed to disk when the process terminates.
  */
 function flushUsersSync() {
   try {
@@ -235,17 +221,6 @@ function setUser(nick, record) {
 }
 
 /**
- * deleteUser
- * - Removes a user from the in-memory Map and schedules a save.
- * - Returns a boolean indicating whether a deletion occurred.
- */
-/*function deleteUser(nick) {
-  const r = users.delete(nick);
-  scheduleSaveUsers();
-  return r;
-}/*
-
-/**
  * incrementGames
  * - Increment the 'games' counter for the given nick.
  * - If the user does not exist, creates a placeholder user (empty password).
@@ -325,11 +300,10 @@ module.exports = {
   //saveUsers,
   flushUsersSync,
 
-  // user API (new names)
+  // user API (new names etc)
   getUser,
   hasUser,
   setUser,
-  //deleteUser,
   incrementGames,
   incrementVictories,
   getAllUsers,

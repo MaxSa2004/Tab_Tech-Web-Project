@@ -7,28 +7,18 @@
 
 const fs = require("fs");
 const path = require("path");
-const querystring = require("querystring");
+const querystring = require("querystring"); // convert query part of url into object for handlers
 
-/**
- * setCorsHeaders - set permissive CORS headers on a response.
- * @param {http.ServerResponse} res
- * @param {string} origin
- */
+// set permissive CORS headers on a response
 function setCorsHeaders(res, origin = "*") {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-/**
- * sendJSON - send a JSON response with the provided HTTP status code.
- * Adds CORS headers first.
- * @param {http.ServerResponse} res
- * @param {number} code
- * @param {Object} obj
- */
+// send a JSON response with the provided HTTP status code
 function sendJSON(res, code, obj) {
-  setCorsHeaders(res);
+  setCorsHeaders(res); // headers first
   const body = JSON.stringify(obj);
   res.writeHead(code, {
     "Content-Type": "application/json; charset=utf-8",
@@ -37,23 +27,12 @@ function sendJSON(res, code, obj) {
   res.end(body);
 }
 
-/**
- * sendError - convenience wrapper to send a JSON error object.
- * @param {http.ServerResponse} res
- * @param {number} code
- * @param {string} message
- */
+// wrapper to send a JSON error object
 function sendError(res, code, message) {
   sendJSON(res, code, { error: message });
 }
 
-/**
- * parseJSONBody - read and parse a JSON request body.
- * Resolves to {} when no body is present.
- * Rejects on invalid JSON or when the payload is too large.
- * @param {http.IncomingMessage} req
- * @returns {Promise<Object>}
- */
+// read and parse a JSON request body
 function parseJSONBody(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
@@ -62,11 +41,11 @@ function parseJSONBody(req) {
       if (raw.length > 1e6) {
         // Too large: destroy socket to avoid resource exhaustion
         req.socket.destroy();
-        reject(new Error("Payload too large"));
+        reject(new Error("Payload too large")); // exceeds 1e6 chars
       }
     });
     req.on("end", () => {
-      if (!raw) return resolve({});
+      if (!raw) return resolve({}); // no body present
       try {
         resolve(JSON.parse(raw));
       } catch (err) {
@@ -77,12 +56,7 @@ function parseJSONBody(req) {
   });
 }
 
-/**
- * parseUrlEncoded - parse a URL's query string into an object.
- * Used by GET endpoints (SSE / update, ranking) that accept urlencoded query params.
- * @param {string} reqUrl
- * @returns {Object}
- */
+// parse a URL's query string into an object
 function parseUrlEncoded(reqUrl) {
   const idx = reqUrl.indexOf("?");
   if (idx === -1) return {};
@@ -90,32 +64,19 @@ function parseUrlEncoded(reqUrl) {
   return querystring.parse(qs);
 }
 
-/**
- * isNonEmptyString - simple validator for non-empty strings.
- * @param {*} v
- * @returns {boolean}
- */
+// validator for non-empty strings
 function isNonEmptyString(v) {
   return typeof v === "string" && v.trim() !== "";
 }
 
-/**
- * toInt - convert a numeric string or number to an integer.
- * Returns NaN on failure.
- * @param {*} v
- * @returns {number}
- */
+// convert a numeric string or number to an integer
 function toInt(v) {
   if (typeof v === "number" && Number.isInteger(v)) return v;
   if (typeof v === "string" && /^-?\d+$/.test(v.trim())) return parseInt(v, 10);
   return NaN;
 }
 
-/**
- * contentTypeFor - minimal content type detection for static files.
- * @param {string} filePath
- * @returns {string}
- */
+// minimal content type detection for static files
 function contentTypeFor(filePath) {
   if (filePath.endsWith(".html")) return "text/html; charset=utf-8";
   if (filePath.endsWith(".js")) return "application/javascript; charset=utf-8";
@@ -126,14 +87,10 @@ function contentTypeFor(filePath) {
   return "application/octet-stream";
 }
 
-/**
- * tryServeStatic - attempt to serve a static file from publicDir.
- * Returns true if a file was served, false otherwise.
- * Protects against directory traversal by ensuring resolved path starts with publicDir.
- * @param {http.IncomingMessage} req
- * @param {http.ServerResponse} res
- * @param {string} publicDir
- * @returns {boolean}
+/*
+  attempts to serve a static file from publicDir (where index.html is)
+  returns true if a file was served, otherwise false
+  protects against directory traversal by ensuring resolved path starts with publicDir
  */
 function tryServeStatic(req, res, publicDir) {
   let reqPath = req.url.split("?")[0];

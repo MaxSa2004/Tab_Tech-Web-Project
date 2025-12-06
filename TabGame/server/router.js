@@ -12,21 +12,16 @@ const utils = require("./utils");
 
 let PUBLIC_DIR = null;
 
-/**
- * init - provide runtime configuration to the router
- * @param {Object} opts
- * @param {string} opts.publicDir - path to static files
- */
+// provide runtime configuration to the router
+// publicDir - path to static files
 function init({ publicDir }) {
   PUBLIC_DIR = publicDir;
 }
 
-/**
- * handleRequest - primary entrypoint for the HTTP server.
- * - serves static files from PUBLIC_DIR for GET requests
- * - dispatches API routes to handler modules
- * @param {http.IncomingMessage} req
- * @param {http.ServerResponse} res
+/* 
+primary entrypoint for the HTTP server.
+ - serves static files from PUBLIC_DIR for GET requests
+ - dispatches API routes to handler modules
  */
 async function handleRequest(req, res) {
   // Serve static SPA first for GET requests
@@ -44,8 +39,6 @@ async function handleRequest(req, res) {
   // Authentication
   if (pathname === "register" && req.method === "POST")
     return handlersAuth.handleRegister(req, res);
-  if (pathname === "login" && req.method === "POST")
-    return handlersAuth.handleLogin(req, res);
 
   // Game operations
   if (pathname === "join" && req.method === "POST")
@@ -74,7 +67,6 @@ async function handleRequest(req, res) {
         ok: true,
         endpoints: [
           "register",
-          "login",
           "join",
           "leave",
           "roll",
