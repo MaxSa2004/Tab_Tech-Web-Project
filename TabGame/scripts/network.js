@@ -15,10 +15,22 @@ const Network = (function () {
             headers: {'Content-Type':'application/json', 'Accept':'application/json'},
             body: JSON.stringify(bodyObj)
         });
+        
+        // --- CORREÇÃO DE ERRO ---
         if(!resp.ok){
-            const txt = await resp.text();
-            throw new Error(`HTTP ${resp.status}: ${txt}`);
+            // Tenta ler o JSON de erro enviado pelo servidor
+            const ct = resp.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+                const errJson = await resp.json();
+                // Lança o erro com a mensagem exata do servidor (ex: "Invalid move")
+                throw new Error(errJson.error || `HTTP ${resp.status}`);
+            } else {
+                const txt = await resp.text();
+                throw new Error(`HTTP ${resp.status}: ${txt}`);
+            }
         }
+        // ------------------------
+
         const ct = resp.headers.get('content-type') || '';
         return ct.includes('application/json') ? resp.json() : null;
     }

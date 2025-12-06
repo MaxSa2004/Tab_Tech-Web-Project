@@ -55,39 +55,59 @@ window.PVPController = (function () {
     function handleUpdateMessage(ev) {
         let payload; try { payload = JSON.parse(ev.data); } catch { return; }
         const localNick = sessionStorage.getItem('tt_nick');
+        if (payload.error) {
+            console.warn('[PvP] Server Error:', payload.error);
+            
+            // Cancela esperas e limpa seleções visuais para evitar estado bloqueado
+            waitingServer = false;
+            UI.clearHighlights();
+            if (S.selectedPiece) {
+                S.selectedPiece.classList.remove('selected');
+                S.selectedPiece = null;
+            }
 
+            // Mostra o erro ao utilizador (podes usar alert ou o sistema de mensagens)
+            alert(`Erro do Servidor: ${payload.error}`); 
+            // Se tiveres uma chave de tradução para erros genéricos, usa: 
+            // Msg.system('msg_error_generic', { text: payload.error });
+            
+            return; // Impede processamento do resto da mensagem
+        }
+        // initial
         if (payload.initial) {
             sessionStorage.setItem('tt_initial', payload.initial);
+            // determinar se sou eu o inicial
             const isMe = (payload.initial.toLowerCase() === localNick.toLowerCase());
+            // determinar número do jogador (se for eu o inicial, sou o 1)
             S.humanPlayerNum = isMe ? 1 : 2;
             console.log(`[PvP] Initial: P${S.humanPlayerNum}`);
         }
-
+        // players
         if (payload.players) {
-            const playersMap = payload.players || {};
-            const myColor = playersMap[localNick];
-            if (myColor) S.myServerColor = String(myColor).toLowerCase();
+            const playersMap = payload.players || {}; // mapa nick -> color
+            const myColor = playersMap[localNick]; // obter cor
+            if (myColor) S.myServerColor = String(myColor).toLowerCase(); //  "red" ou "yellow"
 
-            if (!S.gameActive) {
-                S.setGameActive(true);
-                S.waitingForPair = false;
-                if (UI.updatePlayLeaveButtons) UI.updatePlayLeaveButtons();
-                if (window.clearMessages) window.clearMessages();
-                Msg.system('msg_game_started');
+            if (!S.gameActive) { // se o jogo não estiver ativo, quando temos players, inicia
+                S.setGameActive(true); // ativar jogo
+                S.waitingForPair = false; // espera para
+                if (UI.updatePlayLeaveButtons) UI.updatePlayLeaveButtons(); // atualizar botões
+                if (window.clearMessages) window.clearMessages(); // limpar mensagens
+                Msg.system('msg_game_started'); // notificar início do jogo
 
-                UI.renderBoard(S.getCols());
-                if (window.__refreshCaptured) window.__refreshCaptured();
+                UI.renderBoard(S.getCols()); // renderizar tabuleiro
+                if (window.__refreshCaptured) window.__refreshCaptured(); // atualizar peças capturadas 
             }
         }
-
+        // turn
         if (payload.turn !== undefined) {
-            if (S.serverTurnNick !== payload.turn) {
-                S.serverMustPass = false; S.serverDiceValue = null; S.lastDiceValue = null;
+            if (S.serverTurnNick !== payload.turn) { // se o nick que tem o turno for diferente do atual
+                S.serverMustPass = false; S.serverDiceValue = null; S.lastDiceValue = null; //  o turno foi realizado, resetar valores (nova jogada com novo player)
                 try { TabStats.onTurnAdvance(); } catch { }
             }
-            S.serverTurnNick = payload.turn;
-            const isMyTurn = (S.serverTurnNick === localNick);
-            S.currentPlayer = isMyTurn ? S.humanPlayerNum : (S.humanPlayerNum === 1 ? 2 : 1);
+            S.serverTurnNick = payload.turn; // atualizar nick do turno
+            const isMyTurn = (S.serverTurnNick === localNick); // se formos nós
+            S.currentPlayer = isMyTurn ? S.humanPlayerNum : (S.humanPlayerNum === 1 ? 2 : 1); // atualizar jogador atual: se formos nós, somos o nosso número, senão o outro jogador é o atual
             if (S.elements.currentPlayerEl) S.elements.currentPlayerEl.textContent = isMyTurn ? 'EU' : S.serverTurnNick;
             Msg.system('msg_turn_of', { player: S.currentPlayer });
 
@@ -97,31 +117,32 @@ window.PVPController = (function () {
             UI.clearHighlights();
             updatePvPControls();
         }
-
+        // must pass: sem jogadas possíveis nem lançamentos de dados extra
         if (payload.mustPass !== undefined) {
             S.serverMustPass = payload.mustPass;
             if (S.serverMustPass && S.serverTurnNick === localNick) Msg.system('msg_player_no_moves_pass');
             updatePvPControls();
         }
-
+        // dice
         if (payload.dice !== undefined) {
-            if (payload.dice === null) {
+            if (payload.dice === null) { // se o valor vier nulo, limpar valores
                 S.serverDiceValue = null; S.lastDiceValue = null;
-            } else {
+            } else { // caso contrário, atualizar valores e mostrar lançamento remoto
                 const val = payload.dice.value;
                 const keepPlaying = payload.dice.keepPlaying;
                 S.serverDiceValue = val;
-
+                // mostrar lançamento remoto
                 Dice.showRemoteRoll(val).then(() => {
                     S.lastDiceValue = val;
                     const isMyTurn = (S.serverTurnNick === localNick);
                     const playerNum = isMyTurn ? S.humanPlayerNum : (S.humanPlayerNum === 1 ? 2 : 1);
                     Msg.player(playerNum, 'msg_dice_thrown', { value: val });
                     if (keepPlaying) {
-                        if (val === 1) {
+                        if (val === 1) { // se for 1, contar peças conversíveis
                             const conv = Rules.countConvertiblePieces(S, playerNum);
                             if (conv > 0) Msg.system('msg_dice_thrown_one', { n: conv });
                         }
+                        // Msg de lançamento duplo
                         Msg.system('msg_dice_thrown_double', { value: val });
                     }
 
@@ -140,11 +161,11 @@ window.PVPController = (function () {
             updatePvPControls();
         }
 
-        S.currentServerStep = (typeof payload.step === 'string') ? payload.step : null;
+        S.currentServerStep = (typeof payload.step === 'string') ? payload.step : null; // "from", "to", "take"
 
-        if (Array.isArray(payload.selected)) {
+        if (Array.isArray(payload.selected)) { // índices selecionados pelo servidor
             const cols = S.getCols();
-            S.serverSelectedIndices = new Set(payload.selected);
+            S.serverSelectedIndices = new Set(payload.selected); // atualizar set
 
             // Realçar sugestões do servidor apenas se NÃO for o meu turno (para não duplicar highlight)
             const isMyTurn = (S.serverTurnNick === localNick);
@@ -159,16 +180,16 @@ window.PVPController = (function () {
         } else {
             S.serverSelectedIndices = new Set();
         }
-
+        // pieces
         if (payload.pieces) {
-            updateBoardFromRemote(payload.pieces);
-            waitingServer = false;
+            updateBoardFromRemote(payload.pieces); // atualizar tabuleiro
+            waitingServer = false; // já recebemos atualização do servidor
 
             // Após atualização do servidor, limpa seleção e highlights
             clearSelection();
             UI.clearHighlights();
         }
-
+        // winner
         if (payload.winner) {
             const winnerNum = (payload.winner === localNick) ? S.humanPlayerNum : (S.humanPlayerNum === 1 ? 2 : 1);
             Msg.system('msg_player_won', { player: winnerNum });
@@ -186,7 +207,7 @@ window.PVPController = (function () {
         if (S.serverTurnNick !== localNick) return; // só jogas no teu turno
 
         const cols = S.getCols();
-        const cellIndex = viewCellToServerIndex(r, c, cols);
+        const cellIndex = viewCellToServerIndex(r, c, cols); // índice do servidor
         const game = sessionStorage.getItem('tt_game');
         const password = sessionStorage.getItem('tt_password');
 
@@ -194,7 +215,7 @@ window.PVPController = (function () {
         if (S.currentServerStep === 'take') {
             waitingServer = true;
             Net.notify({ nick: localNick, password, game, cell: cellIndex })
-                .catch(err => { waitingServer = false; console.warn('notify error:', err); });
+                .catch(err => { waitingServer = false; alert(err.message); console.warn('notify error:', err); });
             return;
         }
 
@@ -242,7 +263,9 @@ window.PVPController = (function () {
             .then(() => {
                 // aguardamos update 'pieces' para refletir o movimento
             })
-            .catch(err => { waitingServer = false; console.warn('notify error (to):', err); });
+            .catch(err => { waitingServer = false; console.warn('notify error (to):', err); alert(err.message); 
+            clearSelection();
+            UI.clearHighlights();});
     }
 
     function selectPieceAt(r, c, pieceEl) {

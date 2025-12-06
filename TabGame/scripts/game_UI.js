@@ -34,6 +34,8 @@ window.GameUI = (function () {
         attachBoardEvents();
     }
 
+    
+
     function updatePlayLeaveButtons() {
         const { playButton, leaveButton } = S.elements;
         if (!playButton) return;
