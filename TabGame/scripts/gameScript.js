@@ -250,6 +250,28 @@ document.addEventListener("DOMContentLoaded", () => {
         // cell?
 
         // winner
+        if(data.winner !== undefined){
+            const myNick = sessionStorage.getItem('tt_nick');
+            Network.stopUpdateEventSource(); // stop updates -> corrigir para antes enviar o TabStats
+            if(data.winner===null){
+                showMessage({ who: 'system', key: 'msg_game_draw' });
+                console.log('Game ended in a draw');
+            } else if(data.winner === myNick){
+                showMessage({ who: 'system', key: 'msg_game_won', params: {player: 1} });
+                showMessage({ who: 'system', key: 'msg_game_lost', params: { player: 2} });
+                console.log('Winner:', data.winner);
+                // lançar confetis
+            } else {
+                showMessage({ who: 'system', key: 'msg_game_won', params: { player: 2} });
+                showMessage({ who: 'system', key: 'msg_game_lost', params: { player: 1} });
+                console.log('Winner:', data.winner);
+            }
+            // Reset game state & UI
+            gameActive = false;
+            waitingForPair = false;
+            endGame();
+            return;
+        }
 
         // dice
         if(data.dice){
@@ -492,6 +514,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // manage the clicks on a cell (used by event listener click) - only if game is active
     function handleCellClick(cell) {
         if (!gameActive) return;
+        if(!vsAI){
+            const r = parseInt(cell.dataset.r, 10);
+            const c = parseInt(cell.dataset.c, 10);
+            const cols = parseInt(widthSelect.value, 10);
+            const cellIndex = r * cols + c;
+            Network.notidy({cell: cellIndex}).catch(err => {
+                console.warn('Error notifying server of cell click:', err.message);
+                if(err.message !== "Not your turn"){
+                    showMessage({ who: 'system', text: err.message});
+                }
+            });
+            return;
+        }
         // don't allow input when AI is playing
         if (vsAI && currentPlayer === aiPlayerNum) return;
 
