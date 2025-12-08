@@ -151,7 +151,20 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             // render
             renderOnlineBoard(data.pieces);
-
+        }
+        // must pass
+        if(data.mustPass !== undefined){
+            const nextTurnBtn = document.getElementById('nextTurn');
+            const throwBtn = document.getElementById('throwDiceBtn');
+            if(data.mustPass){
+                showMessage({who: 'system', key: 'msg_must_pass'});
+                if(throwBtn) throwBtn.disabled = true;
+                if(nextTurnBtn) nextTurnBtn.disabled = false;
+                console.log('Player must pass turn');
+            } 
+        }
+        if(data.pieces){
+            
         }
 
 
