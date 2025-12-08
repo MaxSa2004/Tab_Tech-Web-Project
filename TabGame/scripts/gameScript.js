@@ -190,11 +190,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const myNick = sessionStorage.getItem('tt_nick');
             gameBoard.querySelectorAll('.selected').forEach(el => { el.classList.remove('selected'); });
             gameBoard.querySelectorAll('.green-glow').forEach(el => { el.classList.remove('green-glow', 'pulse'); });
-
+            
             data.selected.forEach(index => {
                 const r = Math.floor(index / cols);
                 const c = index % cols;
                 const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+                const piece = cell.querySelector('.piece');
                 let isMyPiece = false;
                 if (piece) {
                     const isRed = piece.classList.contains('red');
@@ -215,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const myNick = sessionStorage.getItem('tt_nick');
             const currentPlayerEl = document.getElementById('currentPlayer');
             if (currentPlayerEl) {
-                if (data - turn === myNick) {
+                if (data.turn === myNick) {
                     currentPlayerEl.textContent = 'You';
                 } else {
                     currentPlayerEl.textContent = data.turn;
@@ -519,7 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const c = parseInt(cell.dataset.c, 10);
             const cols = parseInt(widthSelect.value, 10);
             const cellIndex = r * cols + c;
-            Network.notidy({cell: cellIndex}).catch(err => {
+            Network.notify({cell: cellIndex}).catch(err => {
                 console.warn('Error notifying server of cell click:', err.message);
                 if(err.message !== "Not your turn"){
                     showMessage({ who: 'system', text: err.message});
@@ -1523,7 +1524,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // expose refreshDiceOverlay globally
     window.__refreshDice = refreshDiceOverlay;
     // public API
-    window.tabGame.spawnAndLaunch = function () {
+    window.tabGame.spawnAndLaunch = function (forcedValue = null) {
         return new Promise((resolve) => {
             // closes previous overlay if any
             const prev = document.body.querySelector('.dice-overlay');
