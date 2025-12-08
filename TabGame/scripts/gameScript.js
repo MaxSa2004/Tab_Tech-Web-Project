@@ -126,9 +126,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // lista contendo a tabela classificativa para o grupo e tamanho de tabuleiro dados
         // cada elem da lista é um obj com as propriedades: nick, games, victories
         // a lista retornada está ordenada por ordem decrescente do nr de vitórias e tem no máximo 10 registos
-        if(data.rankings){
-            window.updatePvPLeaderboard(data.rankings);
+        if(data.ranking){
+            window.updatePvPLeaderboard(data.ranking);
         }
+        // error
+        // msg de erro produzida sempre que a resposta HTTP for diferente de 200
+        if(data.error){
+            showMessage({who: 'system', text: data.error});
+            console.warn('Server error:', data.error);
+            return;
+        }
+
 
     }
     // leave button click handler
@@ -173,8 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             try {
                 Network.leave();
-            } catch {
-                showMessage({ who: 'system', key: 'msg_network_error' });
+            } catch (err) {
+                showMessage({ who: 'system', text: err.message });
                 return;
             }
 
@@ -705,8 +713,8 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 try {
                     await Network.pass();
-                } catch {
-                    showMessage({ who: 'system', key: 'msg_network_error' });
+                } catch (err) {
+                    showMessage({ who: 'system', text: err.message });
                     return;
                 }
             }
@@ -746,8 +754,8 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const joinData = await Network.join({ nickname, password, size });
                 Network.createUpdateEventSource(dataHandler);
-            } catch {
-                showMessage({ who: 'system', key: 'msg_network_error' });
+            } catch (err){
+                showMessage({ who: 'system', text: err.message });
                 return;
             }
             gameId = joinData.gameId;
@@ -894,6 +902,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 } catch (err) {
                     console.warn('Erro ao lançar dados (PvP):', err);
+                    showMessage({ who: 'system', text: err.message });
                 }
 
             }
