@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentPlayer = 1; // 1 or 2
     let gameActive = false;
     let waitingForPair = false;
+    let serverInitialNick = null;
 
     // AI state and mode
     let gameMode = 'player';      // 'player' | 'ia'
@@ -123,30 +124,70 @@ document.addEventListener("DOMContentLoaded", () => {
         // used in online mode (PVP)
         if(!data) return;
         // rankings
-        // lista contendo a tabela classificativa para o grupo e tamanho de tabuleiro dados
-        // cada elem da lista é um obj com as propriedades: nick, games, victories
-        // a lista retornada está ordenada por ordem decrescente do nr de vitórias e tem no máximo 10 registos
         if(data.ranking){
             window.updatePvPLeaderboard(data.ranking);
         }
         // error
-        // msg de erro produzida sempre que a resposta HTTP for diferente de 200
         if(data.error){
             showMessage({who: 'system', text: data.error});
             console.warn('Server error:', data.error);
             return;
         }
         // game
-        // identificador de jogo (has) que é gerado quando um jogador pede para ser emparelhado (join)
-        // este identificador deve ser usado como argumento nas funções relacionadas com o jogo como leave, notify, update
         if(waitingForPair && (data.turn)){
             waitingForPair = false;
             showMessage({who: 'system', key: 'msg_game_start'}); // ou pair found com o nome do pair
             console.log('Paired! Game starting...');
         }
+        // initial
+        if(data.initial && data.pieces){
+            if(serverInitialNick === null){ // not yet defined
+                serverInitialNick = data.initial;
+                // atualizar nomes na UI
+                const p1Label = document.getElementById('capTitleP1');
+                if(p1Label){
+                    p1Label.textContent = data.initial;
+                }
+            }
+            // render
+            renderOnlineBoard(data.pieces);
+
+        }
+
 
 
     }
+
+    // helper to render the online board (update pieces positions)
+    function renderOnlineBoard(pieces){
+        const cols = parseInt(gameBoard.style.getPropertyValue('width'), 10);
+        const gameBoard = document.getElementById('gameBoard');
+        const oldPieces = gameBoard.querySelectorAll('.piece');
+        oldPieces.forEach(p => p.remove()); // clear old pieces
+        pieces.forEach((ownerNick, index)=>{
+            if(!ownerNick) return;
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+            const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+            if(cell){
+                const piece = document.createElement('div');
+                piece.classList.add('piece');
+                // determine color based on ownerNick
+                if(ownerNick === serverInitialNick){
+                    piece.classList.add('red');
+                } else {
+                    piece.classList.add('yellow');
+                }
+                const isRed = piece.classList.contains('red');
+                const isBase = (isRed && r === 3) || (!isRed && r === 0);
+                piece.setAttribute('move-state', isBase ? 'not-moved' : 'moved'); // depende doq eles consideram isBase , pode mover e estar na base
+                cell.appendChild(piece);
+            }
+        });
+        redPieces = gameBoard.querySelectorAll('.piece.red').length;
+        yellowPieces = gameBoard.querySelectorAll('.piece.yellow').length;
+    }
+
     // leave button click handler
     leaveButton.addEventListener('click', async () => {
         if (!gameActive) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
@@ -754,6 +795,7 @@ document.addEventListener("DOMContentLoaded", () => {
         aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null; // if vsAI, determine AI player number (depends on who plays first), else null
         humanPlayerNum = vsAI ? (humanFirst ? 1 : 2) : 1; // if vsAI, determine human player number, else 1
         refreshCapturedTitles(); // update captured panels titles based on mode and localization
+        renderBoard(parseInt(widthSelect.value, 10)); // render board based on selected width
         if (!vsAI) {
             const nickname = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
             const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
