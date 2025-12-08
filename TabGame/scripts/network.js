@@ -1,7 +1,7 @@
 /* Network module for TWServer API (group 36) */
 (() => {
   const BASE_URL = 'http://twserver.alunos.dcc.fc.up.pt:8008';
-  // const BASE_URL = 'http://localhost:8136/';     local server link for testing
+  //const BASE_URL = 'http://localhost:8136/';     //local server link for testing
   const GROUP = 36;
   // internal state
   let currentState = {
