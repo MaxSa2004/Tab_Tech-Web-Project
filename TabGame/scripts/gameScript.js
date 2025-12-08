@@ -136,6 +136,14 @@ document.addEventListener("DOMContentLoaded", () => {
             console.warn('Server error:', data.error);
             return;
         }
+        // game
+        // identificador de jogo (has) que é gerado quando um jogador pede para ser emparelhado (join)
+        // este identificador deve ser usado como argumento nas funções relacionadas com o jogo como leave, notify, update
+        if(waitingForPair && (data.turn)){
+            waitingForPair = false;
+            showMessage({who: 'system', key: 'msg_game_start'}); // ou pair found com o nome do pair
+            console.log('Paired! Game starting...');
+        }
 
 
     }
@@ -753,14 +761,15 @@ document.addEventListener("DOMContentLoaded", () => {
             waitingForPair = true;
             try {
                 const joinData = await Network.join({ nickname, password, size });
+                gameId = joinData.game;
+                sessionStorage.setItem('tt_gameId', gameId);
+                waitingForPair = true;
+                showMessage({ who: 'system', key: 'msg_waiting_pair' });
                 Network.createUpdateEventSource(dataHandler);
             } catch (err){
                 showMessage({ who: 'system', text: err.message });
                 return;
             }
-            gameId = joinData.gameId;
-            sessionStorage.setItem('tt_gameId', gameId);
-            waitingForPair = false;
 
         }
         currentPlayer = 1; // red starts
