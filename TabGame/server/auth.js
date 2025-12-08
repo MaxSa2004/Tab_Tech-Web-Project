@@ -10,6 +10,7 @@ const storage = require("./storage");
 
 /* handleRegister
   Request body (JSON): { nick, password }
+  Returns 200 JSON on success (registered or logged in), errors otherwise.
   */
 
 async function handleRegister(req, res) {
@@ -24,8 +25,8 @@ async function handleRegister(req, res) {
     if (!existing) {
       const hashed = storage.hashPassword(password);
       storage.setUser(nick, { password: hashed, victories: 0, games: 0 });
-      // 201 = created
-      return utils.sendJSON(res, 201, {
+      // Return 200 with JSON body to match teacher server behaviour
+      return utils.sendJSON(res, 200, {
         ok: true,
         nick,
         message: "registered",

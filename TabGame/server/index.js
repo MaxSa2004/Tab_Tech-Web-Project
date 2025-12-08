@@ -24,7 +24,8 @@ const server = http.createServer((req, res) => {
   // Handle simple CORS preflight for all endpoints
   if (req.method === "OPTIONS") {
     utils.setCorsHeaders(res); // CORS = Cross-Origin Resource Sharing
-    res.writeHead(200);
+    // Respond 204 No Content for preflight (no response body)
+    res.writeHead(204);
     res.end();
     return;
   }

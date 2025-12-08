@@ -337,17 +337,28 @@ async function handleNotify(req, res) {
 
 /**
  * handleRanking
- * - GET /ranking?nick=...
- * - Validates query 'nick' param (keeps same validation as before).
+ * - GET /ranking?nick=...  OR POST /ranking with JSON body
  * - Returns ranking using storage.getRanking(limit) which provides { nick, victories, games } entries.
+ * - Note: nick is optional; we return ranking even if no nick provided (to match teacher server behavior).
  */
 async function handleRanking(req, res) {
   try {
+    // accept query param or POST JSON body
     const q = utils.parseUrlEncoded(req.url);
-    const { nick } = q;
-    if (!utils.isNonEmptyString(nick))
-      return utils.sendError(res, 400, "nick query required");
+    let nick = q.nick;
 
+    if (req.method === "POST") {
+      try {
+        const body = await utils.parseJSONBody(req);
+        if (body && typeof body.nick === "string" && body.nick.trim() !== "") {
+          nick = body.nick;
+        }
+      } catch (e) {
+        // ignore body parse errors for ranking; we can still proceed
+      }
+    }
+
+    // Do not require nick — return ranking regardless (matches teacher server)
     try {
       const ranking = storage.getRanking(20); // array of { nick, victories, games }
       return utils.sendJSON(res, 200, { ok: true, ranking });

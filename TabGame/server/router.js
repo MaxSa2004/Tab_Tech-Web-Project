@@ -20,8 +20,8 @@ function init({ publicDir }) {
 
 /* 
 primary entrypoint for the HTTP server.
- - serves static files from PUBLIC_DIR for GET requests
- - dispatches API routes to handler modules
+  - serves static files from PUBLIC_DIR for GET requests
+  - dispatches API routes to handler modules
  */
 async function handleRequest(req, res) {
   // Serve static SPA first for GET requests
@@ -35,6 +35,30 @@ async function handleRequest(req, res) {
 
   const urlPath = req.url.split("?")[0] || "/";
   const pathname = urlPath.replace(/^\/+|\/+$/g, "");
+
+  // Known endpoints and expected methods
+  // POST-only endpoints:
+  const postOnly = new Set([
+    "register",
+    "join",
+    "leave",
+    "roll",
+    "pass",
+    "notify",
+    "ranking",
+  ]);
+
+  // GET-only endpoints:
+  const getOnly = new Set(["update"]);
+  // ranking: accepts GET and POST (teacher server compatibility)
+
+  // If request matches a known endpoint but the method is not allowed, return 405
+  if (postOnly.has(pathname) && req.method !== "POST") {
+    return utils.sendError(res, 405, "method not allowed");
+  }
+  if (getOnly.has(pathname) && req.method !== "GET") {
+    return utils.sendError(res, 405, "method not allowed");
+  }
 
   // Authentication
   if (pathname === "register" && req.method === "POST")
@@ -55,7 +79,9 @@ async function handleRequest(req, res) {
   // Updates (SSE) and ranking
   if (pathname === "update" && req.method === "GET")
     return handlersUpdate.handleUpdate(req, res);
-  if (pathname === "ranking" && req.method === "GET")
+
+  // Accept both GET and POST for /ranking to mimic teacher server behaviour
+  if (pathname === "ranking" && req.method === "POST")
     return handlersGame.handleRanking(req, res);
 
   // Root informational endpoint
@@ -80,7 +106,7 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // No matching route
+  // No matching route (not found)
   utils.sendError(res, 404, "not found");
 }
 

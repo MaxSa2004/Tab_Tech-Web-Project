@@ -1,21 +1,41 @@
 {
   "max": {
     "password": "e5a2c41784f88e74fa4957158257538b:cc5229550af08ef4d60891f4583c59e51c19b941aac6a7ff28a965499ab665689fea884199ca1f3698a0e08e62c2338ac7d5ae1cf70263ad534b762ab7f5a407",
-    "victories": 0,
-    "games": 0
+    "victories": 5,
+    "games": 8
   },
   "bob": {
     "password": "9b2c2ea4161129050bb40d59458ec0c7:321f02470712bb87dee1cf4084658cb2289381d88b5a1b55333e2733a95cafb889a3c49e5b390cbd475ef6306ff1c766ec2f6f986c6a6b3faebbd6a8f9c6992c",
-    "victories": 0,
-    "games": 0
+    "victories": 1,
+    "games": 1
   },
   "test": {
     "password": "3d54e9b107fc26aec5472c4f566ccc63:29cb4e89d2933ce0b0a5ff1f7b7bb0848344539083a178fcea40121eb9588c65d8e54a9e6d4f172520320c8691ebd20338eaa9dcc902291a9cd2df96d1b644ba",
-    "victories": 0,
-    "games": 0
+    "victories": 2,
+    "games": 2
   },
   "maria": {
     "password": "ba401965d0c81d158134c733d13d07c7:c8c94b956deb9fb2169746cb236fd8dd155332c84b3096ec274e7f10c45e381b17a90be7255259eb135c7d7611b548fffbbc7561d961f2d4f9a8e3cd99cbe447",
+    "victories": 0,
+    "games": 0
+  },
+  "test1": {
+    "password": "fc16e1a6c4286d415228b2143298a415:c75650bfc8e0b98170d3210b86b6c2c2022aa52edfbea309ca811b2e80719507206f954592e97f478605b9e61e8cfccc5391ec4ee0a195de7002242e5d32f764",
+    "victories": 0,
+    "games": 0
+  },
+  "maxie": {
+    "password": "55376c071e3affa436465f4f3bc7a4bd:a261b03ed5e61489ea22919bb9214fab437713fe270ba899e823db525ae736d14f05422e57c19b7a2304126af14967998ce0e9db3c1fd30417dc622a430c418c",
+    "victories": 0,
+    "games": 0
+  },
+  "bobby": {
+    "password": "a16b2ae9636f7d65a3a1f4b3aed48fa6:0e877d22d6df498cc2c36b8864c494e0738afb3c892d89b25d8dd234584c1b8ee3e0c4277722ed044480a0c3c9259477f37bfbeacf7cb19b4c1c1c2e92711765",
+    "victories": 0,
+    "games": 0
+  },
+  "maxie123": {
+    "password": "e025d55b1064366f7f367830252654ec:7d2166a57e736fcf53a8c64e703cf924b9437b577b0ca6ea2a8bbc50541d9dd1c31fd28721e05b0b4757949dddcb7e3186f67c664920dcab3f6610c7b6b85a50",
     "victories": 0,
     "games": 0
   }

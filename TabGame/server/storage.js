@@ -1,15 +1,10 @@
 "use strict";
 
 /*
-  storage.js
+storage.js
   - In-memory singletons (users, games, sseClients).
   - File-backed persistence for users in ./data/users.json.
   - Password hashing using crypto.scryptSync (hashPassword / verifyPassword).
-  - Field name change: stored user counters are now:
-      - games      (number of games played)
-      - victories  (number of wins)
-  - Backwards compatibility on load: if file contains "plays"/"wins", they are mapped to "games"/"victories".
-  - Public API exposes incrementGames / incrementVictories and getRanking() that returns { nick, victories, games }.
 */
 
 const fs = require("fs");
@@ -25,7 +20,7 @@ const users = new Map(); // nick -> { password: 'salt:hex', victories:number, ga
 const games = new Map(); // gameId -> { size, players, turnIndex, pieces:Map, winner }
 const sseClients = new Map(); // `${nick}:${game}` -> ServerResponse
 
-// scrypt params (sync)
+// scrypt params (sync) - scrypt used as it is more secure than MD5
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_SALT_BYTES = 16;
 
@@ -34,9 +29,8 @@ const SCRYPT_SALT_BYTES = 16;
 /*
  loadUsersFromDiskSync
  - Reads the users JSON file synchronously at startup.
- - Supports new fields (victories/games) and legacy fields (wins/plays).
  - Populates the in-memory `users` Map with normalized records.
- - No return value; logs errors to console.
+ - No return value = logs errors to console.
  */
 function loadUsersFromDiskSync() {
   try {
@@ -50,13 +44,9 @@ function loadUsersFromDiskSync() {
       const password = rec.password;
       const victories = Number.isFinite(rec.victories)
         ? rec.victories
-        : Number.isFinite(rec.wins)
-        ? rec.wins
         : 0;
       const gamesCount = Number.isFinite(rec.games)
         ? rec.games
-        : Number.isFinite(rec.plays)
-        ? rec.plays
         : 0;
       users.set(nick, {
         password: String(password || ""),
@@ -140,14 +130,13 @@ function flushUsersSync() {
   }
 }
 
-// ------------------ Crypto helpers (scrypt) ------------------
+// Crypto helpers (scrypt)
 
-/**
- * hashPassword
- * - Generates a random salt and derives a key using crypto.scryptSync.
- * - Returns a string in the format 'salt:derivedHex' suitable for storing.
- * - Input: plain (string) - the plaintext password.
- * - Output: string (salt:hex)
+/*
+  Generates a random salt and derives a key using crypto.scryptSync.
+  Returns a string in the format 'salt:derivedHex' suitable for storing.
+  Input: plain (string) - the plaintext password.
+  Output: string (salt:hex)
  */
 function hashPassword(plain) {
   const salt = crypto.randomBytes(SCRYPT_SALT_BYTES).toString("hex");
@@ -273,10 +262,6 @@ function getRanking(limit = 10) {
   return arr.slice(0, limit);
 }
 
-// Backwards-compatible aliases (optional)
-const incrementPlays = incrementGames;
-const incrementWins = incrementVictories;
-
 loadUsersFromDiskSync();
 
 process.on("exit", () => flushUsersSync());
@@ -308,10 +293,6 @@ module.exports = {
   incrementVictories,
   getAllUsers,
   getRanking,
-
-  // aliases for compatibility
-  incrementPlays,
-  incrementWins,
 
   // crypto helpers
   hashPassword,
