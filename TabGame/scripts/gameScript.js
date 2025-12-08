@@ -210,6 +210,48 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         }
+        // turn
+        if(data.turn){
+            const myNick = sessionStorage.getItem('tt_nick');
+            const currentPlayerEl = document.getElementById('currentPlayer');
+            if(currentPlayerEl){
+                if(data-turn === myNick){
+                    currentPlayerEl.textContent = 'You';
+                } else {
+                    currentPlayerEl.textContent = data.turn;
+                }
+            }
+            if(data.turn === myNick){
+                if(document.body.dataset.lastTurn !== myNick){
+                    showMessage({who: 'system', key: 'msg_your_turn'});
+                    const throwBtn = document.getElementById('throwDiceBtn');
+                    if(throwBtn && !data.mustPass) throwBtn.disabled = false;
+                }
+            }
+            document.body.dataset.lastTurn = data.turn;
+        }
+        // step
+        if(data.step){
+            const myNick = sessionStorage.getItem('tt_nick');
+            if(data.turn === myNick){
+                switch(data.step){
+                    case 'from':
+                        showMessage({who: 'system', key: 'msg_select_piece'});
+                        break;
+                    case 'to':
+                        showMessage({who: 'system', key: 'msg_select_destination'});
+                        break;
+                    case 'take':
+                        showMessage({who: 'system', key: 'msg_take_piece'});
+                        break;
+                }
+            }
+        }
+        // cell
+
+        // winner
+
+        // dice
 
 
 
