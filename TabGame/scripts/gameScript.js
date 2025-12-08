@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log('Paired! Game starting...');
         }
         // initial
-        if(data.initial && data.pieces){
+        if(data.initial){
             if(serverInitialNick === null){ // not yet defined
                 serverInitialNick = data.initial;
                 // atualizar nomes na UI
@@ -149,8 +149,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     p1Label.textContent = data.initial;
                 }
             }
-            // render
-            renderOnlineBoard(data.pieces);
         }
         // must pass
         if(data.mustPass !== undefined){
@@ -163,8 +161,54 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.log('Player must pass turn');
             } 
         }
+        // pieces
         if(data.pieces){
+            renderOnlineBoard(data.pieces);
+        }
+        // players
+        if(data.players){
+            const myNick = sessionStorage.getItem('tt_nick');
+            const playerNames = Object.keys(data.players);
+            const opponentNick = playerNames.find(nick => nick !== myNick);
+            if(opponentNick){
+                const p2Label = document.getElementById('capTitleP2');
+                if(p2Label){
+                    p2Label.textContent = opponentNick;
+                }
+                const p1Label = document.getElementById('capTitleP1');
+                if(p1Label && myNick){
+                    p1Label.textContent = myNick;
+                }
+                console.log('Opponent found:', opponentNick);
+                showMessage({who: 'system', key: 'msg_opponent_found', params: { opponent: opponentNick }});
+            }
+        }
+        // selected
+        if(data.selected){
+            const cols = parseInt(document.getElementById('width').value, 10);
+            const gameBoard = document.getElementById('gameBoard');
+            const myNick = sessionStorage.getItem('tt_nick');
+            gameBoard.querySelectorAll('.selected').forEach(el => { el.classList.remove('selected'); });
+            gameBoard.querySelectorAll('.green-glow').forEach(el => { el.classList.remove('green-glow', 'pulse'); });
             
+            data.selected.forEach(index => {
+                const r = Math.floor(index / cols);
+                const c = index % cols;
+                const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+                let isMyPiece = false;
+                if(piece){
+                    const isRed = piece.classList.contains('red');
+                    const amIP1 = (serverInitialNick === myNick);
+                    if((isRed && amIP1) || (!isRed && !amIP1)){
+                        isMyPiece = true;
+                    }
+                }
+                if(isMyPiece){
+                    piece.classList.add('selected');
+                }else {
+                    cell.classList.add('green-glow', 'pulse');
+                }
+            });
         }
 
 
@@ -177,23 +221,28 @@ document.addEventListener("DOMContentLoaded", () => {
         const gameBoard = document.getElementById('gameBoard');
         const oldPieces = gameBoard.querySelectorAll('.piece');
         oldPieces.forEach(p => p.remove()); // clear old pieces
-        pieces.forEach((ownerNick, index)=>{
-            if(!ownerNick) return;
+        pieces.forEach((pieceObj, index)=>{
+            if(!pieceObj) return;
             const r = Math.floor(index / cols);
             const c = index % cols;
             const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
             if(cell){
                 const piece = document.createElement('div');
                 piece.classList.add('piece');
-                // determine color based on ownerNick
-                if(ownerNick === serverInitialNick){
+                // determine color based on pieceObj
+                if(pieceObj.color === 'Red'){
                     piece.classList.add('red');
-                } else {
+                } else if(pieceObj.color === 'Blue'){
                     piece.classList.add('yellow');
                 }
-                const isRed = piece.classList.contains('red');
-                const isBase = (isRed && r === 3) || (!isRed && r === 0);
-                piece.setAttribute('move-state', isBase ? 'not-moved' : 'moved'); // depende doq eles consideram isBase , pode mover e estar na base
+                // states
+                if(pieceObj.reachedLastRow){
+                    piece.setAttribute('move-state', 'row-four');
+                } else if(!pieceObj.inMotion){
+                    piece.setAttribute('move-state', 'not-moved');
+                } else {
+                    piece.setAttribute('move-state', 'moved');
+                }
                 cell.appendChild(piece);
             }
         });
