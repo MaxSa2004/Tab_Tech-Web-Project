@@ -41,6 +41,16 @@ contents = document.addEventListener("DOMContentLoaded", () => {
       viewPvP.style.display = "block";
       viewAI.style.display = "none";
       if (sortButton) sortButton.style.display = "none";
+      const sizeElement = document.getElementById("width");
+      const size = sizeElement ? parseInt(sizeElement.value, 10) : 9;
+      Network.ranking({ size: size }).then((data) => {
+        if(data.ranking){
+          window.updatePvPLeaderboard(data.ranking);  
+        }
+      }).catch((err) => {
+        console.error("Failed to fetch PvP rankings:", err);
+      });
+
     });
   }
 
@@ -163,6 +173,32 @@ contents = document.addEventListener("DOMContentLoaded", () => {
       sortAILeaderboard();
       saveAIData();
     }
+  };
+
+  // update PVP leaderboard
+  window.updatePvPLeaderboard = function (rankingList) {
+    const viewPvP = document.getElementById("view-pvp");
+    if (!viewPvP) return;
+    viewPvP.innerHTML = "";
+    if(!rankingList || rankingList.length === 0){
+      viewPvP.innerHTML = "<div style='padding:15px; text-align: center'> No rankings found. </div>";
+      return;
+    }
+    rankingList.forEach((player, index) => {
+      const games = player.games || 0;
+      const wins = player.victories || 0;
+      const ratio = games > 0 ? ((wins / games) * 100).toFixed(1) + "%": "0.0%";
+      const playerRow = document.createElement("div");
+      playerRow.className = "ladder-nav--results-players";
+      playerRow.innerHTML= `
+      <div class = "results-col"><span class="results-rank"><span class="positions">${index + 1}</span></span></div>
+      <div class = "results-col"><span class="results-user">${player.nick}</span></div>
+      <div class = "results-col">${games}</span></div>
+      <div class = "results-col">${wins}</span></div>
+      <div class = "results-col">${ratio}</span></div>
+      `;
+      viewPvP.appendChild(playerRow);
+    });
   };
 
   // --- 6. INITIALIZATION ---

@@ -118,7 +118,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // expose refreshCapturedTitles globally
     window.__refreshCaptured = refreshCapturedTitles;
 
-    
+    // server data handler 
+    async function dataHandler(data){
+        // used in online mode (PVP)
+        if(!data) return;
+        // rankings
+        // lista contendo a tabela classificativa para o grupo e tamanho de tabuleiro dados
+        // cada elem da lista é um obj com as propriedades: nick, games, victories
+        // a lista retornada está ordenada por ordem decrescente do nr de vitórias e tem no máximo 10 registos
+        if(data.rankings){
+            window.updatePvPLeaderboard(data.rankings);
+        }
+
+    }
     // leave button click handler
     leaveButton.addEventListener('click', async () => {
         if (!gameActive) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
@@ -159,6 +171,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 loserName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
                 winnerNum = 1;
             }
+            try {
+                Network.leave();
+            } catch {
+                showMessage({ who: 'system', key: 'msg_network_error' });
+                return;
+            }
+
 
         }
 
@@ -685,10 +704,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 nextTurn(); // advance turn
             } else {
                 try {
-                    const nickname = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-                    const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
-                    const game = sessionStorage.getItem('tt_gameId');
-                    await Network.pass({ nickname, password, game });
+                    await Network.pass();
                 } catch {
                     showMessage({ who: 'system', key: 'msg_network_error' });
                     return;
@@ -729,6 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
             waitingForPair = true;
             try {
                 const joinData = await Network.join({ nickname, password, size });
+                Network.createUpdateEventSource(dataHandler);
             } catch {
                 showMessage({ who: 'system', key: 'msg_network_error' });
                 return;
@@ -873,10 +890,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             } else {
                 try {
-                    const nickname = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-                    const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
-                    const game = sessionStorage.getItem('tt_gameId');
-                    Network.roll({ nickname, password, game });
+                    Network.roll();
 
                 } catch (err) {
                     console.warn('Erro ao lançar dados (PvP):', err);

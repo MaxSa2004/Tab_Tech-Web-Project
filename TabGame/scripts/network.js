@@ -38,7 +38,7 @@ export function createUpdateEventSource(msg) {
   const url = `${BASE_URL}/update?game=${encodeURIComponent(game)}&nick=${encodeURIComponent(nick)}`;
   currentState.eventSource = new EventSource(url);
   currentState.eventSource.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    const data = JSON.parse(event.data); // parse JSON data to use in the payload handler in gameScript 
     if(msg) {
       msg(data);
     }
@@ -76,7 +76,7 @@ export async function register({ nick, password }) {
   return post('register', { nick: cleanNick, password: cleanPassword });
 }
 // join
-export async function join({ group = GROUP, nick, password, size }) {
+export async function join({ group = GROUP, nick, password, size }) { // o enunciado gera um gameID automaticamente
   if(!nick || !password || !group || !size) {
     throw new Error('Parameters are required');
   }
