@@ -120,174 +120,216 @@ document.addEventListener("DOMContentLoaded", () => {
     window.__refreshCaptured = refreshCapturedTitles;
 
     // server data handler 
-    async function dataHandler(data){
+    async function dataHandler(data) {
         // used in online mode (PVP)
-        if(!data) return;
+        if (!data) return;
         // rankings
-        if(data.ranking){
+        if (data.ranking) {
             window.updatePvPLeaderboard(data.ranking);
         }
         // error
-        if(data.error){
-            showMessage({who: 'system', text: data.error});
+        if (data.error) {
+            showMessage({ who: 'system', text: data.error });
             console.warn('Server error:', data.error);
             return;
         }
         // game
-        if(waitingForPair && (data.turn)){
+        if (waitingForPair && (data.turn)) {
             waitingForPair = false;
-            showMessage({who: 'system', key: 'msg_game_start'}); // ou pair found com o nome do pair
+            showMessage({ who: 'system', key: 'msg_game_start' }); // ou pair found com o nome do pair
             console.log('Paired! Game starting...');
         }
         // initial
-        if(data.initial){
-            if(serverInitialNick === null){ // not yet defined
+        if (data.initial) {
+            if (serverInitialNick === null) { // not yet defined
                 serverInitialNick = data.initial;
                 // atualizar nomes na UI
                 const p1Label = document.getElementById('capTitleP1');
-                if(p1Label){
+                if (p1Label) {
                     p1Label.textContent = data.initial;
                 }
             }
         }
         // must pass
-        if(data.mustPass !== undefined){
+        if (data.mustPass !== undefined) {
             const nextTurnBtn = document.getElementById('nextTurn');
             const throwBtn = document.getElementById('throwDiceBtn');
-            if(data.mustPass){
-                showMessage({who: 'system', key: 'msg_must_pass'});
-                if(throwBtn) throwBtn.disabled = true;
-                if(nextTurnBtn) nextTurnBtn.disabled = false;
+            if (data.mustPass) {
+                showMessage({ who: 'system', key: 'msg_must_pass' });
+                if (throwBtn) throwBtn.disabled = true;
+                if (nextTurnBtn) nextTurnBtn.disabled = false;
                 console.log('Player must pass turn');
-            } 
+            }
         }
         // pieces
-        if(data.pieces){
+        if (data.pieces) {
             renderOnlineBoard(data.pieces);
         }
         // players
-        if(data.players){
+        if (data.players) {
             const myNick = sessionStorage.getItem('tt_nick');
             const playerNames = Object.keys(data.players);
             const opponentNick = playerNames.find(nick => nick !== myNick);
-            if(opponentNick){
+            if (opponentNick) {
                 const p2Label = document.getElementById('capTitleP2');
-                if(p2Label){
+                if (p2Label) {
                     p2Label.textContent = opponentNick;
                 }
                 const p1Label = document.getElementById('capTitleP1');
-                if(p1Label && myNick){
+                if (p1Label && myNick) {
                     p1Label.textContent = myNick;
                 }
                 console.log('Opponent found:', opponentNick);
-                showMessage({who: 'system', key: 'msg_opponent_found', params: { opponent: opponentNick }});
+                showMessage({ who: 'system', key: 'msg_opponent_found', params: { opponent: opponentNick } });
             }
         }
         // selected
-        if(data.selected){
+        if (data.selected) {
             const cols = parseInt(document.getElementById('width').value, 10);
             const gameBoard = document.getElementById('gameBoard');
             const myNick = sessionStorage.getItem('tt_nick');
             gameBoard.querySelectorAll('.selected').forEach(el => { el.classList.remove('selected'); });
             gameBoard.querySelectorAll('.green-glow').forEach(el => { el.classList.remove('green-glow', 'pulse'); });
-            
+
             data.selected.forEach(index => {
                 const r = Math.floor(index / cols);
                 const c = index % cols;
                 const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
                 let isMyPiece = false;
-                if(piece){
+                if (piece) {
                     const isRed = piece.classList.contains('red');
                     const amIP1 = (serverInitialNick === myNick);
-                    if((isRed && amIP1) || (!isRed && !amIP1)){
+                    if ((isRed && amIP1) || (!isRed && !amIP1)) {
                         isMyPiece = true;
                     }
                 }
-                if(isMyPiece){
+                if (isMyPiece) {
                     piece.classList.add('selected');
-                }else {
+                } else {
                     cell.classList.add('green-glow', 'pulse');
                 }
             });
         }
         // turn
-        if(data.turn){
+        if (data.turn) {
             const myNick = sessionStorage.getItem('tt_nick');
             const currentPlayerEl = document.getElementById('currentPlayer');
-            if(currentPlayerEl){
-                if(data-turn === myNick){
+            if (currentPlayerEl) {
+                if (data - turn === myNick) {
                     currentPlayerEl.textContent = 'You';
                 } else {
                     currentPlayerEl.textContent = data.turn;
                 }
             }
-            if(data.turn === myNick){
-                if(document.body.dataset.lastTurn !== myNick){
-                    showMessage({who: 'system', key: 'msg_your_turn'});
+            if (data.turn === myNick) {
+                if (document.body.dataset.lastTurn !== myNick) {
+                    showMessage({ who: 'system', key: 'msg_your_turn' });
                     const throwBtn = document.getElementById('throwDiceBtn');
-                    if(throwBtn && !data.mustPass) throwBtn.disabled = false;
+                    if (throwBtn && !data.mustPass) throwBtn.disabled = false;
                 }
             }
             document.body.dataset.lastTurn = data.turn;
         }
         // step
-        if(data.step){
+        if (data.step) {
             const myNick = sessionStorage.getItem('tt_nick');
-            if(data.turn === myNick){
-                switch(data.step){
+            if (data.turn === myNick) {
+                switch (data.step) {
                     case 'from':
-                        showMessage({who: 'system', key: 'msg_select_piece'});
+                        showMessage({ who: 'system', key: 'msg_select_piece' });
                         break;
                     case 'to':
-                        showMessage({who: 'system', key: 'msg_select_destination'});
+                        showMessage({ who: 'system', key: 'msg_select_destination' });
                         break;
                     case 'take':
-                        showMessage({who: 'system', key: 'msg_take_piece'});
+                        showMessage({ who: 'system', key: 'msg_take_piece' });
                         break;
                 }
             }
         }
-        // cell
+        // cell?
 
         // winner
 
         // dice
+        if(data.dice){
+            const myNick = sessionStorage.getItem('tt_nick');
+            lastDiceValue = data.dice.value;
+            if(data.turn !== myNick){
+                const opponentNum = (humanPlayerNum === 1) ? 2 : 1;
+                showMessage({ who: 'system', key: 'msg_opponent_rolled', params: { player: opponentNum, value: data.dice.value } });
+                console.log('Opponent rolled dice:', data.dice.value);
+
+            }
+        }
 
 
 
     }
 
     // helper to render the online board (update pieces positions)
-    function renderOnlineBoard(pieces){
+    // Render Otimizado: Só mexe no DOM se houver diferenças
+    function renderOnlineBoard(pieces) {
         const cols = parseInt(document.getElementById('width').value, 10);
         const gameBoard = document.getElementById('gameBoard');
-        const oldPieces = gameBoard.querySelectorAll('.piece');
-        oldPieces.forEach(p => p.remove()); // clear old pieces
-        pieces.forEach((pieceObj, index)=>{
-            if(!pieceObj) return;
+
+        pieces.forEach((pieceObj, index) => {
+            // 1. Encontrar a célula correspondente
             const r = Math.floor(index / cols);
             const c = index % cols;
             const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
-            if(cell){
-                const piece = document.createElement('div');
-                piece.classList.add('piece');
-                // determine color based on pieceObj
-                if(pieceObj.color === 'Red'){
-                    piece.classList.add('red');
-                } else if(pieceObj.color === 'Blue'){
-                    piece.classList.add('yellow');
+
+            if (!cell) return;
+
+            const existingPiece = cell.querySelector('.piece');
+
+            // CASO A: O servidor diz que está VAZIO
+            if (!pieceObj) {
+                // Se existe uma peça visualmente lá, removemos (foi comida ou moveu-se)
+                if (existingPiece) {
+                    existingPiece.remove();
                 }
-                // states
-                if(pieceObj.reachedLastRow){
-                    piece.setAttribute('move-state', 'row-four');
-                } else if(!pieceObj.inMotion){
-                    piece.setAttribute('move-state', 'not-moved');
-                } else {
-                    piece.setAttribute('move-state', 'moved');
+                return;
+            }
+
+            // CASO B: O servidor diz que TEM PEÇA
+            // Vamos calcular como ela deve ser
+            let expectedClass = (pieceObj.color === 'Red') ? 'red' : 'yellow';
+
+            // Estado de movimento
+            let expectedState = 'moved';
+            if (pieceObj.reachedLastRow) {
+                expectedState = 'row-four';
+            } else if (!pieceObj.inMotion) {
+                expectedState = 'not-moved';
+            }
+
+            // B1. Se já existe peça no HTML
+            if (existingPiece) {
+                // Verificamos se mudou alguma coisa (ex: cor ou estado)
+                // Nota: Geralmente só o estado muda, ou a cor se for uma captura instantânea
+                const currentClass = existingPiece.classList.contains('red') ? 'red' : 'yellow';
+                const currentState = existingPiece.getAttribute('move-state');
+
+                // Só mexemos no DOM se for diferente
+                if (currentClass !== expectedClass) {
+                    existingPiece.classList.remove(currentClass);
+                    existingPiece.classList.add(expectedClass);
                 }
-                cell.appendChild(piece);
+                if (currentState !== expectedState) {
+                    existingPiece.setAttribute('move-state', expectedState);
+                }
+            }
+            // B2. Se não existe peça no HTML, criamos uma nova
+            else {
+                const newPiece = document.createElement('div');
+                newPiece.classList.add('piece', expectedClass);
+                newPiece.setAttribute('move-state', expectedState);
+                cell.appendChild(newPiece);
             }
         });
+
+        // Atualizar contadores globais
         redPieces = gameBoard.querySelectorAll('.piece.red').length;
         yellowPieces = gameBoard.querySelectorAll('.piece.yellow').length;
     }
@@ -912,7 +954,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 waitingForPair = true;
                 showMessage({ who: 'system', key: 'msg_waiting_pair' });
                 Network.createUpdateEventSource(dataHandler);
-            } catch (err){
+            } catch (err) {
                 showMessage({ who: 'system', text: err.message });
                 return;
             }
@@ -1053,7 +1095,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             } else {
                 try {
-                    Network.roll();
+                    const result = await Network.roll();
+                    const serverValue = result.dice ? result.dice.value : (result.value || null);
+                    const animation = await window.tabGame.spawnAndLaunch(serverValue);
+                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: animation } });
 
                 } catch (err) {
                     console.warn('Erro ao lançar dados (PvP):', err);
@@ -1238,12 +1283,13 @@ document.addEventListener("DOMContentLoaded", () => {
     window.tabGame = window.tabGame || {}; // ensure tabGame namespace
     window.tabGame._resolveResult = null; // internal resolver for dice result
     // spawns dice pouch and launches dice, returns Promise with game value (1-6)
-    function createDicePouch(autoDrop = false) {
+    function createDicePouch(autoDrop = false, forcedValue = null) {
         const prev = document.body.querySelector('.dice-overlay'); // remove existing overlay
         if (prev) prev.remove();
         // create overlay elements
         const overlay = document.createElement('div');
         overlay.className = 'dice-overlay';
+        if (forcedValue!==null) overlay.dataset.forcedValue = forcedValue;
         // arena where dice are thrown
         const arena = document.createElement('div');
         arena.className = 'dice-arena';
@@ -1295,8 +1341,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // drops the dice sticks with animation, computes result, shows bubble
     function dropDiceSticks(pouch, arena, overlay) {
         const sticks = Array.from(pouch.querySelectorAll('.dice-stick')); // get sticks
-
-        const chosenUpCount = sampleFromDistribution(upCountProbs); // sample up count
+        let chosenUpCount;
+        let forcedIndices = null;
+        if(overlay.dataset.forcedValue){
+            const val = parseInt(overlay.dataset.forcedValue,10);
+            chosenUpCount = (val === 6) ? 0 : val;
+        } else {
+            chosenUpCount = sampleFromDistribution(upCountProbs); // sample up count
+        }
 
         const indices = [0, 1, 2, 3]; // shuffle indices
         for (let i = indices.length - 1; i > 0; i--) { // Fisher-Yates shuffle
@@ -1458,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // saves resolver and creates new pouch
             window.tabGame._resolveResult = resolve;
-            createDicePouch(true);
+            createDicePouch(true, forcedValue);
         });
     };
     window.tabGame.getLastValue = () => lastDiceValue; // getter for last dice value
