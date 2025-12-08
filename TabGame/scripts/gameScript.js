@@ -160,7 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // helper to render the online board (update pieces positions)
     function renderOnlineBoard(pieces){
-        const cols = parseInt(gameBoard.style.getPropertyValue('width'), 10);
+        const cols = parseInt(document.getElementById('width').value, 10);
         const gameBoard = document.getElementById('gameBoard');
         const oldPieces = gameBoard.querySelectorAll('.piece');
         oldPieces.forEach(p => p.remove()); // clear old pieces
