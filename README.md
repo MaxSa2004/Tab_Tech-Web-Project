@@ -24,8 +24,20 @@ TabGame/
 │   ├── gameScript.js
 |   ├── languageScript.js
 │   ├── leaderBoard.js
+│   ├── network.js
 |   ├── statsScript.js
 │   └── visualScript.js
+├── server/
+│   ├── data/
+│       └── users.json
+│   ├── auth.js
+│   ├── game.js
+│   ├── index.js
+|   ├── router.js
+│   ├── storage.js
+│   ├── update.js
+│   └── visualScript.js
+
 ├── styles/
 |   └── style.css
 └── index.html
@@ -42,6 +54,7 @@ README.md
 - Leaderboard
 - Configuration and UI elements
 - Architecture of scripts
+- Server Architecture
 - Improvement Ideas
 - Acknowledgements
 - Authorship
@@ -52,6 +65,7 @@ The project is supported by all browsers and screen sizes.
 
 ## Features
 - Modes: vs. AI (Easy/Normal/Hard)
+- Modes: vs. Player using our server or teacher one;
 - Board: 7/9/11/13/15 columns
 - First to play toggle
 - Stick-dice with special throws
@@ -60,8 +74,8 @@ The project is supported by all browsers and screen sizes.
 - Leaderboard with sort/search
 - PT/EN live switch
 - Acessible modals and controls
-- Login (just a simulation for now)
-
+- Login
+  
 ## Gameplay overview
 
 At the start of the game, neither player may move until someone throws a tâb (1). The tâb converts a piece from "not moved" to "moved", and only "moved" pieces can move at any number the dice gives us.
@@ -140,11 +154,12 @@ The leaderboard shows, for each player (Human, AI (easy), AI (normal) and AI (ha
 The rank is sorted by the following order: win ratio -> number of games won -> number of games played -> alphabetical order.
 You can also search for a specific player using the search bar.
 It's possible to sort in ascending or descending order. 
+You have a button now, to check the vs Player mode, where you see the top 10 best players in the server.
 
 The data is stored in local storage, so it only resets by clearing browser data. (i.e., it doesn't disappear by refreshing ou closing the browser).
 
 ## Configuration and UI elements
-At this point, there is only one game mode available: vs. AI, with three levels of difficulty (easy, normal and hard). The board can have a range of columns (7, 9, 11, 13, 15), but the recommended value is 9. If the player wishes to start, they need to check the checkbox First to Play and the piece attributed is red. If not, its yellow.
+There is two game modes available: vs. AI, with three levels of difficulty (easy, normal and hard) and PvP, where you play against someone in your server. The board can have a range of columns (7, 9, 11, 13, 15), but the recommended value is 9. For the AI game, if the player wishes to start, they need to check the checkbox First to Play and the piece attributed is red. If not, its yellow. When you select the vs Player mode, the first to play will be the first to clicks on "Start Game"
 
 ## Architecture of scripts
 
@@ -157,6 +172,19 @@ At this point, there is only one game mode available: vs. AI, with three levels 
 
 For example, to throw a dice, the data flows in this order:
 dice overlay -> lastDiceValue -> valid moves -> move -> stats/log -> summary/leaderboard
+## Server Architecture
+
+- index.js: Entry point, server configuration (Port/Public Dir), and HTTP listener setup.
+- router.js: Central request dispatcher, static file serving, and API route definitions (/roll, /join, etc.).
+- game.js: Core game mechanics (turns, dice logic, piece movement), victory conditions, and ranking generation.
+- auth.js: User registration and initial credential validation logic.
+- update.js: Real-time communication via Server-Sent Events (SSE) and connection keep-alive management.
+- storage.js: In-memory state management (users/games), file persistence (users.json), and password security (scrypt hashing).
+- utils.js: Low-level helpers for JSON parsing, CORS headers, and input validation.
+
+For a user to throw a dice (POST /roll), the data flows in this order:
+
+router (identifies route) → game (validates turn/rules) → storage (verifies credentials & gets game state) → game (calculates math/updates positions) → storage (saves stats if winner) → update (broadcasts SSE event to all players) → router (returns JSON result).
 
 ## Improvement Ideas
 A good idea would be to actually see the AI making the move because the dice modal appears on top of the board. Instead the AI uses the dice in a more automatic way than the player and the player just sees the final move, and therefore, may get lost about where they had a piece captured etc. Another thing that we could improve in the future would be resizing the board and chat in relation to the browser's size. If the page is big, for instance when using a monitor, the board is quite small.
