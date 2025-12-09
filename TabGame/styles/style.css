@@ -973,21 +973,109 @@ main {
 }
 
 .cell.green-glow {
-  border-color: rgba(46, 204, 113, 1);
-  /* solid bright green border */
+  /* Borda Verde Neon */
+  border: 2px solid #69f0ae !important;
+  
+  /* Fundo: 40% de opacidade (cobre o preto, mas deixa passar luz) */
+  background-color: rgba(105, 240, 174, 0.4) !important;
+  
+  /* Sombra INTERNA forte: Isto é que dá o aspeto "brilhante" sem tapar a seta */
+  box-shadow: inset 0 0 25px rgba(105, 240, 174, 0.6),
+              0 0 15px rgba(105, 240, 174, 0.5) !important;
+  
+  cursor: pointer !important;
+  z-index: 50;
+  
+  /* Animação suave */
+  animation: pulse-green-glass 1.5s infinite alternate;
+}
+
+@keyframes pulse-green-glass {
+  from {
+    /* Estado Normal */
+    background-color: rgba(105, 240, 174, 0.4);
+    box-shadow: inset 0 0 15px rgba(105, 240, 174, 0.4), 0 0 10px rgba(105, 240, 174, 0.3);
+  }
+  to {
+    /* Estado "Aceso" - Mais brilho nas bordas, fundo um pouco mais sólido */
+    background-color: rgba(105, 240, 174, 0.6); 
+    box-shadow: inset 0 0 35px rgba(105, 240, 174, 0.9), 0 0 20px rgba(105, 240, 174, 0.8);
+  }
+}
+
+.cell.red-glow {
+  border: 3px solid #ff5252 !important; /* Vermelho claro/coral */
+  
+  /* Fundo avermelhado muito suave */
   background: linear-gradient(
     180deg,
-    rgba(230, 255, 235, 1),
-    rgba(210, 255, 220, 0.95)
-  );
-  box-shadow: 0 0 30px 8px rgba(46, 204, 113, 0.65),
-    0 0 12px rgba(46, 204, 113, 0.45) inset;
-  /* bright inner glow */
-  transition: box-shadow 200ms ease, transform 160ms ease,
-    border-color 160ms ease;
-  z-index: 5;
+    rgba(255, 200, 200, 0.4), 
+    rgba(255, 150, 150, 0.2)
+  ) !important;
+  
+  /* Brilho vermelho vivo */
+  box-shadow: 0 0 20px 5px rgba(255, 82, 82, 0.5) inset,
+              0 0 15px rgba(255, 82, 82, 0.3) !important;
+  
+  transition: box-shadow 200ms ease, transform 160ms ease;
+  z-index: 50; /* Aumentei para garantir que fica acima */
   cursor: pointer;
+  animation: pulse-red 1.5s infinite;
 }
+
+@keyframes pulse-red {
+  0% { box-shadow: inset 0 0 5px rgba(255, 82, 82, 0.4); }
+  50% { box-shadow: inset 0 0 25px rgba(255, 82, 82, 0.7); }
+  100% { box-shadow: inset 0 0 5px rgba(255, 82, 82, 0.4); }
+}
+
+/* Peça com movimento normal (Azul Ciano) */
+.piece.playable {
+  border: 3px solid #00FFFF;
+  box-shadow: 0 0 15px 5px rgba(0, 255, 255, 0.8), inset 0 0 10px rgba(0, 255, 255, 0.5);
+  cursor: pointer;
+  animation: pulse-playable 1.2s infinite alternate ease-in-out;
+}
+
+/* Peça com AMEAÇA de captura (Laranja/Vermelho Agressivo) */
+.piece.playable-threat {
+  border: 3px solid #FF4500; /* OrangeRed */
+  box-shadow: 0 0 20px 8px rgba(255, 69, 0, 0.8), inset 0 0 15px rgba(255, 0, 0, 0.6);
+  cursor: pointer;
+  animation: pulse-threat 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-playable {
+  0% { transform: scale(1); box-shadow: 0 0 10px 2px rgba(0, 255, 255, 0.6); border-color: #00FFFF; }
+  100% { transform: scale(1.15); box-shadow: 0 0 25px 8px rgba(0, 255, 255, 1); border-color: #ffffff; }
+}
+
+@keyframes pulse-threat {
+  0% { transform: scale(1); border-color: #FF4500; }
+  100% { transform: scale(1.2); border-color: #FF0000; box-shadow: 0 0 35px 12px rgba(255, 0, 0, 1); }
+}
+
+/* Animação para peças que podem ser desbloqueadas (apenas com Tâb/1) */
+.piece.can-unlock {
+  /* Borda Dourada */
+  border: 2px solid #ffd700 !important; 
+  /* Sombra dourada intensa */
+  box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.6);
+  z-index: 60; /* Fica acima das outras */
+  animation: pulse-gold 1s infinite alternate;
+}
+
+@keyframes pulse-gold {
+  from {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    transform: scale(1);
+  }
+  to {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.9);
+    transform: scale(1.1); /* Um ligeiro aumento de tamanho para chamar atenção */
+  }
+}
+
 
 .scrims-ladder {
   margin: 40px auto;
@@ -1299,12 +1387,3 @@ main {
   color: #0b79f7;
 }
 
-.cell.red-glow {
-  box-shadow: inset 0 0 15px red;
-  animation: pulse-red 1.5s infinite;
-}
-@keyframes pulse-red {
-  0% { box-shadow: inset 0 0 5px red; }
-  50% { box-shadow: inset 0 0 20px red; }
-  100% { box-shadow: inset 0 0 5px red; }
-}

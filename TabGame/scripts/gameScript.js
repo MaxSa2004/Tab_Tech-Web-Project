@@ -121,59 +121,88 @@ document.addEventListener("DOMContentLoaded", () => {
     // expose refreshCapturedTitles globally
     window.__refreshCaptured = refreshCapturedTitles;
 
-    // Destaca células visualmente (converte índice linear para DOM)
-    function highlightCell(index, type) {
-        const cols = parseInt(widthSelect.value, 10);
-        const r = Math.floor(index / cols);
-        const c = index % cols;
-        const cell = gameBoard.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
 
-        if (!cell) return;
-
-        if (type === 'selected') {
-            // Destacar a peça selecionada (origem)
-            const piece = cell.querySelector('.piece');
-            if (piece) piece.classList.add('selected');
-        } else if (type === 'green-glow') {
-            // Destacar destino válido
-            cell.classList.add('green-glow');
-        } else if (type === 'red-glow') {
-            // Destacar alvo de captura (se implementado visualmente no CSS)
-            cell.classList.add('green-glow'); // Reutiliza green-glow se não houver CSS para red
-            cell.style.boxShadow = "inset 0 0 15px red"; // Fallback inline
-        }
-    }
 
     // Gere o fim do jogo online
+    // Gere o fim do jogo online
+    // Gere o fim do jogo online
     function handleOnlineWinner(winnerNick, myNick) {
-        // IMPORTANTE: Fechar a conexão SSE imediatamente
-        Network.stopUpdateEventSource();
+        console.log("🏆 Processar Vencedor:", winnerNick);
 
-        console.log("Fim de jogo. Vencedor:", winnerNick);
+        // -----------------------------------------------------------
+        // 1. PROCESSAR DADOS (Enquanto a memória está fresca)
+        // -----------------------------------------------------------
+        
+        // Definir quem ganhou nas Stats
+        let winnerNum = null;
+        if (winnerNick === myNick) winnerNum = 1;
+        else if (winnerNick !== null) winnerNum = 2;
+        
+        // Se TabStats existir, define o vencedor
+        if (typeof TabStats !== 'undefined') {
+            TabStats.setWinner(winnerNum);
+        }
 
+        // Mostrar Mensagens de Texto (Vitória/Derrota)
         if (winnerNick === null) {
-            showMessage({ who: 'system', text: 'O jogo terminou empatado (ou cancelado).' });
+            showMessage({ who: 'system', key: 'msg_drawn' });
         } else if (winnerNick === myNick) {
             showMessage({ who: 'system', key: 'msg_you_won' });
         } else {
-            showMessage({ who: 'system', key: 'msg_you_lost', params: { winner: winnerNick } });
+            const wName = (winnerNick && winnerNick !== myNick) ? (shownOpponentNick || winnerNick) : "Oponente";
+            showMessage({ who: 'system', key: 'msg_you_lost', params: { winner: wName } });
         }
 
-        // Reset de interface
+        // -----------------------------------------------------------
+        // 2. MOSTRAR STATS (O passo crucial!)
+        // -----------------------------------------------------------
+        // Chamamos isto ANTES de fechar a rede ou limpar variáveis
+        if (typeof TabStats !== 'undefined') {
+            TabStats.showSummary();
+        }
+
+        // -----------------------------------------------------------
+        // 3. FECHAR CONEXÃO E LIMPEZA (Só agora!)
+        // -----------------------------------------------------------
+        
+        // Agora sim, matamos a conexão SSE
+        Network.stopUpdateEventSource(); 
+
+        // Reset de variáveis de estado do jogo
         gameActive = false;
         waitingForPair = false;
         serverStep = null;
         onlineSourceCell = null;
+        lastDiceValue = null;
+        
+        // Limpar referências a oponentes
+        shownOpponentNick = null;
+        delete document.body.dataset.lastTurn;
+        if (currentPlayerEl) currentPlayerEl.textContent = '-';
 
+        // Limpar HTML (Capturas e Chat)
+        if (capturedP1) capturedP1.innerHTML = '';
+        if (capturedP2) capturedP2.innerHTML = '';
+        clearMessages(); 
+
+        // Resetar Tabuleiro
+        const cols = parseInt(widthSelect.value, 10);
+        redPieces = cols;
+        yellowPieces = cols;
+        renderBoard(cols); 
+        
+        // Mostrar mensagem inicial
+        showMessage({who: 'system', key: 'select_mode'});
+
+        // Bloquear botões de jogo
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = true;
 
         // Reativar botões de configuração
         setConfigEnabled(true);
-        playButton.disabled = !isConfigValid();
-        leaveButton.disabled = true;
+        if (playButton) playButton.disabled = !isConfigValid();
+        if (leaveButton) leaveButton.disabled = true;
     }
-
     // --- LÓGICA DE COORDENADAS (SNAKE) ---
 
     /// --- LÓGICA DE COORDENADAS (SNAKE - Baseado no OnlineController) ---
@@ -183,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 1. Converter (Linha/Coluna Visual) -> (Linha/Coluna Lógica do Servidor)
     function getLogicalCoords(visualR, visualC) {
         const cols = parseInt(widthSelect.value, 10);
-        
+
         if (isBoardFlipped) {
             // Se o tabuleiro está rodado (sou P2):
             // O meu Visual Baixo (3) corresponde ao Lógico Topo (0) do servidor
@@ -199,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 2. Converter (Linha/Coluna Lógica) -> Visual
     function getVisualCoords(logicalR, logicalC) {
         const cols = parseInt(widthSelect.value, 10);
-        
+
         if (isBoardFlipped) {
             return {
                 r: 3 - logicalR,
@@ -225,31 +254,63 @@ document.addEventListener("DOMContentLoaded", () => {
         if (r === 2 || r === 0) {
             offset = (cols - 1) - c;
         }
-        
+
         return indexBase + offset;
     }
 
     // 4. Inverso: Índice Servidor -> Lógico
     function getLogicalFromIndex(index) {
         const cols = parseInt(widthSelect.value, 10);
-        const rowIdx = Math.floor(index / cols); 
+        const rowIdx = Math.floor(index / cols);
         const offset = index % cols;
-        
-        let r = 3 - rowIdx; 
+
+        let r = 3 - rowIdx;
         let c = offset;
-        
+
         if (r === 2 || r === 0) {
             c = (cols - 1) - offset;
         }
-        
+
         return { r, c };
     }
+    // Função auxiliar para desenhar as capturas no modo Online
+    function updateOnlineCapturedPanels(myCount, oppCount) {
+        const totalPieces = parseInt(widthSelect.value, 10);
 
+        // Calcular quantas foram capturadas (Total - Vivas)
+        const myLosses = totalPieces - myCount;     // Peças minhas que o inimigo tem (Vermelhas no painel dele)
+        const oppLosses = totalPieces - oppCount;   // Peças dele que eu tenho (Amarelas no meu painel)
+
+        // Limpar painéis
+        if (capturedP1) capturedP1.innerHTML = ''; // O meu painel (Minhas capturas)
+        if (capturedP2) capturedP2.innerHTML = ''; // Painel do oponente (Capturas dele)
+
+        // 1. Preencher o MEU painel (Peças inimigas capturadas -> Amarelas)
+        for (let i = 0; i < oppLosses; i++) {
+            const token = document.createElement('div');
+            token.className = 'captured-token yellow';
+            capturedP1.appendChild(token);
+        }
+
+        // 2. Preencher o PAINEL DO OPONENTE (Minhas peças capturadas -> Vermelhas)
+        for (let i = 0; i < myLosses; i++) {
+            const token = document.createElement('div');
+            token.className = 'captured-token red';
+            capturedP2.appendChild(token);
+        }
+
+        // Atualizar variáveis globais para manter consistência (opcional, mas boa prática)
+        redPieces = myCount;
+        yellowPieces = oppCount;
+    }
     // Helper para desenhar o tabuleiro com dados do servidor
     // Helper para desenhar o tabuleiro online
     function renderOnlineBoard(pieces) {
+        clearHighlights();
         const cols = parseInt(widthSelect.value, 10);
         const myServerColor = document.body.dataset.myColor; // 'Blue' ou 'Red'
+        let currentMyPieces = 0;
+        let currentEnemyPieces = 0;
 
         // Limpar
         gameBoard.querySelectorAll('.piece').forEach(p => p.remove());
@@ -269,19 +330,21 @@ document.addEventListener("DOMContentLoaded", () => {
             let cssColor;
             if (pieceObj.color === myServerColor) {
                 cssColor = 'red';
+                currentMyPieces++;
             } else {
                 cssColor = 'yellow';
+                currentEnemyPieces++;
             }
-            
+
             // --- CORREÇÃO DO ESTADO DA PEÇA ---
             let moveState = 'moved'; // Default
-            
-            if (pieceObj.reachedLastRow) {
+
+            if (pieceObj.reachedLastRow || (visual.r === 0 && cssColor === 'red')) {
                 moveState = 'row-four';
             } else if (pieceObj.inMotion === false) {
                 // SE inMotion É FALSE, ESTÁ NA BASE -> 'not-moved'
                 // Antes estava 'moved', o que causava o erro do 6 bloqueado
-                moveState = 'not-moved'; 
+                moveState = 'not-moved';
             } else {
                 moveState = 'moved';
             }
@@ -289,33 +352,149 @@ document.addEventListener("DOMContentLoaded", () => {
             const newPiece = document.createElement('div');
             newPiece.classList.add('piece', cssColor);
             newPiece.setAttribute('move-state', moveState);
-            
+
             if (onlineSourceCell === serverIndex) {
                 newPiece.classList.add('selected');
             }
 
             cell.appendChild(newPiece);
         });
+        if (currentMyPieces < redPieces) {
+            const qtd = redPieces - currentMyPieces;
+            for (let i = 0; i < qtd; i++) {
+                TabStats.onCapture(2, 'red');
+            }
+        }
+        if (currentEnemyPieces < yellowPieces) {
+            const qtd = yellowPieces - currentEnemyPieces;
+            for (let i = 0; i < qtd; i++) {
+                TabStats.onCapture(1, 'yellow');
+            }
+        }
+        updateOnlineCapturedPanels(currentMyPieces, currentEnemyPieces);
     }
+
+    // Substitui TODAS as funções 'highlightCell' por esta única versão
+    // Substitui a função highlightCell existente por esta versão corrigida
     function highlightCell(serverIndex, type) {
         const logical = getLogicalFromIndex(serverIndex);
         const visual = getVisualCoords(logical.r, logical.c);
-
         const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
-        if (!cell) return;
+
+        if (!cell) {
+            console.warn("⚠️ Célula não encontrada no DOM!", visual);
+            return;
+        }
 
         if (type === 'selected') {
             const piece = cell.querySelector('.piece');
             if (piece) piece.classList.add('selected');
-        } 
-        else if (type === 'green-glow') {
-            cell.classList.add('green-glow');
-        } 
-        else if (type === 'red-glow') {
-            cell.classList.add('red-glow'); 
-            cell.style.boxShadow = "inset 0 0 15px rgba(255, 0, 0, 0.8)";
-            cell.style.cursor = "pointer";
         }
+        else if (type === 'green-glow') {
+            // CORREÇÃO: Adicionar a classe para ativar o CSS (animação e z-index)
+            cell.classList.add('green-glow');
+
+            // Opcional: Podes manter ou remover os estilos inline abaixo, 
+            // pois o CSS com !important já trata disto.
+            cell.dataset.highlight = 'green';
+        }
+        else if (type === 'red-glow') {
+            // CORREÇÃO: Adicionar a classe para ativar o CSS
+            cell.classList.add('red-glow');
+
+            cell.dataset.highlight = 'red';
+
+            // Efeitos visuais na peça inimiga
+            const enemyPiece = cell.querySelector('.piece');
+            if (enemyPiece) {
+                enemyPiece.style.boxShadow = "0 0 20px 8px rgba(255, 0, 0, 1)";
+                enemyPiece.style.border = "2px solid #fff";
+                enemyPiece.style.transform = "scale(1.15)";
+                enemyPiece.style.zIndex = "100";
+            }
+        }
+    }
+    // Função auxiliar para iluminar as minhas peças que se podem mexer
+    // Função auxiliar para iluminar as minhas peças que se podem mexer
+    // Função auxiliar para iluminar as minhas peças que se podem mexer
+    // Função auxiliar para iluminar peças (Azul = Mover, Laranja/Vermelho = Ameaça de Captura)
+    // Função auxiliar para iluminar peças e RETORNAR o nº de ameaças
+    // Função auxiliar para iluminar peças e RETORNAR o nº de ameaças
+    function highlightPlayablePieces(diceValue) {
+        // 1. Limpeza
+        const allPieces = document.querySelectorAll('.piece');
+        allPieces.forEach(p => {
+            p.classList.remove('playable', 'playable-threat', 'can-unlock');
+            p.style.zIndex = '';
+        });
+
+        if (!diceValue) return 0; 
+
+        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+        let threatsCount = 0; 
+
+        myPieces.forEach(piece => {
+            const state = piece.getAttribute('move-state');
+            if (state === 'not-moved' && diceValue !== 1) return;
+
+            const rawMoves = getValidMoves(piece, diceValue);
+
+            // Filtro: não posso ir para cima das minhas
+            const validMoves = rawMoves.filter(destCell => {
+                const existingPiece = destCell.querySelector('.piece');
+                if (existingPiece && existingPiece.classList.contains('red')) return false;
+                return true;
+            });
+
+            if (validMoves.length > 0) {
+                piece.classList.add('playable');
+                piece.style.zIndex = '100';
+
+                // Verifica se algum movimento aterra em inimigo (Captura)
+                const isThreat = validMoves.some(destCell => {
+                    const enemy = destCell.querySelector('.piece.yellow');
+                    return enemy !== null;
+                });
+
+                if (isThreat) {
+                    piece.classList.add('playable-threat'); // Estilo visual agressivo (Laranja/Vermelho)
+                    piece.style.zIndex = '105';
+                    threatsCount++; // Contamos esta peça como uma oportunidade de captura
+                } 
+                else if (diceValue === 1 && state === 'not-moved') {
+                    piece.classList.add('can-unlock');
+                }
+            }
+        });
+
+        return threatsCount; // Retorna o total para usarmos na mensagem
+    }
+    // Conta quantas peças inimigas existem numa lista de índices do servidor
+    function countCapturesInServerOptions(indices) {
+        if (!indices || indices.length === 0) return 0;
+        
+        let count = 0;
+        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+        const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
+
+        indices.forEach(idx => {
+            const logical = getLogicalFromIndex(idx);
+            const visual = getVisualCoords(logical.r, logical.c);
+
+            // Ignorar Meta se tiver peças na base (regra visual)
+            if (visual.r === 0 && hasBasePieces) return;
+
+            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+            if (cell) {
+                const enemy = cell.querySelector('.piece.yellow');
+                if (enemy) count++;
+            }
+        });
+        return count;
+    }
+    function getDiceName(val) {
+        const names = { 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah", 6: "Sitteh" };
+        return names[val] || val;
     }
     // Verifica se existem movimentos possíveis para o valor do dado (Modo Online)
     function checkOnlineMovesAvailable(diceValue) {
@@ -326,11 +505,12 @@ document.addEventListener("DOMContentLoaded", () => {
         for (const piece of myPieces) {
             const state = piece.getAttribute('move-state');
             if (state === 'not-moved' && diceValue !== 1) continue;
-            const moves = getValidMoves(piece, diceValue); 
+            const moves = getValidMoves(piece, diceValue);
             if (moves.length > 0) return true;
         }
         return false;
     }
+    // server data handler 
     // server data handler 
     // server data handler 
     // server data handler 
@@ -341,67 +521,111 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!gameActive && (data.turn || data.pieces)) gameActive = true;
 
         const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+        const currentTurnNick = data.turn || document.body.dataset.lastTurn;
+        const isMyTurn = (currentTurnNick === myNick);
 
-        // Erros
+        // --- ERROS ---
         if (data.error) {
             console.warn('Server error:', data.error);
             showMessage({ who: 'system', text: data.error });
-            // Se der erro de "já lançaste", garante que os botões ficam certos
-            if (data.error.includes("already rolled")) {
-                if (throwBtn) throwBtn.disabled = true;
+            if (data.error.includes("already rolled") && throwBtn) {
+                throwBtn.disabled = true;
             }
             return;
         }
 
         if (data.ranking) window.updatePvPLeaderboard(data.ranking);
 
-        // Cor e Rotação
-        // ...
-        // 3. Jogadores e Rotação
+        // 1. JOGADORES
         if (data.players) {
             const myServerColor = data.players[myNick];
             if (myServerColor) {
                 document.body.dataset.myColor = myServerColor;
-                // SE SOU RED (P2), RODO O TABULEIRO
-                isBoardFlipped = (myServerColor === 'Red'); 
+                isBoardFlipped = (myServerColor === 'Red');
+            }
+            const playerNames = Object.keys(data.players);
+            const opponentName = playerNames.find(nick => nick !== myNick);
+
+            if (opponentName && shownOpponentNick !== opponentName) {
+                shownOpponentNick = opponentName;
+                showMessage({ who: 'system', key: 'msg_paired', params: { opponent: opponentName } });
+                if (typeof TabStats !== 'undefined' && TabStats.data) {
+                    TabStats.setOpponentInfo(opponentName, TabStats.data.firstPlayerName);
+                }
             }
         }
-        // ...
 
-        // --- DADOS (DICE) COM CORREÇÃO DE BLOQUEIO ---
+        if (data.turn && typeof TabStats !== 'undefined' && TabStats.data && !TabStats.data.firstPlayerName) {
+            TabStats.setOpponentInfo(TabStats.data.opponentName, data.turn);
+        }
+
+        // 2. PEÇAS
+        if (data.pieces) renderOnlineBoard(data.pieces);
+
+        // 3. DADOS (Lógica de Mensagens Ajustada)
         if (data.dice !== undefined) {
             if (data.dice && data.dice.value) {
                 lastDiceValue = data.dice.value;
-                if (window.tabGame && window.tabGame.spawnAndLaunch) {
-                    window.tabGame.spawnAndLaunch(data.dice.value);
+                const val = data.dice.value;
+                const isTab = (val === 1);
+                const isExtra = (val === 1 || val === 4 || val === 6);
+
+                // STATS (Registamos quem lançou para as estatísticas)
+                if (typeof TabStats !== 'undefined') {
+                    const statPlayer = isMyTurn ? 1 : 2;
+                    TabStats.onDice(statPlayer, val);
+                    if (isExtra) TabStats.onExtraRoll(statPlayer, val);
                 }
 
-                // Lógica de Desbloqueio
-                if (data.turn === myNick) {
-                    const canMove = checkOnlineMovesAvailable(data.dice.value);
-                    const keepPlaying = data.dice.keepPlaying; // true se for 1, 4 ou 6
+                // --- MENSAGENS DE DADOS (Visual) ---
+                if (isMyTurn) {
+                    // SOU EU (P1) A FALAR
+                    showMessage({
+                        who: 'player',
+                        player: 1,
+                        key: 'msg_dice_thrown',
+                        params: { value: val }
+                    });
 
+                    // Animação 3D (só para mim)
+                    if (window.tabGame && window.tabGame.spawnAndLaunch) {
+                        window.tabGame.spawnAndLaunch(val);
+                    }
+
+                    // Lógica de jogo (Highlights, etc)
+                    highlightPlayablePieces(lastDiceValue);
+                    const canMove = checkOnlineMovesAvailable(val);
+                    const keepPlaying = data.dice.keepPlaying;
+
+                    // Indicações de Sistema (Só para mim, sobre o que fazer)
                     if (canMove) {
-                        // Fluxo Normal: Tem jogada -> Bloqueia tudo até mover
                         if (throwBtn) throwBtn.disabled = true;
                         if (nextTurnBtn) nextTurnBtn.disabled = true;
-                        showMessage({ who: 'system', key: 'msg_dice_value', params: { value: data.dice.value } });
+
+                        if (isTab) showMessage({ who: 'system', key: 'msg_dice_thrown_one' });
+                        else if (isExtra) showMessage({ who: 'system', key: 'msg_dice_thrown_double' });
+
+                        showMessage({ who: 'system', key: 'msg_player_can_move' });
                     } else {
-                        // Sem jogada (ex: Saiu 6 na base)
                         if (keepPlaying) {
-                            // Tem extra (6,4,1) -> DEIXA LANÇAR DE NOVO
-                            showMessage({ who: 'system', text: `Saiu ${data.dice.value} mas não tens movimentos. Lança novamente!` });
-                            if (throwBtn) throwBtn.disabled = false; // <--- AQUI ESTÁ A CORREÇÃO
+                            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
+                            if (throwBtn) throwBtn.disabled = false;
                             if (nextTurnBtn) nextTurnBtn.disabled = true;
-                            // Resetar o lastDiceValue para permitir o clique no botão (handler do clique verifica null)
-                            // Nota: No handler do clique, não verificamos lastDiceValue no online, apenas enviamos Network.roll()
                         } else {
-                            // Não tem extra (2,3,5) -> TEM DE PASSAR
-                            showMessage({ who: 'system', text: `Sem movimentos com ${data.dice.value}. Passa a vez.` });
+                            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
                             if (throwBtn) throwBtn.disabled = true;
                             if (nextTurnBtn) nextTurnBtn.disabled = false;
                         }
                     }
+                }
+                else {
+                    // É O OPONENTE (P2) A FALAR
+                    showMessage({
+                        who: 'player',
+                        player: 2,
+                        key: 'msg_op_roll',
+                        params: { value: val }
+                    });
                 }
 
             } else {
@@ -409,39 +633,40 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Peças
-        if (data.pieces) renderOnlineBoard(data.pieces);
-
-        // Vitória
+        // 4. VENCEDOR
         if (data.winner !== undefined) {
             handleOnlineWinner(data.winner, myNick);
             return;
         }
 
-        // Turno
+        // 5. TURNO
         if (data.turn) {
             const previousTurn = document.body.dataset.lastTurn;
-            const isMyTurn = data.turn === myNick;
+            const turnChanged = (previousTurn !== data.turn);
 
-            if (previousTurn !== data.turn) lastDiceValue = null;
+            if (turnChanged) {
+                if (previousTurn && typeof TabStats !== 'undefined') TabStats.onTurnAdvance();
+                lastDiceValue = null;
+                document.body.dataset.lastTurn = data.turn;
+                if (currentPlayerEl) currentPlayerEl.textContent = (isMyTurn) ? "TU" : data.turn;
 
-            document.body.dataset.lastTurn = data.turn;
-            if (currentPlayerEl) currentPlayerEl.textContent = (isMyTurn) ? "TU" : data.turn;
-
-            if (data.mustPass) {
-                if (data.mustPass === myNick) {
-                    showMessage({ who: 'system', text: 'Sem movimentos. Tens de passar.' });
-                    if (nextTurnBtn) nextTurnBtn.disabled = false;
-                    if (throwBtn) throwBtn.disabled = true;
+                // Mensagens de Sistema sobre de quem é a vez
+                if (isMyTurn) {
+                    showMessage({ who: 'system', key: 'msg_turn' });
+                    if (!data.mustPass) showMessage({ who: 'system', key: 'msg_dice' });
+                } else {
+                    showMessage({ who: 'system', key: 'msg_turn_of', params: { player: data.turn } });
                 }
+            }
+
+            if (data.mustPass && data.mustPass === myNick) {
+                if (turnChanged) showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+                if (nextTurnBtn) nextTurnBtn.disabled = false;
+                if (throwBtn) throwBtn.disabled = true;
             } else if (isMyTurn) {
-                // Se é minha vez e não tenho dado (ou acabei de desbloquear acima), ativo botão
-                // Nota: A lógica do dice acima já tratou do estado disabled/enabled se recebemos dados.
-                // Aqui tratamos apenas do início do turno limpo.
                 if (lastDiceValue === null) {
                     if (throwBtn) throwBtn.disabled = false;
                     if (nextTurnBtn) nextTurnBtn.disabled = true;
-                    if (previousTurn !== data.turn) showMessage({ who: 'system', key: 'msg_your_turn' });
                 }
             } else {
                 if (throwBtn) throwBtn.disabled = true;
@@ -449,30 +674,137 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Passos
+        // 6. STEPS (Movimento / Captura)
         if (data.step) {
             serverStep = data.step;
             clearHighlights();
+
+            // ---------------------------------------------------------
+            // A) STEP FROM: Escolher a peça
+            // ---------------------------------------------------------
             if (serverStep === 'from') {
                 onlineSourceCell = null;
-                if (data.selected) data.selected.forEach(idx => highlightCell(idx, 'green-glow'));
-            } else if (serverStep === 'to') {
+                if (isMyTurn && lastDiceValue) {
+                    // Calcula quais peças podem jogar e quantas são AMEAÇAS
+                    const threats = highlightPlayablePieces(lastDiceValue);
+
+                    // Se houver peças que podem capturar, avisa logo aqui!
+                    if (threats > 0) {
+                         showMessage({ 
+                            who: 'player', 
+                            player: 1, 
+                            key: 'msg_capture', 
+                            params: { n: threats } 
+                        });
+                    }
+                }
+            } 
+            
+            // ---------------------------------------------------------
+            // B) STEP TO: Escolher destino
+            // ---------------------------------------------------------
+            else if (serverStep === 'to') {
+                document.querySelectorAll('.piece.playable').forEach(p => p.classList.remove('playable'));
+                
                 if (data.cell !== undefined) {
                     onlineSourceCell = data.cell;
                     highlightCell(data.cell, 'selected');
                 }
-                if (data.selected) data.selected.forEach(idx => highlightCell(idx, 'green-glow'));
-            } else if (serverStep === 'take') {
-                showMessage({ who: 'system', text: 'CAPTURA: Clica na peça do adversário!' });
-                if (data.selected) data.selected.forEach(idx => highlightCell(idx, 'red-glow'));
+
+                if (isMyTurn && data.selected) {
+                    // 1. Highlights Visuais
+                    const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+                    const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
+
+                    data.selected.forEach(idx => {
+                        const logical = getLogicalFromIndex(idx);
+                        const visual = getVisualCoords(logical.r, logical.c);
+                        
+                        if (visual.r === 0 && hasBasePieces) return; 
+
+                        const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+                        if (cell) {
+                            const enemy = cell.querySelector('.piece.yellow');
+                            const mine = cell.querySelector('.piece.red');
+
+                            if (mine) return; 
+                            if (enemy) highlightCell(idx, 'red-glow'); // Vermelho = Captura
+                            else highlightCell(idx, 'green-glow');     // Verde = Mover
+                        }
+                    });
+
+                    // 2. Contar Capturas VISUAIS (O que ficou vermelho no ecrã)
+                    const domCaptureCount = gameBoard.querySelectorAll('.cell.red-glow').length;
+
+                    // 3. Mensagens
+                    if (domCaptureCount > 0) {
+                        showMessage({ 
+                            who: 'player', 
+                            player: 1, 
+                            key: 'msg_capture', 
+                            params: { n: domCaptureCount } 
+                        });
+                    }
+                    showMessage({ who: 'system', key: 'choose_destination' });
+                }
+            } 
+            
+            // ---------------------------------------------------------
+            // C) STEP TAKE: Forçar captura (Múltiplas opções ou única)
+            // ---------------------------------------------------------
+            else if (serverStep === 'take') {
+                if (isMyTurn) {
+                    // 1. Highlights
+                    if (data.selected) {
+                        data.selected.forEach(idx => highlightCell(idx, 'red-glow'));
+                    }
+
+                    // 2. Contar
+                    // No 'take', tudo o que vem no selected é captura.
+                    const captureCount = data.selected ? data.selected.length : 0;
+                    
+                    // 3. Mensagem
+                    showMessage({ 
+                        who: 'player', 
+                        player: 1, 
+                        key: 'msg_capture', 
+                        params: { n: captureCount } 
+                    });
+                }
             }
         }
     }
 
     // leave button click handler
     leaveButton.addEventListener('click', async () => {
-        if (!gameActive) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
+        if (!gameActive && !waitingForPair) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
 
+
+        // --- MODO ONLINE ---
+        if (!vsAI) {
+            const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const winnerName = shownOpponentNick || "Oponente";
+
+            // 1. Mostrar Stats LOCAIS imediatamente (Para tu veres logo)
+            if (typeof TabStats !== 'undefined') {
+                TabStats.setWinner(2); // Eu desisti -> Oponente (2) ganha
+                TabStats.showSummary(); 
+            }
+
+            // 2. Avisar o Servidor (CRUCIAL: Esperar que o aviso siga)
+            try {
+                // Tentamos sair. Se demorar, o jogador já está a ver as stats, por isso não parece encravado.
+                await Network.leave();
+            } catch (err) {
+                console.warn("Aviso de saída falhou:", err);
+            }
+
+            // 3. Limpeza Final
+            showMessage({ who: 'system', key: 'msg_leave_game', params: { player: myNick } });
+            handleOnlineWinner(winnerName, myNick);
+
+            return;
+        }
         // Helpers to obtain localized player labels for leaderboard update
         const lang = window.currentLang || 'pt'; // default to 'pt' if not set
         const dict = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {}; // access i18n dictionary in languageScript
@@ -509,12 +841,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 loserName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
                 winnerNum = 1;
             }
-            try {
-                Network.leave();
-            } catch (err) {
-                showMessage({ who: 'system', text: err.message });
-                return;
-            }
+
+
         }
 
         // Update leaderboard (winner GW+GP, loser GP) while leaving
@@ -527,34 +855,43 @@ document.addEventListener("DOMContentLoaded", () => {
         // system message that the player has left the game
         showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
 
-        // Reset game state & UI
-        gameActive = false;
-        currentPlayer = 1;
-        selectedPiece = null;
-        lastDiceValue = null;
-        aiPlayerNum = null;
-        humanPlayerNum = 1;
 
-        refreshCapturedTitles(); // reset captured titles
-
-        if (capturedP1) capturedP1.innerHTML = '';
-        if (capturedP2) capturedP2.innerHTML = '';
-
-        if (nextTurnBtn) nextTurnBtn.disabled = true;
-        if (throwBtn) throwBtn.disabled = true;
-
-        setConfigEnabled(true);
-        playButton.disabled = !isConfigValid();
-        leaveButton.disabled = true;
-
-        renderBoard(parseInt(widthSelect.value, 10));
-        updatePlayButtonState();
-        clearMessages();
+        endGame();
     });
 
-    if (modeSelect) modeSelect.addEventListener('change', updatePlayButtonState); // update play button state on mode change, if mode is PvP, else waits for AI level
-    if (iaLevelSelect) iaLevelSelect.addEventListener('change', updatePlayButtonState); // update play button state on AI level change, to Start Game
-    updatePlayButtonState(); // initial state
+    // --- LÓGICA DE INTERFACE: Bloquear opções quando escolhemos "vs Player" ---
+    function handleModeChange() {
+        const mode = modeSelect.value;
+        const isAI = (mode === 'ia'); // Só é IA se o valor for 'ia'
+
+        // 1. Gerir o Select de Dificuldade
+        if (iaLevelSelect) {
+            iaLevelSelect.disabled = !isAI; // Bloqueia se não for IA
+            if (!isAI) iaLevelSelect.value = ''; // Limpa a seleção para ficar "bonito"
+        }
+
+        // 2. Gerir a Checkbox "First to Play"
+        if (firstToPlayCheckbox) {
+            firstToPlayCheckbox.disabled = !isAI; // Bloqueia se não for IA
+            if (!isAI) firstToPlayCheckbox.checked = true; // Reset visual (opcional)
+        }
+
+        // 3. Atualizar o botão "Start Game" (para ver se a config é válida)
+        updatePlayButtonState();
+    }
+
+    // Adicionar o ouvinte de evento
+    if (modeSelect) {
+        modeSelect.addEventListener('change', handleModeChange);
+    }
+
+    // Manter o ouvinte no nível de dificuldade (apenas para validar o botão Start)
+    if (iaLevelSelect) {
+        iaLevelSelect.addEventListener('change', updatePlayButtonState);
+    }
+
+    // CHAMADA INICIAL: Correr isto assim que a página abre para garantir que começa bloqueado
+    handleModeChange();
 
     // ---- RENDER BOARD ----
     function renderBoard(cols) {
@@ -616,9 +953,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // helper function to ensure that all cells are NOT highlighted
+    // Função para limpar TODAS as luzes do tabuleiro
     function clearHighlights() {
-        gameBoard.querySelectorAll('.cell.green-glow').forEach(c => {
-            c.classList.remove('green-glow', 'pulse');
+        // 1. Limpar estilos das CÉLULAS
+        gameBoard.querySelectorAll('.cell[data-highlight]').forEach(c => {
+            c.style.boxShadow = '';
+            c.style.border = '';
+            c.style.backgroundColor = '';
+            c.style.cursor = '';
+            delete c.dataset.highlight;
+
+            // --- NOVO: Limpar estilos da PEÇA dentro da célula (se houver) ---
+            const p = c.querySelector('.piece');
+            if (p) {
+                p.style.boxShadow = '';
+                p.style.border = '';
+                p.style.transform = '';
+                p.style.zIndex = '';
+            }
+        });
+
+        // 2. Limpar classes antigas (fallback)
+        gameBoard.querySelectorAll('.cell.green-glow, .cell.red-glow').forEach(c => {
+            c.classList.remove('green-glow', 'red-glow', 'pulse');
+            c.style.cursor = '';
+        });
+
+        // 3. Limpar seleção de peças
+        gameBoard.querySelectorAll('.piece.selected').forEach(p => {
+            p.classList.remove('selected');
         });
     }
 
@@ -631,39 +994,89 @@ document.addEventListener("DOMContentLoaded", () => {
             const isMyTurn = document.body.dataset.lastTurn === myNick;
 
             if (!isMyTurn) {
-                showMessage({ who: 'system', text: 'Aguarda a tua vez.' });
+                showMessage({ who: 'system', key: 'msg_hold' });
                 return;
             }
 
+            // Converter clique visual para índice do servidor
             let visualR = parseInt(cell.dataset.r, 10);
             let visualC = parseInt(cell.dataset.c, 10);
-            
-            // 1. Visual -> Lógico (Desfaz a rotação)
             const logical = getLogicalCoords(visualR, visualC);
-            
-            // 2. Lógico -> Índice Servidor (Snake)
             const cellIndex = getIndexFromLogical(logical.r, logical.c);
-            
-            console.log(`🖱️ CLIQUE: Visual(${visualR},${visualC}) -> Lógico(${logical.r},${logical.c}) -> Server[${cellIndex}]`);
 
-            if (throwBtn && !throwBtn.disabled) {
-                showMessage({ who: 'system', text: 'Tens de lançar o dado primeiro!' });
-                return;
+            console.log(`🖱️ CLIQUE Server[${cellIndex}] | Step: ${serverStep}`);
+
+            // --- 1. BLOQUEIO DE SELEÇÃO INICIAL (A CORREÇÃO PRINCIPAL) ---
+            // Se estamos na fase de escolher a peça ('from' ou null)
+            if (serverStep !== 'to' && serverStep !== 'take') {
+
+                // Verificação do dado
+                if (throwBtn && !throwBtn.disabled) {
+                    showMessage({ who: 'system', key: 'msg_roll_first' });
+                    return;
+                }
+
+                // --- Lógica de Validação Local Pré-Servidor ---
+                // Vamos verificar se a peça clicada tem movimentos REAIS antes de incomodar o servidor.
+                // Isto impede que o servidor faça "Auto-Moves" para sítios proibidos.
+                const pieceClicked = cell.querySelector('.piece');
+                if (pieceClicked && pieceClicked.classList.contains('red') && lastDiceValue) {
+
+                    // 1. Obter movimentos brutos (getValidMoves já aplica a Regra da Base!)
+                    const rawMoves = getValidMoves(pieceClicked, lastDiceValue);
+
+                    // 2. Filtrar movimentos bloqueados por peças PRÓPRIAS (Self-Block)
+                    // (O getValidMoves não filtra self-block, por isso fazemos aqui)
+                    const realMoves = rawMoves.filter(dest => {
+                        const occ = dest.querySelector('.piece');
+                        // Se a casa destino tem uma peça minha, é inválido
+                        if (occ && occ.classList.contains('red')) return false;
+                        return true;
+                    });
+
+                    // 3. Se não sobrarem movimentos, ABORTA.
+                    if (realMoves.length === 0) {
+                        console.warn("🚫 Bloqueio Cliente: Peça sem movimentos válidos (Base ou Bloqueio).");
+                        showMessage({ who: 'system', text: 'msg_no_valid_moves' });
+
+                        // Efeito visual de erro (opcional)
+                        cell.style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
+                        setTimeout(() => cell.style.backgroundColor = '', 300);
+                        return; // NÃO ENVIA AO SERVIDOR
+                    }
+                }
             }
 
+            // --- 2. BLOQUEIO DE DESTINO (O SEGUNDO CLICK) ---
+            if (serverStep === 'to') {
+                const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+
+                // Usar Lógica Visual (Mais segura)
+                const visualBaseRow = 3;
+                const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
+
+                // Se o destino clicado for a Linha Visual 0 (Topo) e tivermos peças na base -> BLOQUEIA
+                if (visualR === 0 && hasBasePieces) {
+                    showMessage({ who: 'system', key: 'msg_base_pieces' });
+                    return;
+                }
+
+                // Verificar se estou a clicar em cima de uma peça minha
+                const existingPiece = cell.querySelector('.piece');
+                if (existingPiece && existingPiece.classList.contains('red')) {
+                    showMessage({ who: 'system', key: 'msg_capture_you_own' });
+                    return;
+                }
+            }
+
+            // Se passou em todas as seguranças, envia ao servidor
             Network.notify({ cell: cellIndex })
                 .then(() => {
-                    // SUCESSO: Limpar highlights visualmente para dar feedback imediato
-                    // Se estavamos no passo 'to' (a mover), isto apaga o verde e a seleção
-                    clearHighlights();
-                    if (selectedPiece) {
-                        selectedPiece.classList.remove('selected');
-                        selectedPiece = null;
-                    }
+                    console.log("📨 Pedido enviado com sucesso. À espera do servidor...");
+
                 })
                 .catch(err => {
                     const msg = err.message ? err.message.toLowerCase() : "";
-                    // Filtra erros não críticos
                     if (!msg.includes("valid") && !msg.includes("piece")) {
                         showMessage({ who: 'system', text: err.message });
                     }
@@ -998,13 +1411,16 @@ document.addEventListener("DOMContentLoaded", () => {
         vsAI = false;
         aiPlayerNum = null;
         humanPlayerNum = 1;
-
+        if(currentPlayerEl) currentPlayerEl.textContent = '-';
         lastDiceValue = null;
         refreshCapturedTitles();
         if (capturedP1) capturedP1.innerHTML = '';
         if (capturedP2) capturedP2.innerHTML = '';
+
+        clearMessages();
         gameActive = false;
         renderBoard(parseInt(widthSelect.value, 10));
+        showMessage({ who: 'system', key: 'select_mode' });
         if (nextTurnBtn) nextTurnBtn.disabled = true;
         if (throwBtn) throwBtn.disabled = true;
 
@@ -1133,10 +1549,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 const joinData = await Network.join({ nick, password, size });
                 gameId = joinData.game;
                 sessionStorage.setItem('tt_gameId', gameId);
+                const humanNick = "Eu";
+                TabStats.start({
+                    mode: 'pvp_online',
+                    aiDifficulty: null,
+                    cols: size,
+                    myNick: nick,
+                });
+
+                redPieces = size;
+                yellowPieces = size;
 
                 // 2. Estado de Espera
                 waitingForPair = true;
-                showMessage({ who: 'system', key: 'msg_waiting_pair' });
+                showMessage({ who: 'system', key: 'msg_waiting_opponent' });
 
                 // 3. UI Bloqueada (Obrigatório!)
                 if (throwBtn) throwBtn.disabled = true;
@@ -1167,13 +1593,19 @@ document.addEventListener("DOMContentLoaded", () => {
         currentPlayer = 1;
         currentPlayerEl.textContent = currentPlayer;
 
-        // Iniciar Stats
+        const humanNick = "Eu"; // Ou ir buscar ao sessionStorage se quiseres
         TabStats.start({
             mode: gameMode,
             aiDifficulty,
             cols: parseInt(widthSelect.value, 10),
-            firstPlayer: vsAI ? (humanFirst ? "Human" : "Ai") : null
+            myNick: humanNick
         });
+
+        // Configurar oponente IA
+        const aiLabel = "IA (" + aiDifficulty + ")";
+        const starterName = (vsAI && !humanFirst) ? aiLabel : humanNick;
+        TabStats.setOpponentInfo(aiLabel, starterName);
+
         TabStats.onTurnAdvance();
 
         // Mensagem imediata

@@ -104,9 +104,14 @@ const i18n = { // internationalization
     current: "Jogador atual",
     nextTurn: "Passar a vez", // button to skip turn
     msg_game_started: "Jogo iniciado - Bom jogo!",
+    msg_paired: "Oponente encontrado: {opponent}",
     msg_leave_game: "Jogador {player} desistiu.",
     msg_turn_of: "Agora é o turno do Jogador {player}.",
+    msg_turn: "É a tua vez de jogar.",
     msg_player_won: "O JOGADOR {player} GANHOU!",
+    msg_you_won: "VOCÊ GANHOU!",
+    msg_you_lost: "VOCÊ PERDEU!",
+    msg_drawn: "Jogo empatado!",
     msg_dice_thrown_double: "Tens outro lançamento!",
     msg_dice: "Lança o dado!",
     msg_dice_thrown: "Dado lançado - valor: {value}.",
@@ -114,6 +119,7 @@ const i18n = { // internationalization
     msg_ai_no_moves_extra: "IA não tem movimentos possíveis - mas ganhou um novo lançamento.",
     msg_ai_no_moves_pass: "IA sem movimentos possíveis - passa a vez.",
     msg_ai_extra_roll: "IA ganhou mais um lançamento.",
+    msg_op_roll: "O oponente lançou o dado - valor: {value}",
     msg_capture: "Tens {n} captura(s) possível(is).",
     msg_player_can_move: "Podes mover uma peça.",
     msg_player_no_moves_extra: "Não há movimentos possíveis - mas ganhaste um novo lançamento.",
@@ -122,6 +128,7 @@ const i18n = { // internationalization
     red_pieces: "Peças vermelhas restantes: {count}",
     yellow_pieces: "Peças amarelas restantes: {count}",
     select_mode: "Seleciona o modo de jogo e, se for vs. IA, selecciona o nível de dificuldade antes de começares.",
+    choose_destination: "Escolhe a casa de destino para a peça selecionada.",
     // pouch and dice texts
     dice_auto_hint: "Lançamento automático...",
     dice_face_up: "CIMA",
@@ -157,7 +164,11 @@ const i18n = { // internationalization
     leader_sort_desc: "Ordenar: Descendente",
     leader_sort_asc: "Ordenar: Ascendente",
     msg_roll_first: "Não podes mover uma peça sem lançar o dado.",
-    msg_waiting_opponent: "A aguardar por um oponente..."
+    msg_waiting_opponent: "A aguardar por um oponente...",
+    msg_no_valid_moves: "Essa peça não tem movimentos válidos.",
+    msg_base_pieces: "Movimento Inválido: Ainda tens peças na base!",
+    msg_capture_you_own: "Não podes mover para cima de uma peça tua.",
+    msg_hold: "Aguarda pela tua vez."
   },
   en: { // list of id:text pairs for English
     title: 'Tâb Game',
@@ -351,7 +362,20 @@ const i18n = { // internationalization
     leader_sort_desc: "Sort: Descending",
     leader_sort_asc: "Sort: Ascending",
     msg_roll_first: "You can't move a piece without rolling the dice.",
-    msg_waiting_opponent: "Waiting for an opponent..."
+    msg_waiting_opponent: "Waiting for an opponent...",
+    msg_no_valid_moves: "That piece has no valid moves.",
+    msg_base_pieces: "Invalid Move: You still have pieces in the base!",
+    msg_capture_you_own: "You can't move onto one of your own pieces.",
+    msg_paired: "Oponent found: {opponent}",
+    msg_drawn: "Game drawn!",
+    msg_turn: "It's your turn to play.",
+    msg_you_won: "YOU WON!",
+    msg_you_lost: "YOU LOST!",
+    msg_choose_destination: "Choose the destination square for the selected piece.",
+    msg_turn: "It's your turn to play.",
+    msg_op_roll: "The oponent rolled the dice - value: {value}",
+    msg_hold: "Wait for your turn.",
+    msg_no_valid_moves: "That piece has no valid moves."
   }
 };
 

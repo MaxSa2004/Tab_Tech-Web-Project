@@ -22,7 +22,8 @@
       summary_no_winner: "Sem vencedor",
       easy: "Fácil",
       normal: "Normal",
-      hard: "Difícil"
+      hard: "Difícil",
+      Jogadores: "Jogadores"
     },
     en: {
       summary_title: "Game summary",
@@ -45,7 +46,8 @@
       summary_no_winner: "No winner",
       easy: "Easy",
       normal: "Normal",
-      hard: "Hard"
+      hard: "Hard",
+      Jogadores: "Players"
     }
   };
   // simple i18n function to translate labels
@@ -60,39 +62,42 @@
   const TabStats = {
     data: null, // will hold the stats data
 
-    reset() { // initialize/reset stats data
+    reset() { 
       this.data = {
-        startTime: Date.now(), // timestamp
-        endTime: null, // timestamp
-        durationMs: null,    // duration in ms
+        startTime: Date.now(), 
+        endTime: null, 
+        durationMs: null,    
+        mode: null,           
+        aiDifficulty: null,   
+        cols: null,           
 
-        mode: null,           // 'player' | 'ia'
-        aiDifficulty: null,   // 'easy' | 'normal' | 'hard' | null
-        cols: null,           // nº colunas
+        p1Name: "Jogador 1",  // Default
+        opponentName: null,
+        firstPlayerName: null,
 
-        firstStarterRole: null, // 'human' | 'ai' | null
-        firstPlayer: 1,       // 1 | 2 
+        winner: null,         
 
-        winner: null,         // 1 | 2 | null
+        turns: 0, 
+        moves: { 1: 0, 2: 0 }, 
+        captures: { 1: 0, 2: 0 }, 
+        passes: { 1: 0, 2: 0 }, 
+        extraRolls: { 1: 0, 2: 0 }, 
 
-        turns: 0, // number of turns
-        moves: { 1: 0, 2: 0 }, // number of moves per player
-        captures: { 1: 0, 2: 0 }, // number of captures per player
-        passes: { 1: 0, 2: 0 }, // number of passes per player
-        extraRolls: { 1: 0, 2: 0 }, // number of extra rolls per player
-
-        diceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 0 }, // count of dice rolls
-        log: [] // event log
+        diceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 0 }, 
+        log: [] 
       };
     },
-    // start tracking a new game
-    start({ mode, aiDifficulty, cols, firstPlayer = 1, firstStarterRole = null }) {
+    start({ mode, aiDifficulty, cols, myNick }) {
       this.reset();
       this.data.mode = mode;
       this.data.aiDifficulty = mode === 'ia' ? (aiDifficulty || 'normal') : null;
       this.data.cols = cols;
-      this.data.firstPlayer = firstPlayer;
-      this.data.firstStarterRole = firstStarterRole;
+      if (myNick) this.data.p1Name = myNick;
+    },
+    setOpponentInfo(oppName, starterName) {
+      if (!this.data) return;
+      this.data.opponentName = oppName;
+      this.data.firstPlayerName = starterName;
     },
     // event handlers to track stats
     /// called when turn advancess
@@ -137,103 +142,99 @@
       this.data.winner = playerOrNull; // 1 | 2 | null (desistência)
     },
     // show the summary modal
+    // show the summary modal (Versão Blindada)
     showSummary() {
-      if (!this.data) return;
+      // Se por algum motivo this.data for null (ex: erro no start), criamos um dummy para não falhar
+      if (!this.data) { 
+          console.warn("TabStats: Dados em falta, a criar dados vazios.");
+          this.reset();
+          this.data.p1Name = "Eu";
+      }
 
-      // calculate duration
       this.data.endTime = Date.now();
-      this.data.durationMs = this.data.endTime - this.data.startTime;
+      // Garante que startTime existe
+      const start = this.data.startTime || (this.data.endTime - 1000);
+      this.data.durationMs = this.data.endTime - start;
+      
       const mins = Math.floor(this.data.durationMs / 60000);
       const secs = Math.floor((this.data.durationMs % 60000) / 1000);
       const durationText = `${mins}m ${secs}s`;
-      // determine first player label
-      let firstLabel = '';
+
       const md = this.data;
-      if (typeof md.firstStarterRole === 'string') {
-        const role = md.firstStarterRole.toLowerCase();
-        if (role === 'human' || role=== 'humano') firstLabel = tLocal('summary_first_player_human');
-        else if (role === 'ai' || role === 'ia') firstLabel = tLocal('summary_first_player_ai');
+
+      // Labels (com proteção contra nulls)
+      let firstLabel = md.firstPlayerName || '-';
+      if (md.mode === 'ia') {
+          if (firstLabel === 'Human') firstLabel = tLocal('summary_first_player_human');
+          else if (firstLabel === 'AI') firstLabel = tLocal('summary_first_player_ai');
       }
 
-      // else try firstPlayer number
-      if (!firstLabel) {
-        if (typeof md.firstPlayer === 'string') {
-          const v = md.firstPlayer.toLowerCase();
-          if (v === 'human' || v === 'humano') firstLabel = tLocal('summary_first_player_human');
-          else if (v === 'ai' || v === 'ia') firstLabel = tLocal('summary_first_player_ai');
-        } else if (md.firstPlayer === 1 || md.firstPlayer === 2) {
-          firstLabel = `P${md.firstPlayer}`;
-        }
-      }
-      if (!firstLabel) {
-        // fallback
-        firstLabel = '-';
+      let opponentLabel = md.opponentName || '...';
+      const diffKey = (md.aiDifficulty || '').toLowerCase();
+      const diffLabel = diffKey ? tLocal(diffKey) : '';
+      
+      if (md.mode === 'ia') {
+          opponentLabel = `IA (${diffLabel})`;
       }
 
-      // remove modal if already present
+      // Remove anterior
       const prev = document.getElementById('gameSummaryModal');
       if (prev) prev.remove();
 
-      // modal structure
+      // Cria novo
       const modal = document.createElement('div');
       modal.className = 'modal is-open';
       modal.id = 'gameSummaryModal';
-      modal.setAttribute('role', 'dialog');
-      modal.setAttribute('aria-modal', 'true');
-      modal.addEventListener('click', (e) => { // close when clicking outside content
-        if (e.target === modal) modal.remove();
-      });
-      // content
+      modal.style.zIndex = '9999'; // Forçar ficar no topo
+      
       const content = document.createElement('div');
       content.className = 'modal-content';
-      // close button
+      
       const closeBtn = document.createElement('button');
       closeBtn.className = 'close';
-      closeBtn.setAttribute('aria-label', 'Fechar');
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => modal.remove());
-      // title
+      
       const title = document.createElement('h3');
       title.textContent = tLocal('summary_title');
-      // body content
-      const diffKey = (md.aiDifficulty || '').toLowerCase();
-      const diffLabel = diffKey ? tLocal(diffKey) : '';
-      // mode label
-      const modeLabel = md.mode === 'ia'
-        ? `${tLocal('summary_mode_vs_ai')} (${diffLabel ? `${diffLabel}` : ''})`
-        : tLocal('summary_mode_vs_player');
-      // winner text
-      const winnerText = (md.winner === 1 || md.winner === 2)
-        ? `P${md.winner}`
-        : tLocal('summary_no_winner');
 
-      // helper to create a paragraph
+      const modeLabel = md.mode === 'ia' ? tLocal('summary_mode_vs_ai') : tLocal('summary_mode_vs_player');
+      
+      let winnerText = tLocal('summary_no_winner');
+      if (md.winner === 1) winnerText = md.p1Name; 
+      else if (md.winner === 2) winnerText = opponentLabel;
+
       const p = (labelKey, value) => `<p><strong>${tLocal(labelKey)}:</strong> ${value}</p>`;
+      const pRaw = (label, value) => `<p><strong>${label}:</strong> ${value}</p>`;
 
       const html = `
         ${p('summary_winner', winnerText)}
+        ${pRaw('Jogadores', `${md.p1Name || 'P1'} vs ${opponentLabel}`)}
         ${p('summary_duration', durationText)}
         ${p('summary_mode', modeLabel)}
-        ${p('summary_board_cols', md.cols)}
+        ${p('summary_board_cols', md.cols || 9)}
         ${p('summary_first_player', firstLabel)}
         <hr>
-        ${p('summary_turns', md.turns)}
-        ${p('summary_moves', `P1: ${md.moves[1]} , P2: ${md.moves[2]}`)}
-        ${p('summary_captures', `P1: ${md.captures[1]} , P2: ${md.captures[2]}`)}
-        ${p('summary_passes', `P1: ${md.passes[1]} , P2: ${md.passes[2]}`)}
-        ${p('summary_extra_rolls', `P1: ${md.extraRolls[1]} , P2: ${md.extraRolls[2]}`)}
-        ${p('summary_dice_distribution', `1: ${md.diceCounts[1]} , 2: ${md.diceCounts[2]} , 3: ${md.diceCounts[3]} , 4: ${md.diceCounts[4]} , 6: ${md.diceCounts[6]}`)}
+        ${p('summary_turns', md.turns || 0)}
+        ${p('summary_moves', `${md.p1Name || 'P1'}: ${md.moves[1]} | ${opponentLabel}: ${md.moves[2]}`)}
+        ${p('summary_captures', `${md.p1Name || 'P1'}: ${md.captures[1]} | ${opponentLabel}: ${md.captures[2]}`)}
+        ${p('summary_passes', `${md.p1Name || 'P1'}: ${md.passes[1]} | ${opponentLabel}: ${md.passes[2]}`)}
+        ${p('summary_extra_rolls', `${md.p1Name || 'P1'}: ${md.extraRolls[1]} | ${opponentLabel}: ${md.extraRolls[2]}`)}
+        <p><small>${tLocal('summary_dice_distribution')}: <br> 1:${md.diceCounts[1]}, 2:${md.diceCounts[2]}, 3:${md.diceCounts[3]}, 4:${md.diceCounts[4]}, 6:${md.diceCounts[6]}</small></p>
       `;
-      // body
+
       const body = document.createElement('div');
       body.innerHTML = html;
-      // assemble modal
+      
       content.appendChild(closeBtn);
       content.appendChild(title);
       content.appendChild(body);
       modal.appendChild(content);
       document.body.appendChild(modal);
+      
+      console.log("📊 Stats Modal Aberto!"); // Log para confirmares
     }
+
   };
   // expose TabStats globally
   window.TabStats = TabStats;
