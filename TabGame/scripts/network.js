@@ -35,7 +35,7 @@
     stopUpdateEventSource();
     const { game, nick } = currentState;
     if (!game || !nick) return;
-    const url = `${BASE_URL}/update?game=${encodeURIComponent(game)}&nick=${encodeURIComponent(nick)}`;
+    const url = `${BASE_URL}/update?nick=${encodeURIComponent(nick)}&game=${encodeURIComponent(game)}`;
     currentState.eventSource = new EventSource(url);
     currentState.eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data); // parse JSON data to use in the payload handler in gameScript 
