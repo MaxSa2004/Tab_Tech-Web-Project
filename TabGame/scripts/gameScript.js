@@ -1681,48 +1681,50 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // SE ESTIVERMOS NA FASE DE ESCOLHER DESTINO ('TO')
+            // SE O SERVIDOR ESTIVER À ESPERA DE UM DESTINO ('TO')
             if (serverStep === 'to') {
-                const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-                const visualBaseRow = 3;
-                const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
-
-                // Verificar o que estamos a clicar
-                const existingPiece = cell.querySelector('.piece');
-                const isMyPiece = existingPiece && existingPiece.classList.contains('red');
-
-                if (isMyPiece) {
-                    // --- CASO 1: Cliquei numa peça minha (red) ---
-                    // Isto serve para DESSELECIONAR ou TROCAR de peça.
-                    
-                    // IMPORTANTE: Não fazemos clearHighlights() nem adicionamos .selected aqui manualmente.
-                    // Porquê? Porque se mudarmos o visual agora, ele vai entrar em conflito com o update 
-                    // que vai chegar do servidor milissegundos depois.
-                    
-                    // Apenas calculamos o índice e enviamos. O dataHandler tratará de atualizar o visual.
+                
+                // 1. Identificar se cliquei numa peça MINHA (Red)
+                // Se sim, isto é uma TROCA DE SELEÇÃO, não é um movimento.
+                const clickedMyPiece = cell.querySelector('.piece.red');
+                
+                if (clickedMyPiece) {
+                    // --- LÓGICA DE TROCA (SWITCH) ---
+                    // Calcular o índice da nova peça que eu quero
                     const visualR = parseInt(cell.dataset.r, 10);
                     const visualC = parseInt(cell.dataset.c, 10);
                     const logical = getLogicalCoords(visualR, visualC);
                     const newIndex = getIndexFromLogical(logical.r, logical.c);
 
+                    console.log("🔄 A trocar seleção para a peça:", newIndex);
+
+                    // Enviar ao servidor. 
+                    // O servidor vai perceber que é uma peça tua e vai responder com:
+                    // step: 'to', cell: newIndex, selected: [novos_destinos]
                     try {
-                        console.log("🔄 Pedido de troca/cancelamento enviado para índice:", newIndex);
                         await Network.notify({ cell: newIndex });
                     } catch (err) {
                         console.warn(err);
                     }
-                    return; // Fim da execução, o resto é com o servidor.
-                } 
-                else {
-                    // --- CASO 2: Cliquei num destino (vazio ou inimigo) ---
-                    // Aqui mantemos a validação visual para evitar erros óbvios antes de enviar
-                    
-                    // Regra da base: não posso ir para a linha 0 se tiver peças na base
-                    if (visualR === 0 && hasBasePieces) {
-                        showMessage({ who: 'system', key: 'msg_base_pieces' });
-                        return; // Bloqueia
-                    }
+                    return; // IMPORTANTE: Sair aqui para não validar mais nada.
                 }
+
+                // 2. Se NÃO cliquei numa peça minha, então estou a tentar MOVER para um destino
+                // Aqui aplicamos as regras de validação visual (para não enviar jogadas impossíveis)
+                
+                const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+                const visualBaseRow = 3;
+                const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
+                const visualR = parseInt(cell.dataset.r, 10);
+
+                // Regra: Não posso mover para a linha 0 se tiver peças na base
+                if (visualR === 0 && hasBasePieces) {
+                    showMessage({ who: 'system', key: 'msg_base_pieces' });
+                    return;
+                }
+
+                // Se passou a validação, deixa o código seguir para o Network.notify lá em baixo
+                // que vai enviar o índice do DESTINO (casa vazia ou inimigo).
             }
 
             // if everything passed the checks, send to server
