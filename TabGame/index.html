@@ -397,7 +397,46 @@
       <!-- LEFT: board + config + captured pieces -->
       <section class="board-wrapper" aria-label="Área do tabuleiro">
         <div class="config">
-          <h3 id="configTitle">Configuration</h3>
+          <div class="config-header-row">
+            <h3 id="configTitle">Configuration</h3>
+            
+            <div class="help-tooltip">
+              <span class="help-icon">?</span>
+              
+              <div class="tooltip-content">
+                <div class="legend-row">
+                  <span class="legend-dot red"></span> 
+                  <span data-i18n="legend_p1">Player 1</span>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-dot yellow"></span> 
+                  <span data-i18n="legend_p2">Player 2</span>
+                </div>
+                <hr class="legend-divider">
+                <div class="legend-row">
+                  <span class="legend-dot move-static"></span> 
+                  <span data-i18n="legend_move">Playable piece</span>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-dot unlock-static"></span> 
+                  <span data-i18n="legend_capture">Convertible piece</span>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-dot capture-static"></span> 
+                  <span data-i18n="legend_capture">Capture a piece</span>
+                </div>
+                <hr class="legend-divider">
+                <div class="legend-row">
+                  <span class="legend-dot green-glow-static square"></span> 
+                  <span data-i18n="legend_move">Empty destination</span>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-dot red-glow-static square"></span> 
+                  <span data-i18n="legend_capture">Has opponent's piece</span>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="controls-row">
             <!-- board width selection + game mode + IA level + first to play + play/leave buttons -->
             <label for="width" id="width1">Width:</label>

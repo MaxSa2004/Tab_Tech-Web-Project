@@ -44,7 +44,7 @@ const i18n = { // internationalization
         <hr>
         <h4>Fim do jogo</h4>
         <p>O jogo termina quando um jogador fica sem peças no tabuleiro; o outro jogador é o vencedor.</p> `,
-      // classifications
+    // classifications
     myBtnClassifications: 'Ver Classificações',
     modalContentClassifications: `<h3>Classificações</h3>`,
     leaderboardTitle: "Classificações",
@@ -168,7 +168,11 @@ const i18n = { // internationalization
     msg_no_valid_moves: "Essa peça não tem movimentos válidos.",
     msg_base_pieces: "Movimento Inválido: Ainda tens peças na base!",
     msg_capture_you_own: "Não podes mover para cima de uma peça tua.",
-    msg_hold: "Aguarda pela tua vez."
+    msg_hold: "Aguarda pela tua vez.",
+    legend_p1: "Jogador 1",
+    legend_p2: "Jogador 2",
+    legend_move: "Mover",
+    legend_capture: "Capturar"
   },
   en: { // list of id:text pairs for English
     title: 'Tâb Game',
@@ -375,7 +379,11 @@ const i18n = { // internationalization
     msg_turn: "It's your turn to play.",
     msg_op_roll: "The oponent rolled the dice - value: {value}",
     msg_hold: "Wait for your turn.",
-    msg_no_valid_moves: "That piece has no valid moves."
+    msg_no_valid_moves: "That piece has no valid moves.",
+    legend_p1: "Player 1",
+    legend_p2: "Player 2",
+    legend_move: "Move",
+    legend_capture: "Capture"
   }
 };
 
@@ -498,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => { // the DOMContentLoaded ev
         return;
       }
 
-    // if not found, skip
+      // if not found, skip
 
     });
 
@@ -535,13 +543,13 @@ document.addEventListener('DOMContentLoaded', () => { // the DOMContentLoaded ev
 
   };
 
-// attach event listeners to language switch buttons/links -> set the language on click
-const elPt = document.getElementById('langPT'); // get the Portuguese language button/link by its id
-const elEn = document.getElementById('langEN'); // get the English language button/link by its id
-if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); }); // if we click on the Portuguese language button/link, set language to 'pt'
-if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); }); // if we click on the English language button/link, set language to 'en'
+  // attach event listeners to language switch buttons/links -> set the language on click
+  const elPt = document.getElementById('langPT'); // get the Portuguese language button/link by its id
+  const elEn = document.getElementById('langEN'); // get the English language button/link by its id
+  if (elPt) elPt.addEventListener('click', (e) => { e.preventDefault(); setLang('pt'); }); // if we click on the Portuguese language button/link, set language to 'pt'
+  if (elEn) elEn.addEventListener('click', (e) => { e.preventDefault(); setLang('en'); }); // if we click on the English language button/link, set language to 'en'
 
-// initialization on page load: set language from localStorage or default to 'en'
-setLang(localStorage.getItem('siteLang') || 'en');
+  // initialization on page load: set language from localStorage or default to 'en'
+  setLang(localStorage.getItem('siteLang') || 'en');
 
 });
