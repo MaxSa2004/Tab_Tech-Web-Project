@@ -137,11 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let winnerNum = null;
         if (winnerNick === myNick) winnerNum = 1;
         else if (winnerNick !== null) winnerNum = 2;
-        
-        // Se TabStats existir, define o vencedor
-        if (typeof TabStats !== 'undefined') {
-            TabStats.setWinner(winnerNum);
-        }
+
 
         // Mostrar Mensagens de Texto (Vitória/Derrota)
         if (winnerNick === null) {
@@ -153,13 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showMessage({ who: 'system', key: 'msg_you_lost', params: { winner: wName } });
         }
 
-        // -----------------------------------------------------------
-        // 2. MOSTRAR STATS (O passo crucial!)
-        // -----------------------------------------------------------
-        // Chamamos isto ANTES de fechar a rede ou limpar variáveis
-        if (typeof TabStats !== 'undefined') {
-            TabStats.showSummary();
-        }
+
 
         // -----------------------------------------------------------
         // 3. FECHAR CONEXÃO E LIMPEZA (Só agora!)
@@ -361,15 +351,13 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         if (currentMyPieces < redPieces) {
             const qtd = redPieces - currentMyPieces;
-            for (let i = 0; i < qtd; i++) {
-                TabStats.onCapture(2, 'red');
-            }
+
+            showMessage({ who: 'system', key: 'red_pieces', params: { count: currentMyPieces } });
         }
         if (currentEnemyPieces < yellowPieces) {
             const qtd = yellowPieces - currentEnemyPieces;
-            for (let i = 0; i < qtd; i++) {
-                TabStats.onCapture(1, 'yellow');
-            }
+
+            showMessage({ who: 'system', key: 'yellow_pieces', params: { count: currentEnemyPieces } });
         }
         updateOnlineCapturedPanels(currentMyPieces, currentEnemyPieces);
     }
@@ -414,11 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     }
-    // Função auxiliar para iluminar as minhas peças que se podem mexer
-    // Função auxiliar para iluminar as minhas peças que se podem mexer
-    // Função auxiliar para iluminar as minhas peças que se podem mexer
-    // Função auxiliar para iluminar peças (Azul = Mover, Laranja/Vermelho = Ameaça de Captura)
-    // Função auxiliar para iluminar peças e RETORNAR o nº de ameaças
+
     // Função auxiliar para iluminar peças e RETORNAR o nº de ameaças
     function highlightPlayablePieces(diceValue) {
         // 1. Limpeza
@@ -470,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return threatsCount; // Retorna o total para usarmos na mensagem
     }
     // Conta quantas peças inimigas existem numa lista de índices do servidor
-    function countCapturesInServerOptions(indices) {
+/*     function countCapturesInServerOptions(indices) {
         if (!indices || indices.length === 0) return 0;
         
         let count = 0;
@@ -491,11 +475,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         return count;
-    }
-    function getDiceName(val) {
+    } */
+/*     function getDiceName(val) {
         const names = { 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah", 6: "Sitteh" };
         return names[val] || val;
-    }
+    } */
     // Verifica se existem movimentos possíveis para o valor do dado (Modo Online)
     function checkOnlineMovesAvailable(diceValue) {
         // No modo relativo, "as minhas peças" são sempre renderizadas como 'red' (baixo)
@@ -510,9 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return false;
     }
-    // server data handler 
-    // server data handler 
-    // server data handler 
+
     // server data handler 
     async function dataHandler(data) {
         console.log("📥 [SERVER UPDATE]:", data);
@@ -549,15 +531,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (opponentName && shownOpponentNick !== opponentName) {
                 shownOpponentNick = opponentName;
                 showMessage({ who: 'system', key: 'msg_paired', params: { opponent: opponentName } });
-                if (typeof TabStats !== 'undefined' && TabStats.data) {
-                    TabStats.setOpponentInfo(opponentName, TabStats.data.firstPlayerName);
-                }
+
             }
         }
 
-        if (data.turn && typeof TabStats !== 'undefined' && TabStats.data && !TabStats.data.firstPlayerName) {
-            TabStats.setOpponentInfo(TabStats.data.opponentName, data.turn);
-        }
 
         // 2. PEÇAS
         if (data.pieces) renderOnlineBoard(data.pieces);
@@ -570,12 +547,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const isTab = (val === 1);
                 const isExtra = (val === 1 || val === 4 || val === 6);
 
-                // STATS (Registamos quem lançou para as estatísticas)
-                if (typeof TabStats !== 'undefined') {
-                    const statPlayer = isMyTurn ? 1 : 2;
-                    TabStats.onDice(statPlayer, val);
-                    if (isExtra) TabStats.onExtraRoll(statPlayer, val);
-                }
 
                 // --- MENSAGENS DE DADOS (Visual) ---
                 if (isMyTurn) {
@@ -593,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     // Lógica de jogo (Highlights, etc)
-                    highlightPlayablePieces(lastDiceValue);
+                    const threats = highlightPlayablePieces(lastDiceValue);
                     const canMove = checkOnlineMovesAvailable(val);
                     const keepPlaying = data.dice.keepPlaying;
 
@@ -601,11 +572,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (canMove) {
                         if (throwBtn) throwBtn.disabled = true;
                         if (nextTurnBtn) nextTurnBtn.disabled = true;
+                        
 
                         if (isTab) showMessage({ who: 'system', key: 'msg_dice_thrown_one' });
                         else if (isExtra) showMessage({ who: 'system', key: 'msg_dice_thrown_double' });
 
                         showMessage({ who: 'system', key: 'msg_player_can_move' });
+
+                        // Se houver capturas (threats > 0), avisa JÁ!
+                        if (threats > 0) {
+                            showMessage({ 
+                                who: 'player', 
+                                player: 1, 
+                                key: 'msg_capture', 
+                                params: { n: threats } 
+                            });
+                        }
                     } else {
                         if (keepPlaying) {
                             showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
@@ -645,7 +627,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const turnChanged = (previousTurn !== data.turn);
 
             if (turnChanged) {
-                if (previousTurn && typeof TabStats !== 'undefined') TabStats.onTurnAdvance();
                 lastDiceValue = null;
                 document.body.dataset.lastTurn = data.turn;
                 if (currentPlayerEl) currentPlayerEl.textContent = (isMyTurn) ? "TU" : data.turn;
@@ -715,6 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // 1. Highlights Visuais
                     const myPieces = Array.from(document.querySelectorAll('.piece.red'));
                     const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
+                    let captureCount = 0;
 
                     data.selected.forEach(idx => {
                         const logical = getLogicalFromIndex(idx);
@@ -728,21 +710,22 @@ document.addEventListener("DOMContentLoaded", () => {
                             const mine = cell.querySelector('.piece.red');
 
                             if (mine) return; 
-                            if (enemy) highlightCell(idx, 'red-glow'); // Vermelho = Captura
+                            if (enemy) {
+                                highlightCell(idx, 'red-glow'); // Vermelho = Captura
+                                captureCount++;
+                            }
                             else highlightCell(idx, 'green-glow');     // Verde = Mover
                         }
                     });
 
-                    // 2. Contar Capturas VISUAIS (O que ficou vermelho no ecrã)
-                    const domCaptureCount = gameBoard.querySelectorAll('.cell.red-glow').length;
 
                     // 3. Mensagens
-                    if (domCaptureCount > 0) {
+                    if (captureCount > 0) {
                         showMessage({ 
                             who: 'player', 
                             player: 1, 
                             key: 'msg_capture', 
-                            params: { n: domCaptureCount } 
+                            params: { n: captureCount } 
                         });
                     }
                     showMessage({ who: 'system', key: 'choose_destination' });
@@ -754,14 +737,25 @@ document.addEventListener("DOMContentLoaded", () => {
             // ---------------------------------------------------------
             else if (serverStep === 'take') {
                 if (isMyTurn) {
+                    captureCount = 0;
                     // 1. Highlights
                     if (data.selected) {
-                        data.selected.forEach(idx => highlightCell(idx, 'red-glow'));
+                        data.selected.forEach(idx => {
+                            highlightCell(idx, 'red-glow');
+                            // Contar logica (no take, assumimos que tudo o que vem é captura válida)
+                            // Mas podemos verificar por segurança se existe peça amarela
+                            const logical = getLogicalFromIndex(idx);
+                            const visual = getVisualCoords(logical.r, logical.c);
+                            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+                            if (cell && cell.querySelector('.piece.yellow')) {
+                                captureCount++;
+                            } else {
+                                // Fallback: se o servidor mandou take, conta como 1
+                                captureCount++;
+                            }
+                        });
                     }
 
-                    // 2. Contar
-                    // No 'take', tudo o que vem no selected é captura.
-                    const captureCount = data.selected ? data.selected.length : 0;
                     
                     // 3. Mensagem
                     showMessage({ 
@@ -785,11 +779,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
             const winnerName = shownOpponentNick || "Oponente";
 
-            // 1. Mostrar Stats LOCAIS imediatamente (Para tu veres logo)
-            if (typeof TabStats !== 'undefined') {
-                TabStats.setWinner(2); // Eu desisti -> Oponente (2) ganha
-                TabStats.showSummary(); 
-            }
 
             // 2. Avisar o Servidor (CRUCIAL: Esperar que o aviso siga)
             try {
@@ -849,8 +838,11 @@ document.addEventListener("DOMContentLoaded", () => {
         window.updateLeaderboard(winnerName, loserName);
 
         // Update TabStats to show summary with the winner before resetting
-        TabStats.setWinner(winnerNum);
-        TabStats.showSummary();
+        if(vsAI){
+            TabStats.setWinner(winnerNum);
+            TabStats.showSummary();
+        }
+        
 
         // system message that the player has left the game
         showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
