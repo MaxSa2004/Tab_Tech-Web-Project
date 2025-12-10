@@ -1667,7 +1667,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // if there are no valid moves BLOCK
                     if (realMoves.length === 0) {
                         console.warn("🚫 Bloqueio Cliente: Peça sem movimentos válidos (Base ou Bloqueio).");
-                        showMessage({ who: 'system', text: 'msg_no_valid_moves' });
+                        showMessage({ who: 'system', key: 'msg_no_valid_moves' });
 
                         // error visual effect (optional)
                         cell.style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
