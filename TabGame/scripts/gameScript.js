@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const messagesEl = document.getElementById('messages');
     const currentPlayerEl = document.getElementById('currentPlayer');
     const nextTurnBtn = document.getElementById('nextTurn');
-    const throwBtn = document.getElementById('throwDiceBtn'); 
+    const throwBtn = document.getElementById('throwDiceBtn');
     const playButton = document.getElementById('playButton');
     const authForm = document.querySelector('.authForm');
     const capturedP1 = document.getElementById('capturedP1');
@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- interface logic : blocks other selections when choosing vsPlayer mode ---
     function handleModeChange() {
         const mode = modeSelect.value;
-        const isAI = (mode === 'ia'); 
+        const isAI = (mode === 'ia');
 
         // manage difficulty select
         if (iaLevelSelect) {
@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
             firstToPlayCheckbox.disabled = !isAI; // disable if not IA
             if (!isAI) firstToPlayCheckbox.checked = true; // reset visual (optional)
         }
-         // finally update play button state
+        // finally update play button state
         updatePlayButtonState();
     }
 
@@ -380,8 +380,10 @@ document.addEventListener("DOMContentLoaded", () => {
             c.style.cursor = '';
         });
 
-        // clear selected pieces
+        // Durante PvP na etapa 'to', manter a peça selecionada (onlineSourceCell) marcada.
+        const keepSelection = (!vsAI && serverStep === 'to' && onlineSourceCell != null);
         gameBoard.querySelectorAll('.piece.selected').forEach(p => {
+            if (keepSelection) return; // não remove a seleção ativa
             p.classList.remove('selected');
         });
     }
@@ -636,7 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
             newPiece.classList.add('piece', cssColor); // set color class
             newPiece.setAttribute('move-state', moveState); // set move state attribute
             // highlight selected piece if applicable
-            if (onlineSourceCell === serverIndex) { 
+            if (onlineSourceCell === serverIndex) {
                 newPiece.classList.add('selected');
             }
 
@@ -765,7 +767,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function dataHandler(data) {
         console.log("📥 [SERVER UPDATE]:", data);
 
-        if (!data) return; 
+        if (!data) return;
         if (!gameActive && (data.turn || data.pieces)) gameActive = true; // if game wasn't active but now there's a turn or pieces, set it active
 
         const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick'); // my nickname from storage
@@ -840,7 +842,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (nextTurnBtn) nextTurnBtn.disabled = true;
 
 
-                        if (isTab) showMessage({ who: 'system', key: 'msg_dice_thrown_one' });
+                        if (isTab) {
+                            const numConvertible = countConvertiblePieces(1);
+                            if (numConvertible > 0) {
+                                showMessage({ who: 'system', key: 'msg_dice_thrown_one' });
+                            }
+                        }
                         else if (isExtra) showMessage({ who: 'system', key: 'msg_dice_thrown_double' });
 
                         showMessage({ who: 'system', key: 'msg_player_can_move' });
@@ -1617,7 +1624,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // manage the clicks on a cell (used by event listener click) - only if game is active
-    function handleCellClick(cell) {
+    async function handleCellClick(cell) {
         if (!gameActive) return;
         // --- (PvP) ---
         if (!vsAI) {
@@ -1674,25 +1681,47 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // if there is more than one destination possible, we must validate the destination clicked (only at 'to' step)
+            // SE ESTIVERMOS NA FASE DE ESCOLHER DESTINO ('TO')
             if (serverStep === 'to') {
                 const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-
-                // visual logic
                 const visualBaseRow = 3;
                 const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
 
-                // if i click on the fourth row (R === 0) and i have pieces in base, block, because i can only get there when i have no pieces in base
-                if (visualR === 0 && hasBasePieces) {
-                    showMessage({ who: 'system', key: 'msg_base_pieces' });
-                    return;
-                }
-
-                // check if i'm clicking on my own pieces
+                // Verificar o que estamos a clicar
                 const existingPiece = cell.querySelector('.piece');
-                if (existingPiece && existingPiece.classList.contains('red')) {
-                    showMessage({ who: 'system', key: 'msg_capture_you_own' });
-                    return;
+                const isMyPiece = existingPiece && existingPiece.classList.contains('red');
+
+                if (isMyPiece) {
+                    // --- CASO 1: Cliquei numa peça minha (red) ---
+                    // Isto serve para DESSELECIONAR ou TROCAR de peça.
+                    
+                    // IMPORTANTE: Não fazemos clearHighlights() nem adicionamos .selected aqui manualmente.
+                    // Porquê? Porque se mudarmos o visual agora, ele vai entrar em conflito com o update 
+                    // que vai chegar do servidor milissegundos depois.
+                    
+                    // Apenas calculamos o índice e enviamos. O dataHandler tratará de atualizar o visual.
+                    const visualR = parseInt(cell.dataset.r, 10);
+                    const visualC = parseInt(cell.dataset.c, 10);
+                    const logical = getLogicalCoords(visualR, visualC);
+                    const newIndex = getIndexFromLogical(logical.r, logical.c);
+
+                    try {
+                        console.log("🔄 Pedido de troca/cancelamento enviado para índice:", newIndex);
+                        await Network.notify({ cell: newIndex });
+                    } catch (err) {
+                        console.warn(err);
+                    }
+                    return; // Fim da execução, o resto é com o servidor.
+                } 
+                else {
+                    // --- CASO 2: Cliquei num destino (vazio ou inimigo) ---
+                    // Aqui mantemos a validação visual para evitar erros óbvios antes de enviar
+                    
+                    // Regra da base: não posso ir para a linha 0 se tiver peças na base
+                    if (visualR === 0 && hasBasePieces) {
+                        showMessage({ who: 'system', key: 'msg_base_pieces' });
+                        return; // Bloqueia
+                    }
                 }
             }
 
@@ -1855,7 +1884,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentPlayer = 1;
         currentPlayerEl.textContent = currentPlayer;
 
-        const humanNick = "Eu"; 
+        const humanNick = "Eu";
         TabStats.start({
             mode: gameMode,
             aiDifficulty,
@@ -1945,7 +1974,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             throwBtn.disabled = true;
                             nextTurnBtn.disabled = false;
                         }
-                        return; 
+                        return;
                     }
 
                     // moves possible
