@@ -21,10 +21,10 @@ router.init({ publicDir: PUBLIC_DIR });
 
 // Create HTTP server and delegate handling to router
 const server = http.createServer((req, res) => {
-  // Handle simple CORS preflight for all endpoints
+  // CORS for all endpoints
   if (req.method === "OPTIONS") {
     utils.setCorsHeaders(res); // CORS = Cross-Origin Resource Sharing
-    // Respond 204 No Content for preflight (no response body)
+    // 204 No Content(no response body)
     res.writeHead(204);
     res.end();
     return;

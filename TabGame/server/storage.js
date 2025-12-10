@@ -1,10 +1,8 @@
 "use strict";
 
 /*
-storage.js
-  - In-memory singletons (users, games, sseClients).
-  - File-backed persistence for users in ./data/users.json.
-  - Password hashing using crypto.scryptSync (hashPassword / verifyPassword).
+  file-backed persistence for users in ./data/users.json
+  password hashing using crypto.scryptSync (hashPassword / verifyPassword)
 */
 
 const fs = require("fs");
@@ -24,13 +22,10 @@ const sseClients = new Map(); // `${nick}:${game}` -> ServerResponse
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_SALT_BYTES = 16;
 
-// ------------------ Persistence helpers ------------------
-
+// persistence helpers
 /*
- loadUsersFromDiskSync
- - Reads the users JSON file synchronously at startup.
- - Populates the in-memory `users` Map with normalized records.
- - No return value = logs errors to console.
+  reads the users JSON file synchronously at startup.
+  populates the in-memory users Map with normalized records.
  */
 function loadUsersFromDiskSync() {
   try {
@@ -60,11 +55,10 @@ function loadUsersFromDiskSync() {
   }
 }
 
-/**
- * saveUsersToDisk
- * - Asynchronously writes the current `users` Map to disk using an atomic pattern:
- *   write to a tmp file, then rename to the final filename.
- * - Returns a Promise that resolves on success or rejects on error.
+/*
+  asynchronously writes the current users Map to disk:
+    - write to a tmp file, then rename to the final filename.
+  returns a Promise that resolves on success or rejects on error.
  */
 async function saveUsersToDisk() {
   try {
@@ -92,12 +86,10 @@ async function saveUsersToDisk() {
 let _saveTimer = null;
 
 /*
-scheduleSaveUsers
-  - Debounces saves to avoid excessive disk writes.
-  - delay: milliseconds to wait before calling saveUsersToDisk.
-  - Cancels previous timer if any and schedules a new one.
+  debounces saves to avoid excessive disk writes.
+  cancels previous timer if any and schedules a new one.
  */
-function scheduleSaveUsers(delay = 200) {
+function scheduleSaveUsers(delay = 200) { // delay: ms to wait before calling saveUsersToDisk.
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
@@ -108,11 +100,10 @@ function scheduleSaveUsers(delay = 200) {
 }
 
 /*
-flushUsersSync
-  - Synchronously writes the users file (used on process exit).
-  - Ensures data is flushed to disk when the process terminates.
+  synchronously writes the users file (used on process exit).
+  ensures data is flushed to disk when the process terminates.
  */
-function flushUsersSync() {
+/*function flushUsersSync() {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     const obj = {};
@@ -128,7 +119,7 @@ function flushUsersSync() {
   } catch (err) {
     console.error("storage: flushUsersSync error:", err);
   }
-}
+}*/
 
 // Crypto helpers (scrypt)
 
@@ -184,14 +175,6 @@ function verifyPassword(nick, plain) {
  */
 function getUser(nick) {
   return users.get(nick);
-}
-
-/**
- * hasUser
- * - Returns true if the user nick exists in the users Map, false otherwise.
- */
-function hasUser(nick) {
-  return users.has(nick);
 }
 
 /**
@@ -264,7 +247,7 @@ function getRanking(limit = 10) {
 
 loadUsersFromDiskSync();
 
-process.on("exit", () => flushUsersSync());
+/*process.on("exit", () => flushUsersSync());
 process.on("SIGINT", () => {
   flushUsersSync();
   process.exit(0);
@@ -272,7 +255,7 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
   flushUsersSync();
   process.exit(0);
-});
+});*/
 
 module.exports = {
   // singletons
@@ -283,11 +266,10 @@ module.exports = {
   // persistence control
   loadUsersFromDiskSync,
   //saveUsers,
-  flushUsersSync,
+  //flushUsersSync,
 
   // user API (new names etc)
   getUser,
-  hasUser,
   setUser,
   incrementGames,
   incrementVictories,

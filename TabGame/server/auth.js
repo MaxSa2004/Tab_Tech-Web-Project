@@ -1,18 +1,17 @@
 "use strict";
 
 /*
-  Authentication endpoints.
+  Authentication endpoints:
   - POST /register
 */
 
 const utils = require("./utils");
 const storage = require("./storage");
 
-/* handleRegister
-  Request body (JSON): { nick, password }
-  Returns 200 JSON on success (registered or logged in), errors otherwise.
-  */
-
+/*
+  request body (JSON): { nick, password }
+  returns 200 JSON on success (registered or logged in), errors otherwise
+*/
 async function handleRegister(req, res) {
   try {
     const body = await utils.parseJSONBody(req);

@@ -9,11 +9,7 @@
 const utils = require("./utils");
 const storage = require("./storage");
 
-/**
- * snapshotForClient - build a serializable snapshot of a game's state to send to a client.
- * @param {string} gameId
- * @returns {Object}
- */
+// serializable snapshot of a game's state to send to a client.
 function snapshotForClient(gameId) {
   const game = storage.games.get(gameId);
   if (!game)

@@ -19,11 +19,6 @@
     "victories": 0,
     "games": 0
   },
-  "test1": {
-    "password": "fc16e1a6c4286d415228b2143298a415:c75650bfc8e0b98170d3210b86b6c2c2022aa52edfbea309ca811b2e80719507206f954592e97f478605b9e61e8cfccc5391ec4ee0a195de7002242e5d32f764",
-    "victories": 0,
-    "games": 0
-  },
   "maxie": {
     "password": "55376c071e3affa436465f4f3bc7a4bd:a261b03ed5e61489ea22919bb9214fab437713fe270ba899e823db525ae736d14f05422e57c19b7a2304126af14967998ce0e9db3c1fd30417dc622a430c418c",
     "victories": 0,
@@ -31,11 +26,6 @@
   },
   "bobby": {
     "password": "a16b2ae9636f7d65a3a1f4b3aed48fa6:0e877d22d6df498cc2c36b8864c494e0738afb3c892d89b25d8dd234584c1b8ee3e0c4277722ed044480a0c3c9259477f37bfbeacf7cb19b4c1c1c2e92711765",
-    "victories": 0,
-    "games": 0
-  },
-  "maxie123": {
-    "password": "e025d55b1064366f7f367830252654ec:7d2166a57e736fcf53a8c64e703cf924b9437b577b0ca6ea2a8bbc50541d9dd1c31fd28721e05b0b4757949dddcb7e3186f67c664920dcab3f6610c7b6b85a50",
     "victories": 0,
     "games": 0
   }
