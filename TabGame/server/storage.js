@@ -18,6 +18,9 @@ const users = new Map(); // nick -> { password: 'salt:hex', victories:number, ga
 const games = new Map(); // gameId -> { size, players, turnIndex, pieces:Map, winner }
 const sseClients = new Map(); // `${nick}:${game}` -> ServerResponse
 
+// waitingClients: per-game long-poll GET clients (array of { nick, res, timer })
+const waitingClients = new Map(); // gameId -> Array<{nick,res,timer}>
+
 // scrypt params (sync) - scrypt used as it is more secure than MD5
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_SALT_BYTES = 16;
@@ -162,6 +165,22 @@ function incrementVictories(nick) {
   return u.victories;
 }
 
+// single end of game write to update db data
+function finalizeGameResult(participants = [], winner = null) {
+  if (!Array.isArray(participants)) participants = [];
+  const updated = [];
+  for (const nick of participants) {
+    const u = users.get(nick) || { password: "", victories: 0, games: 0 };
+    u.games = (u.games || 0) + 1;
+    if (winner && nick === winner) u.victories = (u.victories || 0) + 1;
+    users.set(nick, u);
+    updated.push({ nick, victories: u.victories || 0, games: u.games || 0 });
+  }
+  // schedule one save for the whole batch
+  scheduleSaveUsers();
+  return updated;
+}
+
 // returns an array of user summaries suitable for ranking or display
 function getAllUsers() {
   return Array.from(users.entries()).map(([nick, u]) => ({
@@ -185,6 +204,7 @@ module.exports = {
   users,
   games,
   sseClients,
+  waitingClients,
 
   // persistence control
   loadUsersFromDiskSync,
@@ -194,6 +214,7 @@ module.exports = {
   setUser,
   incrementGames,
   incrementVictories,
+  finalizeGameResult,
   getAllUsers,
   getRanking,
 

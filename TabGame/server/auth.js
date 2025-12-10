@@ -40,7 +40,7 @@ async function handleRegister(req, res) {
       });
     }
 
-    return utils.sendError(res, 400, "invalid credentials");
+    return utils.sendError(res, 400, "User registered with a different password");
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
