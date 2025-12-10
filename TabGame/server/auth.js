@@ -24,7 +24,7 @@ async function handleRegister(req, res) {
     if (!existing) {
       const hashed = storage.hashPassword(password);
       storage.setUser(nick, { password: hashed, victories: 0, games: 0 });
-      // Return 200 with JSON body to match teacher server behaviour
+
       return utils.sendJSON(res, 200, {
         ok: true,
         nick,
@@ -40,7 +40,7 @@ async function handleRegister(req, res) {
       });
     }
 
-    return utils.sendError(res, 401, "invalid credentials");
+    return utils.sendError(res, 400, "invalid credentials");
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }

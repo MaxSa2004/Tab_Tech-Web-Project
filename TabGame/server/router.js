@@ -1,8 +1,8 @@
 "use strict";
 
 /*
-  Simple router: maps paths and methods to handlers.
-  Exposes init({ publicDir }) and handleRequest(req, res).
+  router: maps paths and methods to handlers.
+  exports init({ publicDir }) and handleRequest(req, res).
 */
 
 const handlersAuth = require("./auth");
@@ -36,7 +36,7 @@ async function handleRequest(req, res) {
   const urlPath = req.url.split("?")[0] || "/";
   const pathname = urlPath.replace(/^\/+|\/+$/g, "");
 
-  // Known endpoints and expected methods
+  // known endpoints and expected methods
   // POST-only endpoints:
   const postOnly = new Set([
     "register",
@@ -52,7 +52,7 @@ async function handleRequest(req, res) {
   const getOnly = new Set(["update"]);
   // ranking: accepts GET and POST (teacher server compatibility)
 
-  // If request matches a known endpoint but the method is not allowed, return 405
+  // if request matches a known endpoint but the method is not allowed, return 405
   if (postOnly.has(pathname) && req.method !== "POST") {
     return utils.sendError(res, 405, "method not allowed");
   }
@@ -60,11 +60,11 @@ async function handleRequest(req, res) {
     return utils.sendError(res, 405, "method not allowed");
   }
 
-  // Authentication
+  // authentication
   if (pathname === "register" && req.method === "POST")
     return handlersAuth.handleRegister(req, res);
 
-  // Game operations
+  // game operations
   if (pathname === "join" && req.method === "POST")
     return handlersGame.handleJoin(req, res);
   if (pathname === "leave" && req.method === "POST")
@@ -75,16 +75,14 @@ async function handleRequest(req, res) {
     return handlersGame.handlePass(req, res);
   if (pathname === "notify" && req.method === "POST")
     return handlersGame.handleNotify(req, res);
-
-  // Updates (SSE) and ranking
-  if (pathname === "update" && req.method === "GET")
-    return handlersUpdate.handleUpdate(req, res);
-
-  // Accept both GET and POST for /ranking to mimic teacher server behaviour
   if (pathname === "ranking" && req.method === "POST")
     return handlersGame.handleRanking(req, res);
 
-  // Root informational endpoint
+  // updates (SSE) and ranking
+  if (pathname === "update" && req.method === "GET")
+    return handlersUpdate.handleUpdate(req, res);
+
+  // root informational endpoint
   if (pathname === "" && req.method === "GET") {
     utils.setCorsHeaders(res);
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -98,7 +96,7 @@ async function handleRequest(req, res) {
           "roll",
           "pass",
           "notify",
-          "update (SSE)",
+          "update", // SSE
           "ranking",
         ],
       })
@@ -106,7 +104,7 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // No matching route (not found)
+  // no matching route (not found)
   utils.sendError(res, 404, "not found");
 }
 

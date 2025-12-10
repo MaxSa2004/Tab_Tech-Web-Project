@@ -24,8 +24,8 @@ const SCRYPT_SALT_BYTES = 16;
 
 // persistence helpers
 /*
-  reads the users JSON file synchronously at startup.
-  populates the in-memory users Map with normalized records.
+  reads the users JSON file synchronously at startup
+  populates the in-memory users Map with normalized records
  */
 function loadUsersFromDiskSync() {
   try {
@@ -37,12 +37,8 @@ function loadUsersFromDiskSync() {
     for (const [nick, rec] of Object.entries(obj)) {
       // Support both new and old field names. Prefer new names if present.
       const password = rec.password;
-      const victories = Number.isFinite(rec.victories)
-        ? rec.victories
-        : 0;
-      const gamesCount = Number.isFinite(rec.games)
-        ? rec.games
-        : 0;
+      const victories = Number.isFinite(rec.victories) ? rec.victories : 0;
+      const gamesCount = Number.isFinite(rec.games) ? rec.games : 0;
       users.set(nick, {
         password: String(password || ""),
         victories: victories || 0,
@@ -57,7 +53,7 @@ function loadUsersFromDiskSync() {
 
 /*
   asynchronously writes the current users Map to disk:
-    - write to a tmp file, then rename to the final filename.
+    - write to a tmp file, then rename to the final filename
   returns a Promise that resolves on success or rejects on error.
  */
 async function saveUsersToDisk() {
@@ -86,48 +82,24 @@ async function saveUsersToDisk() {
 let _saveTimer = null;
 
 /*
-  debounces saves to avoid excessive disk writes.
-  cancels previous timer if any and schedules a new one.
+  debounces saves to avoid excessive disk writes
+  cancels previous timer if any and schedules a new one
  */
-function scheduleSaveUsers(delay = 200) { // delay: ms to wait before calling saveUsersToDisk.
+function scheduleSaveUsers(delay = 200) {
+  // delay: ms to wait before calling saveUsersToDisk
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
     saveUsersToDisk().catch(() => {
-      /* logged already */
+      // logged already
     });
   }, delay);
 }
 
-/*
-  synchronously writes the users file (used on process exit).
-  ensures data is flushed to disk when the process terminates.
- */
-/*function flushUsersSync() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    const obj = {};
-    for (const [nick, rec] of users.entries()) {
-      obj[nick] = {
-        password: rec.password,
-        victories: rec.victories || 0,
-        games: rec.games || 0,
-      };
-    }
-    fs.writeFileSync(USERS_FILE, JSON.stringify(obj, null, 2), "utf8");
-    if (fs.existsSync(TMP_USERS_FILE)) fs.unlinkSync(TMP_USERS_FILE);
-  } catch (err) {
-    console.error("storage: flushUsersSync error:", err);
-  }
-}*/
-
 // Crypto helpers (scrypt)
-
 /*
-  Generates a random salt and derives a key using crypto.scryptSync.
-  Returns a string in the format 'salt:derivedHex' suitable for storing.
-  Input: plain (string) - the plaintext password.
-  Output: string (salt:hex)
+  generates a random salt and derives a key using crypto.scryptSync
+  returns a string of format 'salt:derivedHex' suitable for storing
  */
 function hashPassword(plain) {
   const salt = crypto.randomBytes(SCRYPT_SALT_BYTES).toString("hex");
@@ -135,25 +107,12 @@ function hashPassword(plain) {
   return `${salt}:${derived.toString("hex")}`;
 }
 
-/**
- * verifyPassword
- * - Verifies a user-supplied plain password against the stored hashed password for nick.
- * - Only accepts stored format 'salt:hex'. If stored value is not in that format it rejects.
- * - Uses crypto.timingSafeEqual for timing-safe comparison.
- * - Returns boolean (true if match, false otherwise).
- */
+// crypto.timingSafeEqual for timing-safe comparison
 function verifyPassword(nick, plain) {
   const rec = users.get(nick);
   if (!rec || typeof rec.password !== "string") return false;
   const stored = rec.password;
   const idx = stored.indexOf(":");
-  if (idx <= 0) {
-    // Reject any non "salt:hash" format (we expect stored passwords to be hashed)
-    console.warn(
-      `storage: user ${nick} has invalid password format; rejecting authentication`
-    );
-    return false;
-  }
   try {
     const salt = stored.slice(0, idx);
     const expectedHex = stored.slice(idx + 1);
@@ -166,22 +125,15 @@ function verifyPassword(nick, plain) {
   }
 }
 
-// ------------------ Public API ------------------
-
-/**
- * getUser
- * - Returns the user record object from the in-memory Map, or undefined if not present.
- * - Returned object has keys: password (salt:hex), victories (number), games (number).
- */
+// Public API
+// returns user from the in-memory Map
 function getUser(nick) {
   return users.get(nick);
 }
 
-/**
- * setUser
- * - Sets or replaces a user record in memory and schedules a debounced save.
- * - Expects record.password to already be hashed via hashPassword().
- * - Normalizes numeric fields and stores them as victories/games.
+/*
+  sets or replaces a user record in memory and schedules a debounced save
+  normalizes numeric fields and stores them accordingly
  */
 function setUser(nick, record) {
   users.set(nick, {
@@ -192,12 +144,7 @@ function setUser(nick, record) {
   scheduleSaveUsers();
 }
 
-/**
- * incrementGames
- * - Increment the 'games' counter for the given nick.
- * - If the user does not exist, creates a placeholder user (empty password).
- * - Schedules a debounced save and returns the new games count.
- */
+// increment the games counter for the given nick
 function incrementGames(nick) {
   const u = users.get(nick) || { password: "", victories: 0, games: 0 };
   u.games = (u.games || 0) + 1;
@@ -206,12 +153,7 @@ function incrementGames(nick) {
   return u.games;
 }
 
-/**
- * incrementVictories
- * - Increment the 'victories' counter for the given nick.
- * - If the user does not exist, creates a placeholder user (empty password).
- * - Schedules a debounced save and returns the new victories count.
- */
+// ncrement the victories counter for the given nick
 function incrementVictories(nick) {
   const u = users.get(nick) || { password: "", victories: 0, games: 0 };
   u.victories = (u.victories || 0) + 1;
@@ -220,25 +162,16 @@ function incrementVictories(nick) {
   return u.victories;
 }
 
-/**
- * getAllUsers
- * - Returns an array of user summaries suitable for ranking or display:
- *   [{ nick, victories, games }, ...]
- */
+// returns an array of user summaries suitable for ranking or display
 function getAllUsers() {
   return Array.from(users.entries()).map(([nick, u]) => ({
     nick,
-    victories: u.victories || 0,
-    games: u.games || 0,
+    victories: u.victories,
+    games: u.games,
   }));
 }
 
-/**
- * getRanking
- * - Returns top `limit` users sorted by victories descending.
- * - limit defaults to 10.
- * - Each entry: { nick, victories, games }
- */
+// returns top limit users sorted by victories descending.
 function getRanking(limit = 10) {
   const arr = getAllUsers();
   arr.sort((a, b) => b.victories - a.victories);
@@ -246,16 +179,6 @@ function getRanking(limit = 10) {
 }
 
 loadUsersFromDiskSync();
-
-/*process.on("exit", () => flushUsersSync());
-process.on("SIGINT", () => {
-  flushUsersSync();
-  process.exit(0);
-});
-process.on("SIGTERM", () => {
-  flushUsersSync();
-  process.exit(0);
-});*/
 
 module.exports = {
   // singletons
@@ -265,8 +188,6 @@ module.exports = {
 
   // persistence control
   loadUsersFromDiskSync,
-  //saveUsers,
-  //flushUsersSync,
 
   // user API (new names etc)
   getUser,

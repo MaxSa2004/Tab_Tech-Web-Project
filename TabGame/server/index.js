@@ -4,7 +4,7 @@
   Main entrypoint:
   - wires modules together
   - creates HTTP server and starts listening
-  - configuration (PORT, PUBLIC_DIR)
+  - configuration: (PORT, PUBLIC_DIR)
 */
 
 const http = require("http");
@@ -16,10 +16,10 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const router = require("./router");
 const utils = require("./utils");
 
-// Initialize router with runtime configuration (public directory)
+// initialize router with runtime configuration (public directory)
 router.init({ publicDir: PUBLIC_DIR });
 
-// Create HTTP server and delegate handling to router
+// create HTTP server and delegate handling to router
 const server = http.createServer((req, res) => {
   // CORS for all endpoints
   if (req.method === "OPTIONS") {
