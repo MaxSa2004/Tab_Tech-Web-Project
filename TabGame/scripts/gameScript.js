@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const messagesEl = document.getElementById('messages');
     const currentPlayerEl = document.getElementById('currentPlayer');
     const nextTurnBtn = document.getElementById('nextTurn');
-    const throwBtn = document.getElementById('throwDiceBtn'); // mover para o topo
+    const throwBtn = document.getElementById('throwDiceBtn'); 
     const playButton = document.getElementById('playButton');
     const authForm = document.querySelector('.authForm');
     const capturedP1 = document.getElementById('capturedP1');
@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const rows = 4; // fixed number of rows 
 
-    // state
+    // state (mostly for PVP)
     let currentPlayer = 1; // 1 or 2
     let gameActive = false;
     let waitingForPair = false;
@@ -44,12 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // dice
     let lastDiceValue = null;
 
-    // helper function to get color by player number
-    function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
-    // helper function to check if it's human's turns
-    function isHumanTurn() {
-        return !vsAI || currentPlayer !== aiPlayerNum;
-    }
+    // --- CONFIGURATION HELPERS --- //
 
     // config validation helper
     function isConfigValid() {
@@ -74,6 +69,80 @@ document.addEventListener("DOMContentLoaded", () => {
         playButton.disabled = !isConfigValid() || gameActive === true;
         if (leaveButton) leaveButton.disabled = !gameActive;
     }
+
+    // --- GENERAL HELPERS --- //
+
+    // i18n helper function to translate keys with params
+    function t(key, params = {}) {
+        const lang = window.currentLang || 'pt';
+        // tenta ler primeiro da variável global i18n; se não existir, usa window.i18n
+        const root = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
+        const dict = root[lang] || {};
+        // fallback para en depois pt; e por fim mostra a própria key (útil para debug)
+        let str = dict[key] ?? root.en?.[key] ?? root.pt?.[key] ?? key;
+        return String(str).replace(/\{(\w+)\}/g, (_, k) => params[k] ?? '');
+    }
+
+    // messages
+    function showMessage({ who = 'system', player = null, text, key, params }) {
+        const wrap = document.createElement('div'); // message wrapper
+        wrap.className = 'message';
+
+        const bubble = document.createElement('div'); // message bubble
+        bubble.className = 'bubble';
+
+        if (key) { // i18n key provided
+            // use i18n translation
+            bubble.dataset.i18nKey = key;
+            if (params && Object.keys(params).length) { // store params as JSON string if provided
+                bubble.dataset.i18nParams = JSON.stringify(params);
+            }
+            bubble.textContent = t(key, params || {}); // set translated text
+        } else {
+            // fallback: use raw text
+            bubble.textContent = text ?? '';
+        }
+
+        if (who === 'system') { // system message
+            wrap.classList.add('msg-server');
+            wrap.appendChild(bubble);
+        } else { // player message
+            wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar'; // player avatar
+            avatar.textContent = 'P' + player;
+            const stack = document.createElement('div');
+            stack.appendChild(bubble);
+            wrap.appendChild(avatar);
+            wrap.appendChild(stack);
+        }
+
+        messagesEl.appendChild(wrap);
+        messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll to bottom
+    }
+
+    //clearing messages
+    function clearMessages() {
+        if (messagesEl) messagesEl.innerHTML = '';
+    }
+
+    // translate existing chat bubbles if language changes
+    function refreshChatBubbles() {
+        if (!messagesEl) return; // safety check
+        const bubbles = messagesEl.querySelectorAll('.bubble[data-i18n-key]'); // only those with i18n data, bubbles are all the chat messages 
+        bubbles.forEach(b => { // for each bubble
+            const key = b.dataset.i18nKey; // get the key/id (e.g., 'msg_player_won')
+            let params = {}; // default empty params
+            if (b.dataset.i18nParams) { // if there are params
+                try { params = JSON.parse(b.dataset.i18nParams); } catch { } // parse safely
+            }
+            b.textContent = t(key, params); // re-translate and update text content
+        });
+    }
+
+    // expose refreshChatBubbles globally
+    window.__refreshChat = refreshChatBubbles;
+
     // helper: get localized labels for captured panels
     function getLocalizedLabelsForPanels() {
         const lang = window.currentLang || 'pt';
@@ -121,771 +190,33 @@ document.addEventListener("DOMContentLoaded", () => {
     // expose refreshCapturedTitles globally
     window.__refreshCaptured = refreshCapturedTitles;
 
+    // helper function to get color by player number
+    function getColorForPlayerNum(n) { return n === 1 ? 'red' : 'yellow'; }
 
-
-    // Gere o fim do jogo online
-    // Gere o fim do jogo online
-    // Gere o fim do jogo online
-    function handleOnlineWinner(winnerNick, myNick) {
-        console.log("🏆 Processar Vencedor:", winnerNick);
-
-        // -----------------------------------------------------------
-        // 1. PROCESSAR DADOS (Enquanto a memória está fresca)
-        // -----------------------------------------------------------
-        
-        // Definir quem ganhou nas Stats
-        let winnerNum = null;
-        if (winnerNick === myNick) winnerNum = 1;
-        else if (winnerNick !== null) winnerNum = 2;
-
-
-        // Mostrar Mensagens de Texto (Vitória/Derrota)
-        if (winnerNick === null) {
-            showMessage({ who: 'system', key: 'msg_drawn' });
-        } else if (winnerNick === myNick) {
-            showMessage({ who: 'system', key: 'msg_you_won' });
-        } else {
-            const wName = (winnerNick && winnerNick !== myNick) ? (shownOpponentNick || winnerNick) : "Oponente";
-            showMessage({ who: 'system', key: 'msg_you_lost', params: { winner: wName } });
-        }
-
-
-
-        // -----------------------------------------------------------
-        // 3. FECHAR CONEXÃO E LIMPEZA (Só agora!)
-        // -----------------------------------------------------------
-        
-        // Agora sim, matamos a conexão SSE
-        Network.stopUpdateEventSource(); 
-
-        // Reset de variáveis de estado do jogo
-        gameActive = false;
-        waitingForPair = false;
-        serverStep = null;
-        onlineSourceCell = null;
-        lastDiceValue = null;
-        
-        // Limpar referências a oponentes
-        shownOpponentNick = null;
-        delete document.body.dataset.lastTurn;
-        if (currentPlayerEl) currentPlayerEl.textContent = '-';
-
-        // Limpar HTML (Capturas e Chat)
-        if (capturedP1) capturedP1.innerHTML = '';
-        if (capturedP2) capturedP2.innerHTML = '';
-        clearMessages(); 
-
-        // Resetar Tabuleiro
-        const cols = parseInt(widthSelect.value, 10);
-        redPieces = cols;
-        yellowPieces = cols;
-        renderBoard(cols); 
-        
-        // Mostrar mensagem inicial
-        showMessage({who: 'system', key: 'select_mode'});
-
-        // Bloquear botões de jogo
-        if (nextTurnBtn) nextTurnBtn.disabled = true;
-        if (throwBtn) throwBtn.disabled = true;
-
-        // Reativar botões de configuração
-        setConfigEnabled(true);
-        if (playButton) playButton.disabled = !isConfigValid();
-        if (leaveButton) leaveButton.disabled = true;
-    }
-    // --- LÓGICA DE COORDENADAS (SNAKE) ---
-
-    /// --- LÓGICA DE COORDENADAS (SNAKE - Baseado no OnlineController) ---
-
-    // --- LÓGICA DE COORDENADAS (SNAKE + ROTAÇÃO) ---
-
-    // 1. Converter (Linha/Coluna Visual) -> (Linha/Coluna Lógica do Servidor)
-    function getLogicalCoords(visualR, visualC) {
-        const cols = parseInt(widthSelect.value, 10);
-
-        if (isBoardFlipped) {
-            // Se o tabuleiro está rodado (sou P2):
-            // O meu Visual Baixo (3) corresponde ao Lógico Topo (0) do servidor
-            return {
-                r: 3 - visualR,
-                c: (cols - 1) - visualC
-            };
-        }
-        // Se não está rodado (sou P1): Visual = Lógico
-        return { r: visualR, c: visualC };
-    }
-
-    // 2. Converter (Linha/Coluna Lógica) -> Visual
-    function getVisualCoords(logicalR, logicalC) {
-        const cols = parseInt(widthSelect.value, 10);
-
-        if (isBoardFlipped) {
-            return {
-                r: 3 - logicalR,
-                c: (cols - 1) - logicalC
-            };
-        }
-        return { r: logicalR, c: logicalC };
-    }
-
-    // 3. Converter (Linha/Coluna Lógica) -> Índice Linear do Servidor (Snake)
-    // Baseado estritamente no OnlineController.js do professor
-    function getIndexFromLogical(r, c) {
-        const cols = parseInt(widthSelect.value, 10);
-        let indexBase = 0;
-
-        if (r === 3) indexBase = 0;          // Fundo (Home P1)
-        if (r === 2) indexBase = cols;       // Linha 2
-        if (r === 1) indexBase = 2 * cols;   // Linha 1
-        if (r === 0) indexBase = 3 * cols;   // Topo (Home P2)
-
-        let offset = c;
-        // Inversão Snake nas linhas 0 e 2
-        if (r === 2 || r === 0) {
-            offset = (cols - 1) - c;
-        }
-
-        return indexBase + offset;
-    }
-
-    // 4. Inverso: Índice Servidor -> Lógico
-    function getLogicalFromIndex(index) {
-        const cols = parseInt(widthSelect.value, 10);
-        const rowIdx = Math.floor(index / cols);
-        const offset = index % cols;
-
-        let r = 3 - rowIdx;
-        let c = offset;
-
-        if (r === 2 || r === 0) {
-            c = (cols - 1) - offset;
-        }
-
-        return { r, c };
-    }
-    // Função auxiliar para desenhar as capturas no modo Online
-    function updateOnlineCapturedPanels(myCount, oppCount) {
-        const totalPieces = parseInt(widthSelect.value, 10);
-
-        // Calcular quantas foram capturadas (Total - Vivas)
-        const myLosses = totalPieces - myCount;     // Peças minhas que o inimigo tem (Vermelhas no painel dele)
-        const oppLosses = totalPieces - oppCount;   // Peças dele que eu tenho (Amarelas no meu painel)
-
-        // Limpar painéis
-        if (capturedP1) capturedP1.innerHTML = ''; // O meu painel (Minhas capturas)
-        if (capturedP2) capturedP2.innerHTML = ''; // Painel do oponente (Capturas dele)
-
-        // 1. Preencher o MEU painel (Peças inimigas capturadas -> Amarelas)
-        for (let i = 0; i < oppLosses; i++) {
-            const token = document.createElement('div');
-            token.className = 'captured-token yellow';
-            capturedP1.appendChild(token);
-        }
-
-        // 2. Preencher o PAINEL DO OPONENTE (Minhas peças capturadas -> Vermelhas)
-        for (let i = 0; i < myLosses; i++) {
-            const token = document.createElement('div');
-            token.className = 'captured-token red';
-            capturedP2.appendChild(token);
-        }
-
-        // Atualizar variáveis globais para manter consistência (opcional, mas boa prática)
-        redPieces = myCount;
-        yellowPieces = oppCount;
-    }
-    // Helper para desenhar o tabuleiro com dados do servidor
-    // Helper para desenhar o tabuleiro online
-    function renderOnlineBoard(pieces) {
-        clearHighlights();
-        const cols = parseInt(widthSelect.value, 10);
-        const myServerColor = document.body.dataset.myColor; // 'Blue' ou 'Red'
-        let currentMyPieces = 0;
-        let currentEnemyPieces = 0;
-
-        // Limpar
-        gameBoard.querySelectorAll('.piece').forEach(p => p.remove());
-
-        pieces.forEach((pieceObj, serverIndex) => {
-            if (!pieceObj) return;
-
-            // 1. Descobrir posição lógica
-            const logical = getLogicalFromIndex(serverIndex);
-            // 2. Converter para visual (aplica rotação se necessário)
-            const visual = getVisualCoords(logical.r, logical.c);
-
-            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
-            if (!cell) return;
-
-            // 3. Decidir Cor Visual (Relativa)
-            let cssColor;
-            if (pieceObj.color === myServerColor) {
-                cssColor = 'red';
-                currentMyPieces++;
-            } else {
-                cssColor = 'yellow';
-                currentEnemyPieces++;
-            }
-
-            // --- CORREÇÃO DO ESTADO DA PEÇA ---
-            let moveState = 'moved'; // Default
-
-            if (pieceObj.reachedLastRow || (visual.r === 0 && cssColor === 'red')) {
-                moveState = 'row-four';
-            } else if (pieceObj.inMotion === false) {
-                // SE inMotion É FALSE, ESTÁ NA BASE -> 'not-moved'
-                // Antes estava 'moved', o que causava o erro do 6 bloqueado
-                moveState = 'not-moved';
-            } else {
-                moveState = 'moved';
-            }
-
-            const newPiece = document.createElement('div');
-            newPiece.classList.add('piece', cssColor);
-            newPiece.setAttribute('move-state', moveState);
-
-            if (onlineSourceCell === serverIndex) {
-                newPiece.classList.add('selected');
-            }
-
-            cell.appendChild(newPiece);
-        });
-        if (currentMyPieces < redPieces) {
-            const qtd = redPieces - currentMyPieces;
-
-            showMessage({ who: 'system', key: 'red_pieces', params: { count: currentMyPieces } });
-        }
-        if (currentEnemyPieces < yellowPieces) {
-            const qtd = yellowPieces - currentEnemyPieces;
-
-            showMessage({ who: 'system', key: 'yellow_pieces', params: { count: currentEnemyPieces } });
-        }
-        updateOnlineCapturedPanels(currentMyPieces, currentEnemyPieces);
-    }
-
-    // Substitui TODAS as funções 'highlightCell' por esta única versão
-    // Substitui a função highlightCell existente por esta versão corrigida
-    function highlightCell(serverIndex, type) {
-        const logical = getLogicalFromIndex(serverIndex);
-        const visual = getVisualCoords(logical.r, logical.c);
-        const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
-
-        if (!cell) {
-            console.warn("⚠️ Célula não encontrada no DOM!", visual);
-            return;
-        }
-
-        if (type === 'selected') {
-            const piece = cell.querySelector('.piece');
-            if (piece) piece.classList.add('selected');
-        }
-        else if (type === 'green-glow') {
-            // CORREÇÃO: Adicionar a classe para ativar o CSS (animação e z-index)
-            cell.classList.add('green-glow');
-
-            // Opcional: Podes manter ou remover os estilos inline abaixo, 
-            // pois o CSS com !important já trata disto.
-            cell.dataset.highlight = 'green';
-        }
-        else if (type === 'red-glow') {
-            // CORREÇÃO: Adicionar a classe para ativar o CSS
-            cell.classList.add('red-glow');
-
-            cell.dataset.highlight = 'red';
-
-            // Efeitos visuais na peça inimiga
-            const enemyPiece = cell.querySelector('.piece');
-            if (enemyPiece) {
-                enemyPiece.style.boxShadow = "0 0 20px 8px rgba(255, 0, 0, 1)";
-                enemyPiece.style.border = "2px solid #fff";
-                enemyPiece.style.transform = "scale(1.15)";
-                enemyPiece.style.zIndex = "100";
-            }
-        }
-    }
-
-    // Função auxiliar para iluminar peças e RETORNAR o nº de ameaças
-    function highlightPlayablePieces(diceValue) {
-        // 1. Limpeza
-        const allPieces = document.querySelectorAll('.piece');
-        allPieces.forEach(p => {
-            p.classList.remove('playable', 'playable-threat', 'can-unlock');
-            p.style.zIndex = '';
-        });
-
-        if (!diceValue) return 0; 
-
-        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-        let threatsCount = 0; 
-
-        myPieces.forEach(piece => {
-            const state = piece.getAttribute('move-state');
-            if (state === 'not-moved' && diceValue !== 1) return;
-
-            const rawMoves = getValidMoves(piece, diceValue);
-
-            // Filtro: não posso ir para cima das minhas
-            const validMoves = rawMoves.filter(destCell => {
-                const existingPiece = destCell.querySelector('.piece');
-                if (existingPiece && existingPiece.classList.contains('red')) return false;
-                return true;
-            });
-
-            if (validMoves.length > 0) {
-                piece.classList.add('playable');
-                piece.style.zIndex = '100';
-
-                // Verifica se algum movimento aterra em inimigo (Captura)
-                const isThreat = validMoves.some(destCell => {
-                    const enemy = destCell.querySelector('.piece.yellow');
-                    return enemy !== null;
-                });
-
-                if (isThreat) {
-                    piece.classList.add('playable-threat'); // Estilo visual agressivo (Laranja/Vermelho)
-                    piece.style.zIndex = '105';
-                    threatsCount++; // Contamos esta peça como uma oportunidade de captura
-                } 
-                else if (diceValue === 1 && state === 'not-moved') {
-                    piece.classList.add('can-unlock');
-                }
-            }
-        });
-
-        return threatsCount; // Retorna o total para usarmos na mensagem
-    }
-    // Conta quantas peças inimigas existem numa lista de índices do servidor
-/*     function countCapturesInServerOptions(indices) {
-        if (!indices || indices.length === 0) return 0;
-        
-        let count = 0;
-        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-        const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
-
-        indices.forEach(idx => {
-            const logical = getLogicalFromIndex(idx);
-            const visual = getVisualCoords(logical.r, logical.c);
-
-            // Ignorar Meta se tiver peças na base (regra visual)
-            if (visual.r === 0 && hasBasePieces) return;
-
-            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
-            if (cell) {
-                const enemy = cell.querySelector('.piece.yellow');
-                if (enemy) count++;
-            }
-        });
-        return count;
-    } */
-/*     function getDiceName(val) {
-        const names = { 1: "Tâb", 2: "Itneyn", 3: "Teláteh", 4: "Arba'ah", 6: "Sitteh" };
-        return names[val] || val;
-    } */
-    // Verifica se existem movimentos possíveis para o valor do dado (Modo Online)
-    function checkOnlineMovesAvailable(diceValue) {
-        // No modo relativo, "as minhas peças" são sempre renderizadas como 'red' (baixo)
-        // independentemente se sou Blue ou Red no servidor.
-        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-
-        for (const piece of myPieces) {
-            const state = piece.getAttribute('move-state');
-            if (state === 'not-moved' && diceValue !== 1) continue;
-            const moves = getValidMoves(piece, diceValue);
-            if (moves.length > 0) return true;
-        }
-        return false;
-    }
-
-    // server data handler 
-    async function dataHandler(data) {
-        console.log("📥 [SERVER UPDATE]:", data);
-
-        if (!data) return;
-        if (!gameActive && (data.turn || data.pieces)) gameActive = true;
-
-        const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-        const currentTurnNick = data.turn || document.body.dataset.lastTurn;
-        const isMyTurn = (currentTurnNick === myNick);
-
-        // --- ERROS ---
-        if (data.error) {
-            console.warn('Server error:', data.error);
-            showMessage({ who: 'system', text: data.error });
-            if (data.error.includes("already rolled") && throwBtn) {
-                throwBtn.disabled = true;
-            }
-            return;
-        }
-
-        if (data.ranking) window.updatePvPLeaderboard(data.ranking);
-
-        // 1. JOGADORES
-        if (data.players) {
-            const myServerColor = data.players[myNick];
-            if (myServerColor) {
-                document.body.dataset.myColor = myServerColor;
-                isBoardFlipped = (myServerColor === 'Red');
-            }
-            const playerNames = Object.keys(data.players);
-            const opponentName = playerNames.find(nick => nick !== myNick);
-
-            if (opponentName && shownOpponentNick !== opponentName) {
-                shownOpponentNick = opponentName;
-                showMessage({ who: 'system', key: 'msg_paired', params: { opponent: opponentName } });
-
-            }
-        }
-
-
-        // 2. PEÇAS
-        if (data.pieces) renderOnlineBoard(data.pieces);
-
-        // 3. DADOS (Lógica de Mensagens Ajustada)
-        if (data.dice !== undefined) {
-            if (data.dice && data.dice.value) {
-                lastDiceValue = data.dice.value;
-                const val = data.dice.value;
-                const isTab = (val === 1);
-                const isExtra = (val === 1 || val === 4 || val === 6);
-
-
-                // --- MENSAGENS DE DADOS (Visual) ---
-                if (isMyTurn) {
-                    // SOU EU (P1) A FALAR
-                    showMessage({
-                        who: 'player',
-                        player: 1,
-                        key: 'msg_dice_thrown',
-                        params: { value: val }
-                    });
-
-                    // Animação 3D (só para mim)
-                    if (window.tabGame && window.tabGame.spawnAndLaunch) {
-                        window.tabGame.spawnAndLaunch(val);
-                    }
-
-                    // Lógica de jogo (Highlights, etc)
-                    const threats = highlightPlayablePieces(lastDiceValue);
-                    const canMove = checkOnlineMovesAvailable(val);
-                    const keepPlaying = data.dice.keepPlaying;
-
-                    // Indicações de Sistema (Só para mim, sobre o que fazer)
-                    if (canMove) {
-                        if (throwBtn) throwBtn.disabled = true;
-                        if (nextTurnBtn) nextTurnBtn.disabled = true;
-                        
-
-                        if (isTab) showMessage({ who: 'system', key: 'msg_dice_thrown_one' });
-                        else if (isExtra) showMessage({ who: 'system', key: 'msg_dice_thrown_double' });
-
-                        showMessage({ who: 'system', key: 'msg_player_can_move' });
-
-                        // Se houver capturas (threats > 0), avisa JÁ!
-                        if (threats > 0) {
-                            showMessage({ 
-                                who: 'player', 
-                                player: 1, 
-                                key: 'msg_capture', 
-                                params: { n: threats } 
-                            });
-                        }
-                    } else {
-                        if (keepPlaying) {
-                            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
-                            if (throwBtn) throwBtn.disabled = false;
-                            if (nextTurnBtn) nextTurnBtn.disabled = true;
-                        } else {
-                            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-                            if (throwBtn) throwBtn.disabled = true;
-                            if (nextTurnBtn) nextTurnBtn.disabled = false;
-                        }
-                    }
-                }
-                else {
-                    // É O OPONENTE (P2) A FALAR
-                    showMessage({
-                        who: 'player',
-                        player: 2,
-                        key: 'msg_op_roll',
-                        params: { value: val }
-                    });
-                }
-
-            } else {
-                lastDiceValue = null;
-            }
-        }
-
-        // 4. VENCEDOR
-        if (data.winner !== undefined) {
-            handleOnlineWinner(data.winner, myNick);
-            return;
-        }
-
-        // 5. TURNO
-        if (data.turn) {
-            const previousTurn = document.body.dataset.lastTurn;
-            const turnChanged = (previousTurn !== data.turn);
-
-            if (turnChanged) {
-                lastDiceValue = null;
-                document.body.dataset.lastTurn = data.turn;
-                if (currentPlayerEl) currentPlayerEl.textContent = (isMyTurn) ? "TU" : data.turn;
-
-                // Mensagens de Sistema sobre de quem é a vez
-                if (isMyTurn) {
-                    showMessage({ who: 'system', key: 'msg_turn' });
-                    if (!data.mustPass) showMessage({ who: 'system', key: 'msg_dice' });
-                } else {
-                    showMessage({ who: 'system', key: 'msg_turn_of', params: { player: data.turn } });
-                }
-            }
-
-            if (data.mustPass && data.mustPass === myNick) {
-                if (turnChanged) showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-                if (nextTurnBtn) nextTurnBtn.disabled = false;
-                if (throwBtn) throwBtn.disabled = true;
-            } else if (isMyTurn) {
-                if (lastDiceValue === null) {
-                    if (throwBtn) throwBtn.disabled = false;
-                    if (nextTurnBtn) nextTurnBtn.disabled = true;
-                }
-            } else {
-                if (throwBtn) throwBtn.disabled = true;
-                if (nextTurnBtn) nextTurnBtn.disabled = true;
-            }
-        }
-
-        // 6. STEPS (Movimento / Captura)
-        if (data.step) {
-            serverStep = data.step;
-            clearHighlights();
-
-            // ---------------------------------------------------------
-            // A) STEP FROM: Escolher a peça
-            // ---------------------------------------------------------
-            if (serverStep === 'from') {
-                onlineSourceCell = null;
-                if (isMyTurn && lastDiceValue) {
-                    // Calcula quais peças podem jogar e quantas são AMEAÇAS
-                    const threats = highlightPlayablePieces(lastDiceValue);
-
-                    // Se houver peças que podem capturar, avisa logo aqui!
-                    if (threats > 0) {
-                         showMessage({ 
-                            who: 'player', 
-                            player: 1, 
-                            key: 'msg_capture', 
-                            params: { n: threats } 
-                        });
-                    }
-                }
-            } 
-            
-            // ---------------------------------------------------------
-            // B) STEP TO: Escolher destino
-            // ---------------------------------------------------------
-            else if (serverStep === 'to') {
-                document.querySelectorAll('.piece.playable').forEach(p => p.classList.remove('playable'));
-                
-                if (data.cell !== undefined) {
-                    onlineSourceCell = data.cell;
-                    highlightCell(data.cell, 'selected');
-                }
-
-                if (isMyTurn && data.selected) {
-                    // 1. Highlights Visuais
-                    const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-                    const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
-                    let captureCount = 0;
-
-                    data.selected.forEach(idx => {
-                        const logical = getLogicalFromIndex(idx);
-                        const visual = getVisualCoords(logical.r, logical.c);
-                        
-                        if (visual.r === 0 && hasBasePieces) return; 
-
-                        const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
-                        if (cell) {
-                            const enemy = cell.querySelector('.piece.yellow');
-                            const mine = cell.querySelector('.piece.red');
-
-                            if (mine) return; 
-                            if (enemy) {
-                                highlightCell(idx, 'red-glow'); // Vermelho = Captura
-                                captureCount++;
-                            }
-                            else highlightCell(idx, 'green-glow');     // Verde = Mover
-                        }
-                    });
-
-
-                    // 3. Mensagens
-                    if (captureCount > 0) {
-                        showMessage({ 
-                            who: 'player', 
-                            player: 1, 
-                            key: 'msg_capture', 
-                            params: { n: captureCount } 
-                        });
-                    }
-                    showMessage({ who: 'system', key: 'choose_destination' });
-                }
-            } 
-            
-            // ---------------------------------------------------------
-            // C) STEP TAKE: Forçar captura (Múltiplas opções ou única)
-            // ---------------------------------------------------------
-            else if (serverStep === 'take') {
-                if (isMyTurn) {
-                    captureCount = 0;
-                    // 1. Highlights
-                    if (data.selected) {
-                        data.selected.forEach(idx => {
-                            highlightCell(idx, 'red-glow');
-                            // Contar logica (no take, assumimos que tudo o que vem é captura válida)
-                            // Mas podemos verificar por segurança se existe peça amarela
-                            const logical = getLogicalFromIndex(idx);
-                            const visual = getVisualCoords(logical.r, logical.c);
-                            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
-                            if (cell && cell.querySelector('.piece.yellow')) {
-                                captureCount++;
-                            } else {
-                                // Fallback: se o servidor mandou take, conta como 1
-                                captureCount++;
-                            }
-                        });
-                    }
-
-                    
-                    // 3. Mensagem
-                    showMessage({ 
-                        who: 'player', 
-                        player: 1, 
-                        key: 'msg_capture', 
-                        params: { n: captureCount } 
-                    });
-                }
-            }
-        }
-    }
-
-    // leave button click handler
-    leaveButton.addEventListener('click', async () => {
-        if (!gameActive && !waitingForPair) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
-
-
-        // --- MODO ONLINE ---
-        if (!vsAI) {
-            const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-            const winnerName = shownOpponentNick || "Oponente";
-
-
-            // 2. Avisar o Servidor (CRUCIAL: Esperar que o aviso siga)
-            try {
-                // Tentamos sair. Se demorar, o jogador já está a ver as stats, por isso não parece encravado.
-                await Network.leave();
-            } catch (err) {
-                console.warn("Aviso de saída falhou:", err);
-            }
-
-            // 3. Limpeza Final
-            showMessage({ who: 'system', key: 'msg_leave_game', params: { player: myNick } });
-            handleOnlineWinner(winnerName, myNick);
-
-            return;
-        }
-        // Helpers to obtain localized player labels for leaderboard update
-        const lang = window.currentLang || 'pt'; // default to 'pt' if not set
-        const dict = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {}; // access i18n dictionary in languageScript
-        const L = dict[lang] || dict.en || {}; // fallback to English if current language not found
-
-        const player1Label = L.player1 || (lang === 'pt' ? 'Jogador 1' : 'Player 1'); // Player 1/Jogador 1
-        const aiLabel = (() => { // AI label based on difficulty
-            const key = aiDifficulty === 'easy' ? 'easyIA'
-                : aiDifficulty === 'hard' ? 'hardIA'
-                    : 'normalIA';
-            return L[key] || // IA (Fácil)/AI (Easy) etc. 
-                (lang === 'pt'
-                    ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})` // IA (Fácil/Difícil/Normal)
-                    : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`); // AI (Easy/Normal/Hard)
-        })();
-
-        let winnerName = '';
-        let loserName = '';
-        let winnerNum = null;
-
-        if (vsAI) { // PvE mode
-            // The player clicks leave, so the AI wins
-            winnerName = aiLabel;
-            loserName = player1Label;
-            winnerNum = aiPlayerNum || 2;
-        } else {
-            // PvP : the other player wins (not implemented yet)
-            if (currentPlayer === 1) {
-                winnerName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
-                loserName = lang === 'pt' ? 'Jogador 1' : 'Player 1';
-                winnerNum = 2;
-            } else {
-                winnerName = lang === 'pt' ? 'Jogador 1' : 'Player 1';
-                loserName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
-                winnerNum = 1;
-            }
-
-
-        }
-
-        // Update leaderboard (winner GW+GP, loser GP) while leaving
-        window.updateLeaderboard(winnerName, loserName);
-
-        // Update TabStats to show summary with the winner before resetting
-        if(vsAI){
-            TabStats.setWinner(winnerNum);
-            TabStats.showSummary();
-        }
-        
-
-        // system message that the player has left the game
-        showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
-
-
-        endGame();
-    });
-
-    // --- LÓGICA DE INTERFACE: Bloquear opções quando escolhemos "vs Player" ---
+    // --- interface logic : blocks other selections when choosing vsPlayer mode ---
     function handleModeChange() {
         const mode = modeSelect.value;
-        const isAI = (mode === 'ia'); // Só é IA se o valor for 'ia'
+        const isAI = (mode === 'ia'); 
 
-        // 1. Gerir o Select de Dificuldade
+        // manage difficulty select
         if (iaLevelSelect) {
-            iaLevelSelect.disabled = !isAI; // Bloqueia se não for IA
-            if (!isAI) iaLevelSelect.value = ''; // Limpa a seleção para ficar "bonito"
+            iaLevelSelect.disabled = !isAI; // if not IA, disable
+            if (!isAI) iaLevelSelect.value = ''; // reset visual (optional)
         }
 
-        // 2. Gerir a Checkbox "First to Play"
+        //manage first to play checkbox
         if (firstToPlayCheckbox) {
-            firstToPlayCheckbox.disabled = !isAI; // Bloqueia se não for IA
-            if (!isAI) firstToPlayCheckbox.checked = true; // Reset visual (opcional)
+            firstToPlayCheckbox.disabled = !isAI; // disable if not IA
+            if (!isAI) firstToPlayCheckbox.checked = true; // reset visual (optional)
         }
-
-        // 3. Atualizar o botão "Start Game" (para ver se a config é válida)
+         // finally update play button state
         updatePlayButtonState();
     }
 
-    // Adicionar o ouvinte de evento
-    if (modeSelect) {
-        modeSelect.addEventListener('change', handleModeChange);
-    }
 
-    // Manter o ouvinte no nível de dificuldade (apenas para validar o botão Start)
-    if (iaLevelSelect) {
-        iaLevelSelect.addEventListener('change', updatePlayButtonState);
-    }
+    // --- GAME LOGIC HELPERS --- //
 
-    // CHAMADA INICIAL: Correr isto assim que a página abre para garantir que começa bloqueado
-    handleModeChange();
-
-    // ---- RENDER BOARD ----
+    // render board with given cols
     function renderBoard(cols) {
         redPieces = cols;
         yellowPieces = cols;
@@ -921,209 +252,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 cell.appendChild(arrow);
                 gameBoard.appendChild(cell);
-            }
-        }
-    }
-
-    // piece selection operator - only selects if game is active
-    function selectPiece(piece) {
-        if (!gameActive) return;
-        // if selecting the currently selected piece we deselect it
-        if (selectedPiece == piece) {
-            selectedPiece.classList.remove('selected');
-            selectedPiece = null;
-            clearHighlights(); // clear highlights of moves for previously selected piece
-            return;
-        }
-        // current player selecting their own piece
-        if ((currentPlayer == 1 && piece.classList.contains('red')) ||
-            (currentPlayer == 2 && piece.classList.contains('yellow'))) {
-            if (selectedPiece) selectedPiece.classList.remove('selected');
-            selectedPiece = piece;
-            piece.classList.add('selected');
-        }
-    }
-
-    // helper function to ensure that all cells are NOT highlighted
-    // Função para limpar TODAS as luzes do tabuleiro
-    function clearHighlights() {
-        // 1. Limpar estilos das CÉLULAS
-        gameBoard.querySelectorAll('.cell[data-highlight]').forEach(c => {
-            c.style.boxShadow = '';
-            c.style.border = '';
-            c.style.backgroundColor = '';
-            c.style.cursor = '';
-            delete c.dataset.highlight;
-
-            // --- NOVO: Limpar estilos da PEÇA dentro da célula (se houver) ---
-            const p = c.querySelector('.piece');
-            if (p) {
-                p.style.boxShadow = '';
-                p.style.border = '';
-                p.style.transform = '';
-                p.style.zIndex = '';
-            }
-        });
-
-        // 2. Limpar classes antigas (fallback)
-        gameBoard.querySelectorAll('.cell.green-glow, .cell.red-glow').forEach(c => {
-            c.classList.remove('green-glow', 'red-glow', 'pulse');
-            c.style.cursor = '';
-        });
-
-        // 3. Limpar seleção de peças
-        gameBoard.querySelectorAll('.piece.selected').forEach(p => {
-            p.classList.remove('selected');
-        });
-    }
-
-    // manage the clicks on a cell (used by event listener click) - only if game is active
-    function handleCellClick(cell) {
-        if (!gameActive) return;
-        // --- MODO ONLINE (PvP) ---
-        if (!vsAI) {
-            const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-            const isMyTurn = document.body.dataset.lastTurn === myNick;
-
-            if (!isMyTurn) {
-                showMessage({ who: 'system', key: 'msg_hold' });
-                return;
-            }
-
-            // Converter clique visual para índice do servidor
-            let visualR = parseInt(cell.dataset.r, 10);
-            let visualC = parseInt(cell.dataset.c, 10);
-            const logical = getLogicalCoords(visualR, visualC);
-            const cellIndex = getIndexFromLogical(logical.r, logical.c);
-
-            console.log(`🖱️ CLIQUE Server[${cellIndex}] | Step: ${serverStep}`);
-
-            // --- 1. BLOQUEIO DE SELEÇÃO INICIAL (A CORREÇÃO PRINCIPAL) ---
-            // Se estamos na fase de escolher a peça ('from' ou null)
-            if (serverStep !== 'to' && serverStep !== 'take') {
-
-                // Verificação do dado
-                if (throwBtn && !throwBtn.disabled) {
-                    showMessage({ who: 'system', key: 'msg_roll_first' });
-                    return;
-                }
-
-                // --- Lógica de Validação Local Pré-Servidor ---
-                // Vamos verificar se a peça clicada tem movimentos REAIS antes de incomodar o servidor.
-                // Isto impede que o servidor faça "Auto-Moves" para sítios proibidos.
-                const pieceClicked = cell.querySelector('.piece');
-                if (pieceClicked && pieceClicked.classList.contains('red') && lastDiceValue) {
-
-                    // 1. Obter movimentos brutos (getValidMoves já aplica a Regra da Base!)
-                    const rawMoves = getValidMoves(pieceClicked, lastDiceValue);
-
-                    // 2. Filtrar movimentos bloqueados por peças PRÓPRIAS (Self-Block)
-                    // (O getValidMoves não filtra self-block, por isso fazemos aqui)
-                    const realMoves = rawMoves.filter(dest => {
-                        const occ = dest.querySelector('.piece');
-                        // Se a casa destino tem uma peça minha, é inválido
-                        if (occ && occ.classList.contains('red')) return false;
-                        return true;
-                    });
-
-                    // 3. Se não sobrarem movimentos, ABORTA.
-                    if (realMoves.length === 0) {
-                        console.warn("🚫 Bloqueio Cliente: Peça sem movimentos válidos (Base ou Bloqueio).");
-                        showMessage({ who: 'system', text: 'msg_no_valid_moves' });
-
-                        // Efeito visual de erro (opcional)
-                        cell.style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
-                        setTimeout(() => cell.style.backgroundColor = '', 300);
-                        return; // NÃO ENVIA AO SERVIDOR
-                    }
-                }
-            }
-
-            // --- 2. BLOQUEIO DE DESTINO (O SEGUNDO CLICK) ---
-            if (serverStep === 'to') {
-                const myPieces = Array.from(document.querySelectorAll('.piece.red'));
-
-                // Usar Lógica Visual (Mais segura)
-                const visualBaseRow = 3;
-                const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
-
-                // Se o destino clicado for a Linha Visual 0 (Topo) e tivermos peças na base -> BLOQUEIA
-                if (visualR === 0 && hasBasePieces) {
-                    showMessage({ who: 'system', key: 'msg_base_pieces' });
-                    return;
-                }
-
-                // Verificar se estou a clicar em cima de uma peça minha
-                const existingPiece = cell.querySelector('.piece');
-                if (existingPiece && existingPiece.classList.contains('red')) {
-                    showMessage({ who: 'system', key: 'msg_capture_you_own' });
-                    return;
-                }
-            }
-
-            // Se passou em todas as seguranças, envia ao servidor
-            Network.notify({ cell: cellIndex })
-                .then(() => {
-                    console.log("📨 Pedido enviado com sucesso. À espera do servidor...");
-
-                })
-                .catch(err => {
-                    const msg = err.message ? err.message.toLowerCase() : "";
-                    if (!msg.includes("valid") && !msg.includes("piece")) {
-                        showMessage({ who: 'system', text: err.message });
-                    }
-                });
-            return;
-        }
-        // don't allow input when AI is playing
-        if (vsAI && currentPlayer === aiPlayerNum) return;
-
-        const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
-
-        // selecting current player's piece (non-empty cell and cell selected must contain piece belonging to current player)
-        if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
-            (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
-            selectPiece(pieceInCell);
-            if (!selectedPiece) return; // fail-safe if no piece to select
-            clearHighlights(); // clear old highlights
-
-            // get a list of all valid moves for the selected piece and highlight each one of legal moves cells
-            const state = pieceInCell.getAttribute('move-state');
-            const movesAllowed = (state === 'not-moved' && lastDiceValue !== 1) ? [] : getValidMoves(pieceInCell);
-            movesAllowed.forEach(dest => dest.classList.add('green-glow'));
-            return;
-        }
-
-        // try moving selected piece to a clicked cell (dice rolled and a piece is selected)
-        if (selectedPiece && lastDiceValue != null) {
-            const state = selectedPiece.getAttribute('move-state');
-            if (state === 'not-moved' && lastDiceValue !== 1) return; // first move of a piece must be 1
-
-            const possibleMoves = getValidMoves(selectedPiece);
-            const isValidMove = possibleMoves.some(dest => dest === cell);
-
-            // check if the selected cell is a valid move
-            if (isValidMove) {
-                if (state === 'not-moved' && lastDiceValue === 1) {
-                    selectedPiece.setAttribute('move-state', 'moved'); // update atribute of a piece on its first ever move
-                }
-
-                // place selected piece in new cell after move and clear highlights and make sure selectedPiece is null
-                movePieceTo(selectedPiece, cell);
-                clearHighlights();
-                selectedPiece.classList.remove('selected');
-                selectedPiece = null;
-
-                if (checkWinCondition()) return; // check if someone won
-
-                // check if current player gets another turn based on their dice roll
-                if (lastDiceValue === 4 || lastDiceValue === 6 || lastDiceValue === 1) {
-                    throwBtn.disabled = false;
-                    nextTurnBtn.disabled = true;
-                } else {
-                    nextTurn();
-                }
-                lastDiceValue = null; // reset dice value (awaits for new value from next dice roll)
             }
         }
     }
@@ -1226,25 +354,36 @@ document.addEventListener("DOMContentLoaded", () => {
         return currentCell ? [currentCell] : [];
     }
 
-    // if a piece is captured, send it to the captured pieces container (The player who captured it container)
-    function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
-        if (!pieceEl) return; // safety check
-        const humanMadeCapture = capturedByPlayer === humanPlayerNum; // check if human made the capture
-        const target = humanMadeCapture ? capturedP1 : capturedP2; // determine target container (capturedP1 or capturedP2)
-        if (!target) return; // safety check
-        // determine color
-        const isRed = pieceEl.classList.contains('red');
-        const colorClass = isRed ? 'red' : 'yellow';
+    // helper function to ensure that all cells are NOT highlighted
+    function clearHighlights() {
+        //clear highlighted cells
+        gameBoard.querySelectorAll('.cell[data-highlight]').forEach(c => {
+            c.style.boxShadow = '';
+            c.style.border = '';
+            c.style.backgroundColor = '';
+            c.style.cursor = '';
+            delete c.dataset.highlight;
 
-        // creates a token representing the captured piece
-        const token = document.createElement('div');
-        token.className = `captured-token ${colorClass}`; // add color class
-        token.setAttribute('aria-label', colorClass === 'red' ? 'Captured red piece' : 'Captured yellow piece'); // add attribute for accessibility
+            // clear piece styles too (in case of playable piece)
+            const p = c.querySelector('.piece');
+            if (p) {
+                p.style.boxShadow = '';
+                p.style.border = '';
+                p.style.transform = '';
+                p.style.zIndex = '';
+            }
+        });
 
-        target.appendChild(token); // append to the correct container
+        // fallback: clear glow classes (as sometimes they persist)
+        gameBoard.querySelectorAll('.cell.green-glow, .cell.red-glow').forEach(c => {
+            c.classList.remove('green-glow', 'red-glow', 'pulse');
+            c.style.cursor = '';
+        });
 
-        // removes the original piece from the board
-        pieceEl.remove();
+        // clear selected pieces
+        gameBoard.querySelectorAll('.piece.selected').forEach(p => {
+            p.classList.remove('selected');
+        });
     }
 
     // place parsed piece in destCell
@@ -1277,6 +416,622 @@ document.addEventListener("DOMContentLoaded", () => {
         destCell.appendChild(piece); // place piece in cell
         TabStats.onMove(currentPlayer);
     }
+
+    // if a piece is captured, send it to the captured pieces container (The player who captured it container)
+    function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
+        if (!pieceEl) return; // safety check
+        const humanMadeCapture = capturedByPlayer === humanPlayerNum; // check if human made the capture
+        const target = humanMadeCapture ? capturedP1 : capturedP2; // determine target container (capturedP1 or capturedP2)
+        if (!target) return; // safety check
+        // determine color
+        const isRed = pieceEl.classList.contains('red');
+        const colorClass = isRed ? 'red' : 'yellow';
+
+        // creates a token representing the captured piece
+        const token = document.createElement('div');
+        token.className = `captured-token ${colorClass}`; // add color class
+        token.setAttribute('aria-label', colorClass === 'red' ? 'Captured red piece' : 'Captured yellow piece'); // add attribute for accessibility
+
+        target.appendChild(token); // append to the correct container
+
+        // removes the original piece from the board
+        pieceEl.remove();
+    }
+
+    // --- ONLINE HELPERS --- //
+
+    // coords logic: snake board representation
+
+    // converts visual coords to logical coords
+    function getLogicalCoords(visualR, visualC) {
+        const cols = parseInt(widthSelect.value, 10);
+
+        if (isBoardFlipped) {
+            // if I'm player 2, the board is flipped: Logical = Invert(Visual)
+            return {
+                r: 3 - visualR,
+                c: (cols - 1) - visualC
+            };
+        }
+        // if I'm player 1, Logical = Visual
+        return { r: visualR, c: visualC };
+    }
+
+    // converts logical coords to visual coords (same logic as above, but inverted)
+    function getVisualCoords(logicalR, logicalC) {
+        const cols = parseInt(widthSelect.value, 10);
+
+        if (isBoardFlipped) {
+            return {
+                r: 3 - logicalR,
+                c: (cols - 1) - logicalC
+            };
+        }
+        return { r: logicalR, c: logicalC };
+    }
+
+    // converts logical coords to server index
+    function getIndexFromLogical(r, c) {
+        const cols = parseInt(widthSelect.value, 10);
+        let indexBase = 0;
+
+        if (r === 3) indexBase = 0;          // Base (Home P1)
+        if (r === 2) indexBase = cols;       // row 2
+        if (r === 1) indexBase = 2 * cols;   // row 1
+        if (r === 0) indexBase = 3 * cols;   // Top row (Home P2 for P1, i.e., in the perspetive of Player 1)
+
+        let offset = c;
+        // reverse offset for rows 0 and 2
+        if (r === 2 || r === 0) {
+            offset = (cols - 1) - c;
+        }
+
+        return indexBase + offset;
+    }
+
+    // converts server index to logical coords (inverse of above)
+    function getLogicalFromIndex(index) {
+        const cols = parseInt(widthSelect.value, 10);
+        const rowIdx = Math.floor(index / cols);
+        const offset = index % cols;
+
+        let r = 3 - rowIdx;
+        let c = offset;
+
+        if (r === 2 || r === 0) {
+            c = (cols - 1) - offset;
+        }
+
+        return { r, c };
+    }
+    // helper to update captured panels based on online game state
+    function updateOnlineCapturedPanels(myCount, oppCount) {
+        const totalPieces = parseInt(widthSelect.value, 10);
+
+        // calculate losses
+        const myLosses = totalPieces - myCount;     // my pieces (captured by the enemy) (Reds in opponent's panel)
+        const oppLosses = totalPieces - oppCount;   // opponent's pieces (captured by me) (Yellows in my panel)
+
+        // clean captured panels
+        if (capturedP1) capturedP1.innerHTML = ''; // my panel
+        if (capturedP2) capturedP2.innerHTML = ''; // op's panel
+
+        // adding captured tokens to panels
+        // mine
+        for (let i = 0; i < oppLosses; i++) {
+            const token = document.createElement('div');
+            token.className = 'captured-token yellow';
+            capturedP1.appendChild(token);
+        }
+
+        //op's
+        for (let i = 0; i < myLosses; i++) {
+            const token = document.createElement('div');
+            token.className = 'captured-token red';
+            capturedP2.appendChild(token);
+        }
+
+        // update count variables
+        redPieces = myCount;
+        yellowPieces = oppCount;
+    }
+
+    // --- PVP FUNCTIONS --- //
+
+    // manage end of game when winner is announced from server
+    function handleOnlineWinner(winnerNick, myNick) {
+        console.log("🏆 Processar Vencedor:", winnerNick);
+
+        // show msg based on winner
+        if (winnerNick === null) {
+            showMessage({ who: 'system', key: 'msg_drawn' });
+        } else if (winnerNick === myNick) {
+            showMessage({ who: 'system', key: 'msg_you_won' });
+        } else {
+            const wName = (winnerNick && winnerNick !== myNick) ? (shownOpponentNick || winnerNick) : "Oponente";
+            showMessage({ who: 'system', key: 'msg_you_lost', params: { winner: wName } });
+        }
+
+        // close connection SSE
+        Network.stopUpdateEventSource();
+
+        // variable reset
+        gameActive = false;
+        waitingForPair = false;
+        serverStep = null;
+        onlineSourceCell = null;
+        lastDiceValue = null;
+
+        // opponent name reset
+        shownOpponentNick = null;
+        delete document.body.dataset.lastTurn;
+        if (currentPlayerEl) currentPlayerEl.textContent = '-';
+
+        // HTML clean up
+        if (capturedP1) capturedP1.innerHTML = '';
+        if (capturedP2) capturedP2.innerHTML = '';
+        clearMessages();
+
+        // board reset
+        const cols = parseInt(widthSelect.value, 10);
+        redPieces = cols;
+        yellowPieces = cols;
+        renderBoard(cols);
+
+        // initial msg
+        showMessage({ who: 'system', key: 'select_mode' });
+
+        // block game buttons
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
+        if (throwBtn) throwBtn.disabled = true;
+
+        // reenable config
+        setConfigEnabled(true);
+        if (playButton) playButton.disabled = !isConfigValid();
+        if (leaveButton) leaveButton.disabled = true;
+    }
+
+    // Helper to render online board based on pieces array from server
+    function renderOnlineBoard(pieces) {
+        clearHighlights();
+        const cols = parseInt(widthSelect.value, 10);
+        const myServerColor = document.body.dataset.myColor; // 'Blue' or 'Red', from server perspective
+        let currentMyPieces = 0;
+        let currentEnemyPieces = 0;
+
+        // clean up existing pieces
+        gameBoard.querySelectorAll('.piece').forEach(p => p.remove());
+
+        // render pieces based on server data (update their positions and states)
+        pieces.forEach((pieceObj, serverIndex) => {
+            if (!pieceObj) return;
+
+            // find its logical and visual coords
+            const logical = getLogicalFromIndex(serverIndex); // since the server index is a number from 0 to N representing the board, the logical coords divide it into rows and columns
+            const visual = getVisualCoords(logical.r, logical.c); // from there we get the visual coords based on whether the board is flipped or not
+            // finding the cell, given the visual coords
+            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+            if (!cell) return;
+
+            // decide piece color and count pieces (to use later for captured panel updates)
+            let cssColor;
+            if (pieceObj.color === myServerColor) {
+                cssColor = 'red';
+                currentMyPieces++;
+            } else { // server 'Blue' is enemy, mapped to Yellow
+                cssColor = 'yellow';
+                currentEnemyPieces++;
+            }
+
+            // update piece state
+            let moveState = 'moved'; // Default
+            // if the piece reached the 4th row already or reached it now in the first cell of the row (visual.r === 0 for red)
+            if (pieceObj.reachedLastRow || (visual.r === 0 && cssColor === 'red')) {
+                moveState = 'row-four';
+            } else if (pieceObj.inMotion === false) {
+                // if the piece has not moved since the start of the game, inMotion is false, and needs a Tab to move
+                moveState = 'not-moved';
+            } else {
+                moveState = 'moved';
+            }
+            // create and append piece element, using a new div (like a total deletion and recreation, to avoid state issues)
+            const newPiece = document.createElement('div');
+            newPiece.classList.add('piece', cssColor); // set color class
+            newPiece.setAttribute('move-state', moveState); // set move state attribute
+            // highlight selected piece if applicable
+            if (onlineSourceCell === serverIndex) { 
+                newPiece.classList.add('selected');
+            }
+
+            cell.appendChild(newPiece);
+        });
+        // show messages if pieces were captured, letting players know the quantity of pieces left
+        if (currentMyPieces < redPieces) {
+            const qtd = redPieces - currentMyPieces;
+
+            showMessage({ who: 'system', key: 'red_pieces', params: { count: currentMyPieces } });
+        }
+        if (currentEnemyPieces < yellowPieces) {
+            const qtd = yellowPieces - currentEnemyPieces;
+
+            showMessage({ who: 'system', key: 'yellow_pieces', params: { count: currentEnemyPieces } });
+        }
+        // update captured panels
+        updateOnlineCapturedPanels(currentMyPieces, currentEnemyPieces);
+    }
+
+    // helper to highlight a cell based on server index and type of highlight
+    function highlightCell(serverIndex, type) {
+        // get logical and visual coords
+        const logical = getLogicalFromIndex(serverIndex);
+        const visual = getVisualCoords(logical.r, logical.c);
+        // find the cell in the DOM
+        const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+
+        if (!cell) {
+            console.warn("⚠️ Célula não encontrada no DOM!", visual);
+            return;
+        }
+        // apply highlight based on type
+        if (type === 'selected') {
+            const piece = cell.querySelector('.piece');
+            if (piece) piece.classList.add('selected');
+        }
+        // green glow for when a piece has more than 1 move avaliable (without validating the forth row logic), the glow is for the destinations (step === 'to')
+        else if (type === 'green-glow') {
+            cell.classList.add('green-glow');
+            cell.dataset.highlight = 'green';
+        }
+        // red glow for when a piece is threatened (step === 'take'), with the same logic as the green glow, but instead of a safe destination, it's an enemy piece that can be captured
+        else if (type === 'red-glow') {
+            cell.classList.add('red-glow');
+            cell.dataset.highlight = 'red';
+
+            // visual effects on the enemy piece
+            const enemyPiece = cell.querySelector('.piece');
+            if (enemyPiece) {
+                enemyPiece.style.boxShadow = "0 0 20px 8px rgba(255, 0, 0, 1)";
+                enemyPiece.style.border = "2px solid #fff";
+                enemyPiece.style.transform = "scale(1.15)";
+                enemyPiece.style.zIndex = "100";
+            }
+        }
+    }
+
+    // helper to highlight pieces that can be moved and returns the number of threats available (to know how many captures are available in that turn)
+    function highlightPlayablePieces(diceValue) {
+        //clean up previous highlights and styles
+        const allPieces = document.querySelectorAll('.piece');
+        allPieces.forEach(p => {
+            p.classList.remove('playable', 'playable-threat', 'can-unlock');
+            p.style.zIndex = '';
+        });
+
+        if (!diceValue) return 0; // safety check, because without a dice value, no pieces can be playable
+
+        // in online mode, "my pieces" are always rendered as 'red' (bottom), so this is a init point
+        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+        let threatsCount = 0;
+        // check each piece for valid moves
+        myPieces.forEach(piece => {
+            const state = piece.getAttribute('move-state');
+            if (state === 'not-moved' && diceValue !== 1) return; // not moved and not tab, can't move
+            // get valid moves for this piece (locally calculated)
+            const rawMoves = getValidMoves(piece, diceValue);
+
+            // filter out moves that land on my own pieces
+            const validMoves = rawMoves.filter(destCell => {
+                const existingPiece = destCell.querySelector('.piece');
+                if (existingPiece && existingPiece.classList.contains('red')) return false;
+                return true;
+            });
+            // if there are valid moves, highlight the piece as playable
+            if (validMoves.length > 0) {
+                piece.classList.add('playable');
+                piece.style.zIndex = '100';
+
+                // if any of the valid moves can capture an enemy piece, mark as threat
+                const isThreat = validMoves.some(destCell => {
+                    const enemy = destCell.querySelector('.piece.yellow');
+                    return enemy !== null;
+                });
+
+                if (isThreat) {
+                    piece.classList.add('playable-threat'); //agressive visual indication
+                    piece.style.zIndex = '105';
+                    threatsCount++; // counter update
+                }
+                else if (diceValue === 1 && state === 'not-moved') {
+                    piece.classList.add('can-unlock'); // convertible pieces visual indication
+                }
+            }
+        });
+
+        return threatsCount; // return the number of threats found
+    }
+
+
+    // checking if any online moves are available for the current player with the given dice value (used to determine if player can move or must pass)
+    function checkOnlineMovesAvailable(diceValue) {
+
+        const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+
+        for (const piece of myPieces) {
+            const state = piece.getAttribute('move-state');
+            if (state === 'not-moved' && diceValue !== 1) continue;
+            const moves = getValidMoves(piece, diceValue);
+            if (moves.length > 0) return true;
+        }
+        return false;
+    }
+    // server data handler - THE MOST IMPORTANT FUNCTION FOR ONLINE MODE, receives the server responses and updates the game state accordingly
+    async function dataHandler(data) {
+        console.log("📥 [SERVER UPDATE]:", data);
+
+        if (!data) return; 
+        if (!gameActive && (data.turn || data.pieces)) gameActive = true; // if game wasn't active but now there's a turn or pieces, set it active
+
+        const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick'); // my nickname from storage
+        const currentTurnNick = data.turn || document.body.dataset.lastTurn; // current turn from server or last known turn
+        const isMyTurn = (currentTurnNick === myNick); // check if it's my turn
+
+        // error handling
+        if (data.error) {
+            console.warn('Server error:', data.error);
+            showMessage({ who: 'system', text: data.error });
+            if (data.error.includes("already rolled") && throwBtn) {
+                throwBtn.disabled = true;
+            }
+            return;
+        }
+        // ranking handling (connects to leaderBoard.js)
+        if (data.ranking) window.updatePvPLeaderboard(data.ranking);
+
+        // players handling
+        if (data.players) {
+            const myServerColor = data.players[myNick]; // my color from server perspective
+            if (myServerColor) { // set my color in dataset for reference
+                document.body.dataset.myColor = myServerColor;
+                isBoardFlipped = (myServerColor === 'Red');
+            }
+            const playerNames = Object.keys(data.players); // list of player nicknames
+            const opponentName = playerNames.find(nick => nick !== myNick); // find opponent's nickname to use later
+
+            if (opponentName && shownOpponentNick !== opponentName) {
+                shownOpponentNick = opponentName;
+                showMessage({ who: 'system', key: 'msg_paired', params: { opponent: opponentName } });
+
+            }
+        }
+
+
+        // pieces handling - rendering the board in accord to server data
+        if (data.pieces) renderOnlineBoard(data.pieces);
+
+        // dice value handling
+        if (data.dice !== undefined) {
+            if (data.dice && data.dice.value) {
+                lastDiceValue = data.dice.value;
+                const val = data.dice.value;
+                const isTab = (val === 1);
+                const isExtra = (val === 1 || val === 4 || val === 6);
+
+
+                // if this is my turn
+                if (isMyTurn) {
+                    // the message is from me
+                    showMessage({
+                        who: 'player',
+                        player: 1,
+                        key: 'msg_dice_thrown',
+                        params: { value: val }
+                    });
+
+                    // animation just for me
+                    if (window.tabGame && window.tabGame.spawnAndLaunch) {
+                        window.tabGame.spawnAndLaunch(val);
+                    }
+
+                    // game logic
+                    const threats = highlightPlayablePieces(lastDiceValue);
+                    const canMove = checkOnlineMovesAvailable(val);
+                    const keepPlaying = data.dice.keepPlaying; // if 1 || 4 || 6 then true
+
+                    // what to do next
+                    if (canMove) { // if there are available moves we move
+                        if (throwBtn) throwBtn.disabled = true;
+                        if (nextTurnBtn) nextTurnBtn.disabled = true;
+
+
+                        if (isTab) showMessage({ who: 'system', key: 'msg_dice_thrown_one' });
+                        else if (isExtra) showMessage({ who: 'system', key: 'msg_dice_thrown_double' });
+
+                        showMessage({ who: 'system', key: 'msg_player_can_move' });
+
+                        // if there are captures available, show message
+                        if (threats > 0) {
+                            showMessage({
+                                who: 'player',
+                                player: 1,
+                                key: 'msg_capture',
+                                params: { n: threats }
+                            });
+                        }
+                    } else { // no moves available, must pass or keep playing
+                        if (keepPlaying) {
+                            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
+                            if (throwBtn) throwBtn.disabled = false;
+                            if (nextTurnBtn) nextTurnBtn.disabled = true;
+                        } else {
+                            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+                            if (throwBtn) throwBtn.disabled = true;
+                            if (nextTurnBtn) nextTurnBtn.disabled = false;
+                        }
+                    }
+                }
+                else {
+                    // opponent's message
+                    showMessage({
+                        who: 'player',
+                        player: 2,
+                        key: 'msg_op_roll',
+                        params: { value: val }
+                    });
+                }
+
+            } else {
+                lastDiceValue = null; // reset if no dice value
+            }
+        }
+
+        // winner handling
+        if (data.winner !== undefined) {
+            handleOnlineWinner(data.winner, myNick);
+            return;
+        }
+
+        // turn handling
+        if (data.turn) {
+            const previousTurn = document.body.dataset.lastTurn; // see who played last
+            const turnChanged = (previousTurn !== data.turn); // see if the turn changed from last known turn
+
+            if (turnChanged) { // if the turn changed, reset dice value and update turn display
+                lastDiceValue = null;
+                document.body.dataset.lastTurn = data.turn;
+                if (currentPlayerEl) currentPlayerEl.textContent = (isMyTurn) ? "TU" : data.turn;
+
+                // system msgs
+                if (isMyTurn) {
+                    showMessage({ who: 'system', key: 'msg_turn' });
+                    if (!data.mustPass) showMessage({ who: 'system', key: 'msg_dice' });
+                } else {
+                    showMessage({ who: 'system', key: 'msg_turn_of', params: { player: data.turn } });
+                }
+            }
+
+            if (data.mustPass && data.mustPass === myNick) { // if there are no moves available for me and no extra rolls
+                if (turnChanged) showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+                if (nextTurnBtn) nextTurnBtn.disabled = false;
+                if (throwBtn) throwBtn.disabled = true;
+            } else if (isMyTurn) { // if it's my turn and I don't have to pass (roll again or normal turn)
+                if (lastDiceValue === null) {
+                    if (throwBtn) throwBtn.disabled = false;
+                    if (nextTurnBtn) nextTurnBtn.disabled = true;
+                }
+            } else { // opponent's turn, disable buttons
+                if (throwBtn) throwBtn.disabled = true;
+                if (nextTurnBtn) nextTurnBtn.disabled = true;
+            }
+        }
+
+        // step handling (from, to, take)
+        if (data.step) {
+            serverStep = data.step;
+            clearHighlights();
+
+            // step from (when there is only one move possible for a piece, it auto-selects it)
+            if (serverStep === 'from') {
+                onlineSourceCell = null;
+                if (isMyTurn && lastDiceValue) {
+                    // highlight playable pieces and count threats
+                    const threats = highlightPlayablePieces(lastDiceValue);
+
+                    // caoture msgs
+                    if (threats > 0) {
+                        showMessage({
+                            who: 'player',
+                            player: 1,
+                            key: 'msg_capture',
+                            params: { n: threats }
+                        });
+                    }
+                }
+            }
+
+            // step to (when the piece has been selected and now we must choose destination, because that piece has more than one destination possible )
+            else if (serverStep === 'to') {
+                document.querySelectorAll('.piece.playable').forEach(p => p.classList.remove('playable')); // clean playable highlights
+
+                if (data.cell !== undefined) {
+                    onlineSourceCell = data.cell;
+                    highlightCell(data.cell, 'selected');
+                }
+
+                if (isMyTurn && data.selected) {
+                    // 1. Highlights destinations
+                    const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+                    const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === 3);
+                    let captureCount = 0;
+
+                    data.selected.forEach(idx => {
+                        const logical = getLogicalFromIndex(idx);
+                        const visual = getVisualCoords(logical.r, logical.c);
+
+                        if (visual.r === 0 && hasBasePieces) return; // cannot move to top row if still has pieces in base row
+
+                        const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+                        if (cell) {
+                            const enemy = cell.querySelector('.piece.yellow');
+                            const mine = cell.querySelector('.piece.red');
+
+                            if (mine) return; // cannot move onto my own piece
+                            if (enemy) {
+                                highlightCell(idx, 'red-glow'); // capture! 
+                                captureCount++;
+                            }
+                            else highlightCell(idx, 'green-glow');     // safe destination
+                        }
+                    });
+
+
+                    // capture msg
+                    if (captureCount > 0) {
+                        showMessage({
+                            who: 'player',
+                            player: 1,
+                            key: 'msg_capture',
+                            params: { n: captureCount }
+                        });
+                    }
+                    showMessage({ who: 'system', key: 'choose_destination' });
+                }
+            }
+
+            // step take (same logic as to, but the destination is a capture)
+            else if (serverStep === 'take') {
+                if (isMyTurn) {
+                    captureCount = 0;
+                    // Highlights
+                    if (data.selected) {
+                        data.selected.forEach(idx => {
+                            highlightCell(idx, 'red-glow');
+                            // counting captures
+                            const logical = getLogicalFromIndex(idx);
+                            const visual = getVisualCoords(logical.r, logical.c);
+                            const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+                            if (cell && cell.querySelector('.piece.yellow')) {
+                                captureCount++;
+                            } else {
+                                // Fallback: if no piece found, still count as capture (server said so)
+                                captureCount++;
+                            }
+                        });
+                    }
+
+
+                    // msgs
+                    showMessage({
+                        who: 'player',
+                        player: 1,
+                        key: 'msg_capture',
+                        params: { n: captureCount }
+                    });
+                }
+            }
+        }
+    }
+
+    // --- LOCAL FUNCTIONS --- //
 
     // board flip is done at each turn swap between players
     function flipBoard() {
@@ -1403,7 +1158,7 @@ document.addEventListener("DOMContentLoaded", () => {
         vsAI = false;
         aiPlayerNum = null;
         humanPlayerNum = 1;
-        if(currentPlayerEl) currentPlayerEl.textContent = '-';
+        if (currentPlayerEl) currentPlayerEl.textContent = '-';
         lastDiceValue = null;
         refreshCapturedTitles();
         if (capturedP1) capturedP1.innerHTML = '';
@@ -1421,337 +1176,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (playButton) playButton.disabled = !isConfigValid();
         if (leaveButton) leaveButton.disabled = true;
         updatePlayButtonState();
-    }
-
-    // messages
-    function showMessage({ who = 'system', player = null, text, key, params }) {
-        const wrap = document.createElement('div'); // message wrapper
-        wrap.className = 'message';
-
-        const bubble = document.createElement('div'); // message bubble
-        bubble.className = 'bubble';
-
-        if (key) { // i18n key provided
-            // use i18n translation
-            bubble.dataset.i18nKey = key;
-            if (params && Object.keys(params).length) { // store params as JSON string if provided
-                bubble.dataset.i18nParams = JSON.stringify(params);
-            }
-            bubble.textContent = t(key, params || {}); // set translated text
-        } else {
-            // fallback: use raw text
-            bubble.textContent = text ?? '';
-        }
-
-        if (who === 'system') { // system message
-            wrap.classList.add('msg-server');
-            wrap.appendChild(bubble);
-        } else { // player message
-            wrap.classList.add(player === 1 ? 'msg-player1' : 'msg-player2');
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar'; // player avatar
-            avatar.textContent = 'P' + player;
-            const stack = document.createElement('div');
-            stack.appendChild(bubble);
-            wrap.appendChild(avatar);
-            wrap.appendChild(stack);
-        }
-
-        messagesEl.appendChild(wrap);
-        messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll to bottom
-    }
-
-    // translate existing chat bubbles if language changes
-    function refreshChatBubbles() {
-        if (!messagesEl) return; // safety check
-        const bubbles = messagesEl.querySelectorAll('.bubble[data-i18n-key]'); // only those with i18n data, bubbles are all the chat messages 
-        bubbles.forEach(b => { // for each bubble
-            const key = b.dataset.i18nKey; // get the key/id (e.g., 'msg_player_won')
-            let params = {}; // default empty params
-            if (b.dataset.i18nParams) { // if there are params
-                try { params = JSON.parse(b.dataset.i18nParams); } catch { } // parse safely
-            }
-            b.textContent = t(key, params); // re-translate and update text content
-        });
-    }
-
-    // expose refreshChatBubbles globally
-    window.__refreshChat = refreshChatBubbles;
-
-    //clearing messages
-    function clearMessages() {
-        if (messagesEl) messagesEl.innerHTML = '';
-    }
-
-
-    // UI listeners
-    // next turn button
-    if (nextTurnBtn) {
-        nextTurnBtn.addEventListener('click', async () => {
-            TabStats.onPass(currentPlayer); // stats
-            if (vsAI) {
-                nextTurn(); // advance turn
-            } else {
-                try {
-                    await Network.pass();
-                    nextTurnBtn.disabled = true; // evita múltiplos passes até SSE chegar
-                } catch (err) {
-                    showMessage({ who: 'system', text: err.message });
-                    return;
-                }
-            }
-        });
-    }
-    // width select change
-    if (widthSelect) widthSelect.addEventListener('change', () => renderBoard(parseInt(widthSelect.value, 10))); // re-render board on width change
-    if (authForm) authForm.addEventListener('submit', (ev) => ev.preventDefault());
-
-    // Start Game button handler
-    if (playButton) playButton.addEventListener('click', async () => {
-        // 1. Validação
-        if (!isConfigValid()) {
-            showMessage({ who: 'system', key: 'select_mode' });
-            updatePlayButtonState();
-            return;
-        }
-
-        const modeVal = modeSelect.value;
-        const diffSel = (modeVal === 'ia') ? iaLevelSelect.value : 'normal';
-        const humanFirst = firstToPlayCheckbox ? !!firstToPlayCheckbox.checked : true;
-
-        gameMode = modeVal;
-        vsAI = (modeVal === 'ia');
-        aiDifficulty = diffSel;
-
-        aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null;
-        humanPlayerNum = vsAI ? (humanFirst ? 1 : 2) : 1;
-        refreshCapturedTitles();
-        renderBoard(parseInt(widthSelect.value, 10));
-
-        // ---------------------------------------------------------
-        // CAMINHO A: MODO ONLINE (PvP)
-        // ---------------------------------------------------------
-        if (!vsAI) {
-            const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
-            const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
-            const size = parseInt(widthSelect.value, 10);
-
-            try {
-                // 1. Join
-                const joinData = await Network.join({ nick, password, size });
-                gameId = joinData.game;
-                sessionStorage.setItem('tt_gameId', gameId);
-                const humanNick = "Eu";
-                TabStats.start({
-                    mode: 'pvp_online',
-                    aiDifficulty: null,
-                    cols: size,
-                    myNick: nick,
-                });
-
-                redPieces = size;
-                yellowPieces = size;
-
-                // 2. Estado de Espera
-                waitingForPair = true;
-                showMessage({ who: 'system', key: 'msg_waiting_opponent' });
-
-                // 3. UI Bloqueada (Obrigatório!)
-                if (throwBtn) throwBtn.disabled = true;
-                if (nextTurnBtn) nextTurnBtn.disabled = true;
-                if (playButton) playButton.disabled = true;
-                if (leaveButton) leaveButton.disabled = false;
-                setConfigEnabled(false);
-
-                // 4. Ligar SSE
-                Network.createUpdateEventSource(dataHandler);
-
-            } catch (err) {
-                showMessage({ who: 'system', text: err.message });
-                // Se falhar, reativa os botões para tentar de novo
-                updatePlayButtonState();
-                setConfigEnabled(true);
-            }
-
-            // IMPORTANTE: O código PÁRA aqui. 
-            // Não deixamos correr a inicialização local lá em baixo.
-            return;
-        }
-
-        // ---------------------------------------------------------
-        // CAMINHO B: MODO LOCAL / IA (Só corre se o return acima não acontecer)
-        // ---------------------------------------------------------
-
-        currentPlayer = 1;
-        currentPlayerEl.textContent = currentPlayer;
-
-        const humanNick = "Eu"; // Ou ir buscar ao sessionStorage se quiseres
-        TabStats.start({
-            mode: gameMode,
-            aiDifficulty,
-            cols: parseInt(widthSelect.value, 10),
-            myNick: humanNick
-        });
-
-        // Configurar oponente IA
-        const aiLabel = "IA (" + aiDifficulty + ")";
-        const starterName = (vsAI && !humanFirst) ? aiLabel : humanNick;
-        TabStats.setOpponentInfo(aiLabel, starterName);
-
-        TabStats.onTurnAdvance();
-
-        // Mensagem imediata
-        showMessage({ who: 'system', key: 'msg_game_started' });
-
-        gameActive = true;
-
-        updatePlayButtonState();
-        setConfigEnabled(false);
-
-        if (nextTurnBtn) nextTurnBtn.disabled = true;
-        // Lógica do botão dado para IA
-        if (vsAI) {
-            // Se for contra IA, só desativa se a IA for o Jogador 1 (Red)
-            throwBtn.disabled = (aiPlayerNum === 1);
-        } else {
-            // Se for PvP Local (Human vs Human), o botão deve estar ATIVO para o Jogador 1 começar
-            throwBtn.disabled = false;
-        }
-
-        if (playButton) playButton.disabled = true;
-        if (leaveButton) leaveButton.disabled = false;
-
-        if (isHumanTurn() && throwBtn && !throwBtn.disabled) {
-            showMessage({ who: 'system', key: 'msg_dice' });
-        }
-
-        if (vsAI && 1 === aiPlayerNum) {
-            setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro IA:', err)), 250);
-        }
-    });
-
-    // throw dice button
-    if (throwBtn) {
-        throwBtn.addEventListener('click', async (e) => {
-            if (vsAI && currentPlayer === aiPlayerNum) {
-                e.preventDefault();
-                return;
-            }
-            if (!gameActive) return;
-            if (vsAI) {
-                try {
-                    const result = await window.tabGame.spawnAndLaunch();
-                    lastDiceValue = result;
-
-                    // indicate value of dice rolled
-                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
-
-                    // special roll cases
-                    const isExtra = (result === 1 || result === 4 || result === 6);
-                    const isTab = (result === 1);
-
-                    // calculate moves/captures
-                    const playerColor = getColorForPlayerNum(currentPlayer);
-                    const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
-                    const captureMoves = legalMoves.filter(m => {
-                        const occ = m.destCell.querySelector('.piece');
-                        return occ && !occ.classList.contains(playerColor);
-                    });
-
-                    // no possible moves - if extra move allowed, indicate to roll... otherwise indicate to skip turn
-                    if (legalMoves.length === 0) {
-                        if (isExtra) {
-                            // primeiro o “double”, depois o aviso de sem jogadas extra
-                            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
-
-                            TabStats.onDice(currentPlayer, result);
-                            TabStats.onExtraRoll(currentPlayer, result);
-
-                            // volta a lançar
-                            throwBtn.disabled = false;
-                            nextTurnBtn.disabled = true;
-                        } else {
-                            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
-
-                            TabStats.onDice(currentPlayer, result);
-
-                            throwBtn.disabled = true;
-                            nextTurnBtn.disabled = false;
-                        }
-                        return; // termina este lançamento
-                    }
-
-                    // moves possible
-                    if (isTab) {
-                        // Tâb: prioritise capture
-                        const convertibleCount = countConvertiblePieces(currentPlayer);
-
-                        if (captureMoves.length > 0) { // make a capture and indicate reroll
-                            // captura primeiro, depois "double"
-                            showMessage({
-                                who: 'player',
-                                player: currentPlayer,
-                                key: 'msg_capture',
-                                params: { n: captureMoves.length }
-                            });
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                        } else if (convertibleCount > 0) {
-                            // conersion before double
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                        } else {
-                            // nothing to convert
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                            showMessage({ who: 'system', key: 'msg_player_can_move' });
-                        }
-                    } else {
-                        // 4 or 6: double roll... 2/3: no double
-                        if (isExtra) {
-                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
-                        }
-                        if (captureMoves.length > 0) {
-                            showMessage({
-                                who: 'player',
-                                player: currentPlayer,
-                                key: 'msg_capture',
-                                params: { n: captureMoves.length }
-                            });
-                        } else {
-                            showMessage({ who: 'system', key: 'msg_player_can_move' });
-                        }
-                    }
-
-                    // UI and stats
-                    nextTurnBtn.disabled = true;
-                    throwBtn.disabled = true;
-
-                    TabStats.onDice(currentPlayer, result);
-                    if (isExtra) TabStats.onExtraRoll(currentPlayer, result);
-
-                } catch (err) {
-                    console.warn('Erro ao lançar dados:', err);
-                }
-            } else {
-                try {
-                    // Bloqueia imediatamente para não clicar 2 vezes
-                    throwBtn.disabled = true;
-
-                    // Pede ao servidor para lançar
-                    await Network.roll();
-
-                    // Não animar nem mostrar valor aqui.
-                    // A UI será atualizada quando chegar o SSE com data.dice.
-                    // O servidor é a fonte da verdade.
-                } catch (err) {
-                    console.warn('Erro ao lançar dados (PvP):', err);
-                    showMessage({ who: 'system', text: err.message });
-                    // Em erro, permitir tentar de novo
-                    throwBtn.disabled = false;
-                }
-
-            }
-
-        });
     }
 
     // helper: enumerate legal moves
@@ -1781,12 +1205,19 @@ document.addEventListener("DOMContentLoaded", () => {
         return moves;
     }
 
+    // helper function to check if it's human's turns
+    function isHumanTurn() {
+        return !vsAI || currentPlayer !== aiPlayerNum;
+    }
+
     // counts how many pieces can be converted (state "not-moved")
     function countConvertiblePieces(playerNum) {
         const color = getColorForPlayerNum(playerNum);
         return Array.from(gameBoard.querySelectorAll('.piece.' + color))
             .filter(p => p.getAttribute('move-state') === 'not-moved').length;
     }
+
+    // --- AI FUNCTION --- //
 
     // AI TURN 
     async function runAiTurnLoop() { // async makes a function return a Promise, A Promise is an Object that links Producing code and Consuming code
@@ -1909,6 +1340,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     }
+
+    // --- DICE SYSTEM --- //
 
     //  Dice (sticks) 
     const upCountProbs = [0.06, 0.25, 0.38, 0.25, 0.06]; // probabilities for 0 to 4 sticks up
@@ -2164,10 +1597,528 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     window.tabGame.getLastValue = () => lastDiceValue; // getter for last dice value
 
-    // --- initialization ---
+    // --- EVENT HANDLERS --- //
+
+    // piece selection operator - only selects if game is active
+    function selectPiece(piece) {
+        if (!gameActive) return;
+        // if selecting the currently selected piece we deselect it
+        if (selectedPiece == piece) {
+            selectedPiece.classList.remove('selected');
+            selectedPiece = null;
+            clearHighlights(); // clear highlights of moves for previously selected piece
+            return;
+        }
+        // current player selecting their own piece
+        if ((currentPlayer == 1 && piece.classList.contains('red')) ||
+            (currentPlayer == 2 && piece.classList.contains('yellow'))) {
+            if (selectedPiece) selectedPiece.classList.remove('selected');
+            selectedPiece = piece;
+            piece.classList.add('selected');
+        }
+    }
+
+
+    // manage the clicks on a cell (used by event listener click) - only if game is active
+    function handleCellClick(cell) {
+        if (!gameActive) return;
+        // --- (PvP) ---
+        if (!vsAI) {
+            const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const isMyTurn = document.body.dataset.lastTurn === myNick;
+
+            if (!isMyTurn) {
+                showMessage({ who: 'system', key: 'msg_hold' });
+                return;
+            }
+
+            // convert virtual coords to logical coords and index
+            let visualR = parseInt(cell.dataset.r, 10);
+            let visualC = parseInt(cell.dataset.c, 10);
+            const logical = getLogicalCoords(visualR, visualC);
+            const cellIndex = getIndexFromLogical(logical.r, logical.c);
+
+            console.log(`🖱️ CLIQUE Server[${cellIndex}] | Step: ${serverStep}`);
+
+            // if we are at step from, we must validate the piece clicked
+            if (serverStep !== 'to' && serverStep !== 'take') {
+
+                // Verificação do dado
+                if (throwBtn && !throwBtn.disabled) {
+                    showMessage({ who: 'system', key: 'msg_roll_first' });
+                    return;
+                }
+
+                // local validation before bothering the actual server 
+                const pieceClicked = cell.querySelector('.piece');
+                if (pieceClicked && pieceClicked.classList.contains('red') && lastDiceValue) {
+
+                    // get valid moves for the piece clicked
+                    const rawMoves = getValidMoves(pieceClicked, lastDiceValue);
+
+                    // check if the valid moves have any destination with my own cells 
+                    const realMoves = rawMoves.filter(dest => {
+                        const occ = dest.querySelector('.piece');
+                        // if the destination occ has my piece, invalid
+                        if (occ && occ.classList.contains('red')) return false;
+                        return true;
+                    });
+
+                    // if there are no valid moves BLOCK
+                    if (realMoves.length === 0) {
+                        console.warn("🚫 Bloqueio Cliente: Peça sem movimentos válidos (Base ou Bloqueio).");
+                        showMessage({ who: 'system', text: 'msg_no_valid_moves' });
+
+                        // error visual effect (optional)
+                        cell.style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
+                        setTimeout(() => cell.style.backgroundColor = '', 300);
+                        return; // doesn't proceed
+                    }
+                }
+            }
+
+            // if there is more than one destination possible, we must validate the destination clicked (only at 'to' step)
+            if (serverStep === 'to') {
+                const myPieces = Array.from(document.querySelectorAll('.piece.red'));
+
+                // visual logic
+                const visualBaseRow = 3;
+                const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
+
+                // if i click on the fourth row (R === 0) and i have pieces in base, block, because i can only get there when i have no pieces in base
+                if (visualR === 0 && hasBasePieces) {
+                    showMessage({ who: 'system', key: 'msg_base_pieces' });
+                    return;
+                }
+
+                // check if i'm clicking on my own pieces
+                const existingPiece = cell.querySelector('.piece');
+                if (existingPiece && existingPiece.classList.contains('red')) {
+                    showMessage({ who: 'system', key: 'msg_capture_you_own' });
+                    return;
+                }
+            }
+
+            // if everything passed the checks, send to server
+            Network.notify({ cell: cellIndex })
+                .then(() => {
+                    console.log("Pedido enviado com sucesso. À espera do servidor...");
+
+                })
+                .catch(err => {
+                    const msg = err.message ? err.message.toLowerCase() : "";
+                    if (!msg.includes("valid") && !msg.includes("piece")) {
+                        showMessage({ who: 'system', text: err.message });
+                    }
+                });
+            return;
+        }
+        // don't allow input when AI is playing
+        if (vsAI && currentPlayer === aiPlayerNum) return;
+
+        const pieceInCell = cell.querySelector('.piece'); // piece in selected cell
+
+        // selecting current player's piece (non-empty cell and cell selected must contain piece belonging to current player)
+        if (pieceInCell && ((currentPlayer == 1 && pieceInCell.classList.contains('red')) ||
+            (currentPlayer == 2 && pieceInCell.classList.contains('yellow')))) {
+            selectPiece(pieceInCell);
+            if (!selectedPiece) return; // fail-safe if no piece to select
+            clearHighlights(); // clear old highlights
+
+            // get a list of all valid moves for the selected piece and highlight each one of legal moves cells
+            const state = pieceInCell.getAttribute('move-state');
+            const movesAllowed = (state === 'not-moved' && lastDiceValue !== 1) ? [] : getValidMoves(pieceInCell);
+            movesAllowed.forEach(dest => dest.classList.add('green-glow'));
+            return;
+        }
+
+        // try moving selected piece to a clicked cell (dice rolled and a piece is selected)
+        if (selectedPiece && lastDiceValue != null) {
+            const state = selectedPiece.getAttribute('move-state');
+            if (state === 'not-moved' && lastDiceValue !== 1) return; // first move of a piece must be 1
+
+            const possibleMoves = getValidMoves(selectedPiece);
+            const isValidMove = possibleMoves.some(dest => dest === cell);
+
+            // check if the selected cell is a valid move
+            if (isValidMove) {
+                if (state === 'not-moved' && lastDiceValue === 1) {
+                    selectedPiece.setAttribute('move-state', 'moved'); // update atribute of a piece on its first ever move
+                }
+
+                // place selected piece in new cell after move and clear highlights and make sure selectedPiece is null
+                movePieceTo(selectedPiece, cell);
+                clearHighlights();
+                selectedPiece.classList.remove('selected');
+                selectedPiece = null;
+
+                if (checkWinCondition()) return; // check if someone won
+
+                // check if current player gets another turn based on their dice roll
+                if (lastDiceValue === 4 || lastDiceValue === 6 || lastDiceValue === 1) {
+                    throwBtn.disabled = false;
+                    nextTurnBtn.disabled = true;
+                } else {
+                    nextTurn();
+                }
+                lastDiceValue = null; // reset dice value (awaits for new value from next dice roll)
+            }
+        }
+    }
+
+
+
+    // UI listeners
+    // next turn button
+    if (nextTurnBtn) {
+        nextTurnBtn.addEventListener('click', async () => {
+            TabStats.onPass(currentPlayer); // stats
+            if (vsAI) {
+                nextTurn(); // advance turn
+            } else {
+                try {
+                    await Network.pass(); // request to server
+                    nextTurnBtn.disabled = true; // avoids multiple clicks
+                } catch (err) {
+                    showMessage({ who: 'system', text: err.message });
+                    return;
+                }
+            }
+        });
+    }
+    // width select change
+    if (widthSelect) widthSelect.addEventListener('change', () => renderBoard(parseInt(widthSelect.value, 10))); // re-render board on width change
+    if (authForm) authForm.addEventListener('submit', (ev) => ev.preventDefault());
+
+    // Start Game button handler
+    if (playButton) playButton.addEventListener('click', async () => {
+        // validation
+        if (!isConfigValid()) {
+            showMessage({ who: 'system', key: 'select_mode' });
+            updatePlayButtonState();
+            return;
+        }
+
+        const modeVal = modeSelect.value;
+        const diffSel = (modeVal === 'ia') ? iaLevelSelect.value : 'normal';
+        const humanFirst = firstToPlayCheckbox ? !!firstToPlayCheckbox.checked : true;
+
+        gameMode = modeVal;
+        vsAI = (modeVal === 'ia');
+        aiDifficulty = diffSel;
+
+        aiPlayerNum = vsAI ? (humanFirst ? 2 : 1) : null;
+        humanPlayerNum = vsAI ? (humanFirst ? 1 : 2) : 1;
+        refreshCapturedTitles();
+        renderBoard(parseInt(widthSelect.value, 10));
+
+        // PVP
+        if (!vsAI) {
+            const nick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const password = sessionStorage.getItem('tt_password') || localStorage.getItem('tt_password');
+            const size = parseInt(widthSelect.value, 10);
+
+            try {
+                // join a game
+                const joinData = await Network.join({ nick, password, size }); // join request
+                gameId = joinData.game;
+                sessionStorage.setItem('tt_gameId', gameId);
+                const humanNick = "Eu";
+
+                redPieces = size;
+                yellowPieces = size;
+
+                // waiting state
+                waitingForPair = true;
+                showMessage({ who: 'system', key: 'msg_waiting_opponent' });
+
+                // block UI
+                if (throwBtn) throwBtn.disabled = true;
+                if (nextTurnBtn) nextTurnBtn.disabled = true;
+                if (playButton) playButton.disabled = true;
+                if (leaveButton) leaveButton.disabled = false;
+                setConfigEnabled(false);
+
+                // connect SSE
+                Network.createUpdateEventSource(dataHandler);
+
+            } catch (err) {
+                showMessage({ who: 'system', text: err.message });
+                // if it fails, reactivate UI to try again
+                updatePlayButtonState();
+                setConfigEnabled(true);
+            }
+
+            return;
+        }
+
+        // AI / local
+
+        currentPlayer = 1;
+        currentPlayerEl.textContent = currentPlayer;
+
+        const humanNick = "Eu"; 
+        TabStats.start({
+            mode: gameMode,
+            aiDifficulty,
+            cols: parseInt(widthSelect.value, 10),
+            myNick: humanNick
+        });
+
+        // set opponent info (AI)
+        const aiLabel = "IA (" + aiDifficulty + ")";
+        const starterName = (vsAI && !humanFirst) ? aiLabel : humanNick;
+        TabStats.setOpponentInfo(aiLabel, starterName);
+
+        TabStats.onTurnAdvance();
+
+        showMessage({ who: 'system', key: 'msg_game_started' });
+
+        gameActive = true;
+
+        updatePlayButtonState();
+        setConfigEnabled(false);
+
+        if (nextTurnBtn) nextTurnBtn.disabled = true;
+
+        if (vsAI) {
+            throwBtn.disabled = (aiPlayerNum === 1);
+        } else {
+            // if it's PVP, enable throw button for first player
+            throwBtn.disabled = false;
+        }
+
+        if (playButton) playButton.disabled = true;
+        if (leaveButton) leaveButton.disabled = false;
+
+        if (isHumanTurn() && throwBtn && !throwBtn.disabled) {
+            showMessage({ who: 'system', key: 'msg_dice' });
+        }
+
+        if (vsAI && 1 === aiPlayerNum) {
+            setTimeout(() => runAiTurnLoop().catch(err => console.warn('Erro IA:', err)), 250);
+        }
+    });
+
+    // throw dice button
+    if (throwBtn) {
+        throwBtn.addEventListener('click', async (e) => {
+            if (vsAI && currentPlayer === aiPlayerNum) {
+                e.preventDefault();
+                return;
+            }
+            if (!gameActive) return;
+            if (vsAI) {
+                try {
+                    const result = await window.tabGame.spawnAndLaunch();
+                    lastDiceValue = result;
+
+                    // indicate value of dice rolled
+                    showMessage({ who: 'player', player: currentPlayer, key: 'msg_dice_thrown', params: { value: result } });
+
+                    // special roll cases
+                    const isExtra = (result === 1 || result === 4 || result === 6);
+                    const isTab = (result === 1);
+
+                    // calculate moves/captures
+                    const playerColor = getColorForPlayerNum(currentPlayer);
+                    const legalMoves = enumerateLegalMovesDOM(currentPlayer, result);
+                    const captureMoves = legalMoves.filter(m => {
+                        const occ = m.destCell.querySelector('.piece');
+                        return occ && !occ.classList.contains(playerColor);
+                    });
+
+                    // no possible moves - if extra move allowed, indicate to roll... otherwise indicate to skip turn
+                    if (legalMoves.length === 0) {
+                        if (isExtra) {
+                            showMessage({ who: 'system', key: 'msg_player_no_moves_extra' });
+
+                            TabStats.onDice(currentPlayer, result);
+                            TabStats.onExtraRoll(currentPlayer, result);
+
+                            // roll again
+                            throwBtn.disabled = false;
+                            nextTurnBtn.disabled = true;
+                        } else {
+                            showMessage({ who: 'system', key: 'msg_player_no_moves_pass' });
+
+                            TabStats.onDice(currentPlayer, result);
+
+                            throwBtn.disabled = true;
+                            nextTurnBtn.disabled = false;
+                        }
+                        return; 
+                    }
+
+                    // moves possible
+                    if (isTab) {
+                        // Tâb: prioritise capture
+                        const convertibleCount = countConvertiblePieces(currentPlayer);
+
+                        if (captureMoves.length > 0) { // make a capture and indicate reroll
+                            // first capture, then double
+                            showMessage({
+                                who: 'player',
+                                player: currentPlayer,
+                                key: 'msg_capture',
+                                params: { n: captureMoves.length }
+                            });
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                        } else if (convertibleCount > 0) {
+                            // conersion before double
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_one', params: { n: convertibleCount } });
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                        } else {
+                            // nothing to convert
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                            showMessage({ who: 'system', key: 'msg_player_can_move' });
+                        }
+                    } else {
+                        // 4 or 6: double roll... 2/3: no double
+                        if (isExtra) {
+                            showMessage({ who: 'system', key: 'msg_dice_thrown_double', params: { value: result } });
+                        }
+                        if (captureMoves.length > 0) {
+                            showMessage({
+                                who: 'player',
+                                player: currentPlayer,
+                                key: 'msg_capture',
+                                params: { n: captureMoves.length }
+                            });
+                        } else {
+                            showMessage({ who: 'system', key: 'msg_player_can_move' });
+                        }
+                    }
+
+                    // UI and stats
+                    nextTurnBtn.disabled = true;
+                    throwBtn.disabled = true;
+
+                    TabStats.onDice(currentPlayer, result);
+                    if (isExtra) TabStats.onExtraRoll(currentPlayer, result);
+
+                } catch (err) {
+                    console.warn('Erro ao lançar dados:', err);
+                }
+            } else {
+                try {
+                    // immediately disable the button to prevent multiple clicks
+                    throwBtn.disabled = true;
+
+                    // request server to roll dice
+                    await Network.roll();
+
+                } catch (err) {
+                    console.warn('Erro ao lançar dados (PvP):', err);
+                    showMessage({ who: 'system', text: err.message });
+                    //try again
+                    throwBtn.disabled = false;
+                }
+
+            }
+
+        });
+    }
+
+    // leave button click handler
+    leaveButton.addEventListener('click', async () => {
+        if (!gameActive && !waitingForPair) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
+
+
+        // PVP
+        if (!vsAI) {
+            const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick');
+            const winnerName = shownOpponentNick || "Oponente";
+
+
+            // request server
+            try {
+                await Network.leave();
+            } catch (err) {
+                console.warn("Aviso de saída falhou:", err);
+            }
+
+            // final clean up
+            showMessage({ who: 'system', key: 'msg_leave_game', params: { player: myNick } });
+            handleOnlineWinner(winnerName, myNick);
+
+            return;
+        }
+        // Helpers to obtain localized player labels for leaderboard update
+        const lang = window.currentLang || 'pt'; // default to 'pt' if not set
+        const dict = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {}; // access i18n dictionary in languageScript
+        const L = dict[lang] || dict.en || {}; // fallback to English if current language not found
+
+        const player1Label = L.player1 || (lang === 'pt' ? 'Jogador 1' : 'Player 1'); // Player 1/Jogador 1
+        const aiLabel = (() => { // AI label based on difficulty
+            const key = aiDifficulty === 'easy' ? 'easyIA'
+                : aiDifficulty === 'hard' ? 'hardIA'
+                    : 'normalIA';
+            return L[key] || // IA (Fácil)/AI (Easy) etc. 
+                (lang === 'pt'
+                    ? `IA (${aiDifficulty === 'easy' ? 'Fácil' : aiDifficulty === 'hard' ? 'Difícil' : 'Normal'})` // IA (Fácil/Difícil/Normal)
+                    : `AI (${aiDifficulty[0].toUpperCase()}${aiDifficulty.slice(1)})`); // AI (Easy/Normal/Hard)
+        })();
+
+        let winnerName = '';
+        let loserName = '';
+        let winnerNum = null;
+
+        if (vsAI) { // PvE mode
+            // The player clicks leave, so the AI wins
+            winnerName = aiLabel;
+            loserName = player1Label;
+            winnerNum = aiPlayerNum || 2;
+        } else {
+            // PvP : the other player wins (not implemented yet)
+            if (currentPlayer === 1) {
+                winnerName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
+                loserName = lang === 'pt' ? 'Jogador 1' : 'Player 1';
+                winnerNum = 2;
+            } else {
+                winnerName = lang === 'pt' ? 'Jogador 1' : 'Player 1';
+                loserName = lang === 'pt' ? 'Jogador 2' : 'Player 2';
+                winnerNum = 1;
+            }
+
+
+        }
+
+        // Update leaderboard (winner GW+GP, loser GP) while leaving
+        window.updateLeaderboard(winnerName, loserName);
+
+        // Update TabStats to show summary with the winner before resetting
+        if (vsAI) {
+            TabStats.setWinner(winnerNum);
+            TabStats.showSummary();
+        }
+
+
+        // system message that the player has left the game
+        showMessage({ who: 'system', key: 'msg_leave_game', params: { player: currentPlayer } });
+
+
+        endGame();
+    });
+
+
+    // add listener to mode select to update UI accordingly
+    if (modeSelect) {
+        modeSelect.addEventListener('change', handleModeChange);
+    }
+
+    // add listener to IA level select to update Play button state
+    if (iaLevelSelect) {
+        iaLevelSelect.addEventListener('change', updatePlayButtonState);
+    }
+
+
+    // --- INITIALIZATION --- // 
     const initialCols = widthSelect ? parseInt(widthSelect.value, 10) : 9;
     renderBoard(initialCols);
     showMessage({ who: 'system', key: 'select_mode' });
+    // set initial mode UI
+    handleModeChange();
 
     if (nextTurnBtn) nextTurnBtn.disabled = true;
     if (throwBtn) throwBtn.disabled = true;
@@ -2177,14 +2128,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!gameBoard) console.warn('gameBoard not found');
     if (!messagesEl) console.warn('messagesEl not found');
 
-    // i18n helper function to translate keys with params
-    function t(key, params = {}) {
-        const lang = window.currentLang || 'pt';
-        // tenta ler primeiro da variável global i18n; se não existir, usa window.i18n
-        const root = (typeof i18n !== 'undefined' ? i18n : window.i18n) || {};
-        const dict = root[lang] || {};
-        // fallback para en depois pt; e por fim mostra a própria key (útil para debug)
-        let str = dict[key] ?? root.en?.[key] ?? root.pt?.[key] ?? key;
-        return String(str).replace(/\{(\w+)\}/g, (_, k) => params[k] ?? '');
-    }
+
 });
