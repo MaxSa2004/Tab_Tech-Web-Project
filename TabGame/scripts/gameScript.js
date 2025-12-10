@@ -542,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // manage end of game when winner is announced from server
     function handleOnlineWinner(winnerNick, myNick) {
-        console.log("🏆 Processar Vencedor:", winnerNick);
+        console.log("Processar Vencedor:", winnerNick);
 
         // show msg based on winner
         if (winnerNick === null) {
@@ -765,7 +765,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     // server data handler - THE MOST IMPORTANT FUNCTION FOR ONLINE MODE, receives the server responses and updates the game state accordingly
     async function dataHandler(data) {
-        console.log("📥 [SERVER UPDATE]:", data);
+        console.log("[SERVER UPDATE]:", data);
 
         if (!data) return;
         if (!gameActive && (data.turn || data.pieces)) gameActive = true; // if game wasn't active but now there's a turn or pieces, set it active
