@@ -570,7 +570,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // HTML clean up
         if (capturedP1) capturedP1.innerHTML = '';
         if (capturedP2) capturedP2.innerHTML = '';
-        clearMessages();
 
         // board reset
         const cols = parseInt(widthSelect.value, 10);
@@ -578,8 +577,6 @@ document.addEventListener("DOMContentLoaded", () => {
         yellowPieces = cols;
         renderBoard(cols);
 
-        // initial msg
-        showMessage({ who: 'system', key: 'select_mode' });
 
         // block game buttons
         if (nextTurnBtn) nextTurnBtn.disabled = true;
@@ -1798,6 +1795,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePlayButtonState();
             return;
         }
+        clearMessages();
 
         const modeVal = modeSelect.value;
         const diffSel = (modeVal === 'ia') ? iaLevelSelect.value : 'normal';
