@@ -20,12 +20,52 @@ try {
   snapshotFromUpdate = null;
 }
 
-/**
- * ensureGame
- * - Create and return a game object for the given gameId if it doesn't exist.
- * - Each game object contains: { size, players:[], turnIndex, pieces: Map<nick,array>, winner }
- * - Returns the game object (existing or newly created).
- */
+/* normalizePositionsArray
+   - Sanitizes a positions array:
+     * keeps only integers within [0, boardLen-1]
+     * removes duplicates while preserving first occurrence order
+*/
+function normalizePositionsArray(boardLen, arr) {
+  const out = [];
+  const seen = new Set();
+  for (const v of arr || []) {
+    if (!Number.isInteger(v)) continue;
+    if (v < 0 || v >= boardLen) continue;
+    if (seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
+/* ensurePieceMeta
+   - Guarantees g.pieceMeta exists and that for every player the meta array length
+     matches the player's positions array length. Each meta entry has:
+       { moved: boolean, reachedLastRow: boolean }
+   - Call whenever you initialize or change g.pieces significantly.
+*/
+function ensurePieceMeta(g) {
+  if (!g) return;
+  if (!g.pieceMeta) g.pieceMeta = new Map();
+  for (const nick of g.players) {
+    const positions = Array.isArray(g.pieces.get(nick)) ? g.pieces.get(nick) : [];
+    if (!g.pieceMeta.has(nick)) {
+      g.pieceMeta.set(nick, positions.map(() => ({ moved: false, reachedLastRow: false })));
+      continue;
+    }
+    const meta = g.pieceMeta.get(nick);
+    if (meta.length < positions.length) {
+      for (let i = meta.length; i < positions.length; i++) meta.push({ moved: false, reachedLastRow: false });
+    } else if (meta.length > positions.length) {
+      meta.length = positions.length;
+    }
+    g.pieceMeta.set(nick, meta);
+  }
+}
+
+/* ensureGame (patched)
+   - creates g.pieceMeta alongside existing fields so other handlers can rely on it existing.
+*/
 function ensureGame(gameId, size = 6) {
   if (!storage.games.has(gameId)) {
     storage.games.set(gameId, {
@@ -33,6 +73,7 @@ function ensureGame(gameId, size = 6) {
       players: [],
       turnIndex: 0,
       pieces: new Map(),
+      pieceMeta: new Map(),
       winner: null,
     });
   }
@@ -156,7 +197,6 @@ async function handleJoin(req, res) {
     const numSize = utils.toInt(size);
     const numGroup = utils.toInt(group);
 
-    // require at least one valid integer >= 1
     if (
       (!Number.isInteger(numSize) || numSize < 1) &&
       (!Number.isInteger(numGroup) || numGroup < 1)
@@ -164,14 +204,12 @@ async function handleJoin(req, res) {
       return utils.sendError(res, 400, "size must be integer >= 1");
     }
 
-    const sizeInt =
-      Number.isInteger(numSize) && numSize >= 1 ? numSize : numGroup;
+    const sizeInt = Number.isInteger(numSize) && numSize >= 1 ? numSize : numGroup;
 
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password)) {
       return utils.sendError(res, 401, "invalid credentials");
     }
 
-    // try to find an existing waiting game with matching size
     let gameId = null;
     for (const [gid, g] of storage.games.entries()) {
       if (!g.winner && g.players.length < 2 && g.size === sizeInt) {
@@ -179,48 +217,43 @@ async function handleJoin(req, res) {
         break;
       }
     }
+    if (!gameId) gameId = crypto.randomBytes(8).toString("hex");
 
-    // if none, create a new game id
-    if (!gameId) {
-      gameId = crypto.randomBytes(8).toString("hex");
-    }
-
-    // ensure game exists (use sizeInt for new games)
     const g = ensureGame(gameId, sizeInt);
 
     // add player if not already present
     if (!g.players.includes(nick)) {
       g.players.push(nick);
-      // set temporary default positions (will be set correctly when second player arrives)
-      g.pieces.set(nick, Array(g.size).fill(0));
+      // Waiting player: set to empty positions until game start
+      g.pieces.set(nick, []);
     }
 
-    // If this join made the game start (now has 2 players), initialize start positions
+    // If second player joined, initialize start positions
     if (g.players.length === 2) {
       const p1 = g.players[0];
       const p2 = g.players[1];
 
-      // set internal piece position arrays to starting indices
       const positionsP1 = [];
       const positionsP2 = [];
       for (let i = 0; i < g.size; i++) {
-        positionsP1.push(i); // 0..size-1
+        positionsP1.push(i); // 0..size-1 (stored orientation)
         positionsP2.push(3 * g.size + i); // 3*size .. 4*size-1
       }
-      g.pieces.set(p1, positionsP1);
-      g.pieces.set(p2, positionsP2);
 
-      // ensure turn starts with first player and no winner
+      // normalize (sanity) though these are constructed validly
+      g.pieces.set(p1, normalizePositionsArray(4 * g.size, positionsP1));
+      g.pieces.set(p2, normalizePositionsArray(4 * g.size, positionsP2));
+
       g.turnIndex = 0;
       g.winner = null;
 
-      // build snapshot
+      // initialize piece metadata to align with pieces arrays
+      ensurePieceMeta(g);
+
       const snap = buildStartSnapshot(g);
 
-      // broadcast 'update' to any SSE clients (first player has its EventSource open and will get this)
       broadcastGameEvent(gameId, "update", snap);
 
-      // respond to any long-poll GET clients waiting for this game's start (if you kept that mechanism)
       const waiters =
         storage.waitingClients && storage.waitingClients.get
           ? storage.waitingClients.get(gameId)
@@ -230,19 +263,14 @@ async function handleJoin(req, res) {
           try {
             if (w.timer) clearTimeout(w.timer);
             utils.sendJSON(w.res, 200, snap);
-          } catch (e) {
-            // ignore per-client errors
-          }
+          } catch (e) {}
         }
         if (storage.waitingClients) storage.waitingClients.delete(gameId);
       }
 
-      // ALSO return the snapshot in the HTTP POST /join response for the joining client
-      // this avoids a race where the joining client opens its EventSource after the broadcast and misses it
       return utils.sendJSON(res, 200, { game: gameId });
     }
 
-    // For the first player we return only the game id and do NOT send any snapshot
     return utils.sendJSON(res, 200, { game: gameId });
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -439,7 +467,7 @@ async function handleRoll(req, res) {
     broadcastGameEvent(game, "roll", resp);
 
     // Respond to the HTTP POST caller
-    return utils.sendJSON(res, 200, resp);
+    return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
