@@ -9,7 +9,7 @@
 const utils = require("./utils");
 const storage = require("./storage");
 const crypto = require("crypto");
-const update = require('./update');
+const update = require("./update");
 
 // reuse snapshot helper from update.js if available (avoid duplication)
 let snapshotFromUpdate = null;
@@ -48,14 +48,20 @@ function ensurePieceMeta(g) {
   if (!g) return;
   if (!g.pieceMeta) g.pieceMeta = new Map();
   for (const nick of g.players) {
-    const positions = Array.isArray(g.pieces.get(nick)) ? g.pieces.get(nick) : [];
+    const positions = Array.isArray(g.pieces.get(nick))
+      ? g.pieces.get(nick)
+      : [];
     if (!g.pieceMeta.has(nick)) {
-      g.pieceMeta.set(nick, positions.map(() => ({ moved: false, reachedLastRow: false })));
+      g.pieceMeta.set(
+        nick,
+        positions.map(() => ({ moved: false, reachedLastRow: false }))
+      );
       continue;
     }
     const meta = g.pieceMeta.get(nick);
     if (meta.length < positions.length) {
-      for (let i = meta.length; i < positions.length; i++) meta.push({ moved: false, reachedLastRow: false });
+      for (let i = meta.length; i < positions.length; i++)
+        meta.push({ moved: false, reachedLastRow: false });
     } else if (meta.length > positions.length) {
       meta.length = positions.length;
     }
@@ -204,7 +210,8 @@ async function handleJoin(req, res) {
       return utils.sendError(res, 400, "size must be integer >= 1");
     }
 
-    const sizeInt = Number.isInteger(numSize) && numSize >= 1 ? numSize : numGroup;
+    const sizeInt =
+      Number.isInteger(numSize) && numSize >= 1 ? numSize : numGroup;
 
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password)) {
       return utils.sendError(res, 401, "invalid credentials");
@@ -396,7 +403,8 @@ async function handleRoll(req, res) {
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
     if (g.winner) return utils.sendError(res, 409, "game finished");
-    if (getTurnNick(g) !== nick) return utils.sendError(res, 403, "not your turn");
+    if (getTurnNick(g) !== nick)
+      return utils.sendError(res, 403, "not your turn");
 
     // --- simulate stick-dice using weighted distribution ---
     // distribution over up-counts 0..4: probs [0.06, 0.25, 0.38, 0.25, 0.06]
@@ -406,10 +414,13 @@ async function handleRoll(req, res) {
     let chosenUp = 2; // default
     for (let i = 0; i < upProb.length; i++) {
       cum += upProb[i];
-      if (r <= cum) { chosenUp = i; break; }
+      if (r <= cum) {
+        chosenUp = i;
+        break;
+      }
     }
     // build stickValues: chosenUp positions set to true randomly
-    const indices = [0,1,2,3];
+    const indices = [0, 1, 2, 3];
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -417,8 +428,8 @@ async function handleRoll(req, res) {
     const stickValues = [false, false, false, false];
     for (let i = 0; i < chosenUp; i++) stickValues[indices[i]] = true;
 
-    const value = (chosenUp === 0) ? 6 : chosenUp;
-    const keepPlaying = (value === 1 || value === 4 || value === 6);
+    const value = chosenUp === 0 ? 6 : chosenUp;
+    const keepPlaying = value === 1 || value === 4 || value === 6;
 
     // --- determine whether the player has any legal moves for this roll ---
     const size = g.size;
@@ -427,8 +438,9 @@ async function handleRoll(req, res) {
     // build occupancy map: index -> ownerNick
     const occ = new Map();
     for (const [playerNick, arr] of g.pieces.entries()) {
-      for (const pos of (arr || [])) {
-        if (Number.isInteger(pos) && pos >= 0 && pos < boardLen) occ.set(pos, playerNick);
+      for (const pos of arr || []) {
+        if (Number.isInteger(pos) && pos >= 0 && pos < boardLen)
+          occ.set(pos, playerNick);
       }
     }
 
@@ -448,9 +460,9 @@ async function handleRoll(req, res) {
     const movesAvailable = hasMovesAvailable();
 
     // mustPass: if no available moves AND this roll does not grant keepPlaying (i.e., no extra roll)
-    const mustPass = (!movesAvailable && !keepPlaying) ? nick : null;
+    const mustPass = !movesAvailable && !keepPlaying ? nick : null;
 
-    // Build response payload
+    // response payload
     const dicePayload = {
       stickValues,
       value,
@@ -490,7 +502,8 @@ async function handlePass(req, res) {
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
     if (g.winner) return utils.sendError(res, 409, "game finished");
-    if (getTurnNick(g) !== nick) return utils.sendError(res, 403, "not your turn");
+    if (getTurnNick(g) !== nick)
+      return utils.sendError(res, 403, "not your turn");
 
     // Advance turn
     const next = nextTurn(g);
@@ -538,7 +551,11 @@ async function handlePass(req, res) {
 
     // Broadcast the snapshot to SSE clients (both players will receive this)
     broadcastGameEvent(game, "pass", snap);
-    try { update.resetInactivityTimerFor(next, game); } catch (e) { /* ignore */ }
+    try {
+      update.resetInactivityTimerFor(next, game);
+    } catch (e) {
+      /* ignore */
+    }
 
     // Return an empty object to the HTTP caller as requested
     return utils.sendJSON(res, 200, {});
@@ -547,7 +564,39 @@ async function handlePass(req, res) {
   }
 }
 
+// game helpers
+// [0,1..]
+function remapToPlayer2Perspective(arr, rows = 4, cols) {
+  // original row-major bottom->top to top->bottom
+  const out = new Array(rows * cols);
+  for (let i = 0; i < arr.length; i++) {
+    const v = arr[i];
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const j = (rows - 1 - r) * cols + c;
+    out[j] = v;
+  }
+  return out;
+}
+
+function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
+  // inverse of the above mapping
+  const out = new Array(rows * cols);
+  for (let j = 0; j < arr.length; j++) {
+    const v = arr[j];
+    const r2 = Math.floor(j / cols);
+    const c2 = j % cols;
+    const i = (rows - 1 - r2) * cols + c2;
+    out[i] = v;
+  }
+  return out;
+}
+
+// TO-DO:
 async function handleNotify(req, res) {
+  try {
+  } catch (error) {}
+
   try {
     const body = await utils.parseJSONBody(req);
     const { nick, password, game, cell } = body;
@@ -584,7 +633,7 @@ async function handleNotify(req, res) {
       turn: getTurnNick(g),
     };
     broadcastGameEvent(game, "notify", resp);
-    return utils.sendJSON(res, 200, resp);
+    return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
@@ -592,26 +641,20 @@ async function handleNotify(req, res) {
 
 async function handleRanking(req, res) {
   try {
-    // accept query param or POST JSON body
-    const q = utils.parseUrlEncoded(req.url);
-    let nick = q.nick;
+    const body = await utils.parseJSONBody(req);
+    const { group, size } = body;
+    const numSize = utils.toInt(size);
+    const numGroup = utils.toInt(group);
 
-    if (req.method === "POST") {
-      try {
-        const body = await utils.parseJSONBody(req);
-        if (body && typeof body.nick === "string" && body.nick.trim() !== "") {
-          nick = body.nick;
-        }
-      } catch (e) {
-        // ignore body parse errors for ranking; we can still proceed
-      }
+    if ((!Number.isInteger(numSize) || numSize < 1) && (!Number.isInteger(numGroup) || numGroup < 1)) {
+      return utils.sendError(res, 400, "size must be integer >= 1");
     }
 
-    // Do not require nick — return ranking regardless (matches teacher server)
     try {
       const ranking = storage.getRanking(20); // array of { nick, victories, games }
-      return utils.sendJSON(res, 200, { ok: true, ranking });
+      return utils.sendJSON(res, 200, { ranking });
     } catch (e) {
+      // default empty return in case of failure
       console.warn("Warning: getRanking failed, falling back", e);
       const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
         nick: n,
@@ -619,9 +662,9 @@ async function handleRanking(req, res) {
         games: u.games || 0,
       }));
       ranking.sort((a, b) => b.victories - a.victories);
-      return utils.sendJSON(res, 200, { ok: true, ranking });
+      return utils.sendJSON(res, 200, { ranking });
     }
-  } catch (err) {
+  } catch (error) {
     return utils.sendError(res, 400, err.message);
   }
 }
