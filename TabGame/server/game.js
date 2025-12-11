@@ -90,7 +90,9 @@ function broadcastGameEvent(gameId, /*string*/ eventName, data) {
 function buildStartSnapshot(game) {
   // prefer using the snapshot helper from update.js if available
   if (snapshotFromUpdate) {
-    const s = snapshotFromUpdate(game ? (typeof game === "string" ? game : game.id) : null);
+    const s = snapshotFromUpdate(
+      game ? (typeof game === "string" ? game : game.id) : null
+    );
     // snapshotFromUpdate expects gameId; but if passed object return fallback below
     // we'll fallback to local builder when necessary
   }
@@ -218,7 +220,10 @@ async function handleJoin(req, res) {
       broadcastGameEvent(gameId, "update", snap);
 
       // respond to any long-poll GET clients waiting for this game's start (if you kept that mechanism)
-      const waiters = storage.waitingClients && storage.waitingClients.get ? storage.waitingClients.get(gameId) : null;
+      const waiters =
+        storage.waitingClients && storage.waitingClients.get
+          ? storage.waitingClients.get(gameId)
+          : null;
       if (Array.isArray(waiters)) {
         for (const w of waiters.slice()) {
           try {
@@ -243,8 +248,6 @@ async function handleJoin(req, res) {
   }
 }
 
-/* remaining handlers unchanged (leave/roll/pass/notify/ranking) */
-
 async function handleLeave(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -254,7 +257,7 @@ async function handleLeave(req, res) {
       !utils.isNonEmptyString(password) ||
       !utils.isNonEmptyString(game)
     ) {
-      return utils.sendError(res, 400, "nick, password, game required");
+      return utils.sendError(res, 400, "nick, password and game required");
     }
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
@@ -262,29 +265,84 @@ async function handleLeave(req, res) {
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
 
-    g.players = g.players.filter((p) => p !== nick);
-    g.pieces.delete(nick);
-    if (g.turnIndex >= g.players.length) g.turnIndex = 0;
+    // capture participants before modification so finalizeGameResult can be accurate
+    const participantsBefore = g.players.slice();
 
-    if (g.players.length === 1) {
-      g.winner = g.players[0];
-      try {
-        storage.incrementVictories(g.winner);
-      } catch (e) {
-        console.warn("Warning: failed to persist victory for", g.winner, e);
+    // remove leaving player
+    g.players = g.players.filter((p) => p !== nick);
+
+    // CASE: nobody left in game (player left while waiting) -> treat as draw and remove game
+    if (g.players.length === 0) {
+      // notify any SSE clients for this game with draw and close their connections
+      for (const [skey, sres] of Array.from(storage.sseClients.entries())) {
+        if (skey.endsWith(`:${game}`)) {
+          try {
+            sres.write(`data: ${JSON.stringify({ winner: null })}\n\n`);
+          } catch (e) {
+            // ignore
+          }
+          try {
+            sres.end();
+          } catch (e) {
+            // ignore
+          }
+          storage.sseClients.delete(skey);
+        }
       }
+
+      // remove the game from memory
+      storage.games.delete(game);
+
+      return utils.sendJSON(res, 200, {});
     }
 
+    // CASE: one player remains -> they are the winner
+    if (g.players.length === 1) {
+      const winner = g.players[0];
+      g.winner = winner;
+
+      // finalize game result for both participants (increment games for both, victory for winner)
+      try {
+        storage.finalizeGameResult(participantsBefore, winner);
+      } catch (e) {
+        console.warn("Warning: finalizeGameResult failed for", winner, e);
+      }
+
+      // broadcast leave/update and then send final winner to SSE clients and close
+      broadcastGameEvent(game, "leave", {
+        players: g.players.slice(),
+        winner: g.winner || null,
+      });
+
+      // notify SSE clients with final winner and close connections
+      for (const [skey, sres] of Array.from(storage.sseClients.entries())) {
+        if (skey.endsWith(`:${game}`)) {
+          try {
+            sres.write(`data: ${JSON.stringify({ winner: g.winner })}\n\n`);
+          } catch (e) {
+            /* ignore */
+          }
+          try {
+            sres.end();
+          } catch (e) {
+            /* ignore */
+          }
+          storage.sseClients.delete(skey);
+        }
+      }
+
+      // remove the game from memory
+      storage.games.delete(game);
+
+      return utils.sendJSON(res, 200, {});
+    }
+
+    // fallback: (shouldn't normally happen) broadcast updated players list
     broadcastGameEvent(game, "leave", {
       players: g.players.slice(),
       winner: g.winner || null,
     });
-    return utils.sendJSON(res, 200, {
-      ok: true,
-      game,
-      players: g.players.slice(),
-      winner: g.winner || null,
-    });
+    return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
