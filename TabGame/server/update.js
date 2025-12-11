@@ -97,7 +97,7 @@ function handleUpdate(req, res) {
   const rec = storage.games.get(game);
   const state = rec ? rec.state : null;
   const players = state ? Object.keys(state.players) : [];
-  if (state && players.length >= 2) {
+  if (state && players.length == 2) {
     try {
       res.write(`data: ${JSON.stringify(state)}\n\n`);
       console.log("[update] immediate snapshot sent to", key);
