@@ -20,6 +20,36 @@ try {
   snapshotFromUpdate = null;
 }
 
+async function handleRanking(req, res) {
+  try {
+    const body = await utils.parseJSONBody(req);
+    const { group, size } = body;
+    const numSize = utils.toInt(size);
+    const numGroup = utils.toInt(group);
+
+    if ((!Number.isInteger(numSize) || numSize < 1) && (!Number.isInteger(numGroup) || numGroup < 1)) {
+      return utils.sendError(res, 400, "size must be integer >= 1");
+    }
+
+    try {
+      const ranking = storage.getRanking(20); // array of { nick, victories, games }
+      return utils.sendJSON(res, 200, { ranking });
+    } catch (e) {
+      // default empty return in case of failure
+      console.warn("Warning: getRanking failed, falling back", e);
+      const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
+        nick: n,
+        victories: u.victories || 0,
+        games: u.games || 0,
+      }));
+      ranking.sort((a, b) => b.victories - a.victories);
+      return utils.sendJSON(res, 200, { ranking });
+    }
+  } catch (error) {
+    return utils.sendError(res, 400, err.message);
+  }
+}
+
 /* normalizePositionsArray
    - Sanitizes a positions array:
      * keeps only integers within [0, boardLen-1]
@@ -635,36 +665,6 @@ async function handleNotify(req, res) {
     broadcastGameEvent(game, "notify", resp);
     return utils.sendJSON(res, 200, {});
   } catch (err) {
-    return utils.sendError(res, 400, err.message);
-  }
-}
-
-async function handleRanking(req, res) {
-  try {
-    const body = await utils.parseJSONBody(req);
-    const { group, size } = body;
-    const numSize = utils.toInt(size);
-    const numGroup = utils.toInt(group);
-
-    if ((!Number.isInteger(numSize) || numSize < 1) && (!Number.isInteger(numGroup) || numGroup < 1)) {
-      return utils.sendError(res, 400, "size must be integer >= 1");
-    }
-
-    try {
-      const ranking = storage.getRanking(20); // array of { nick, victories, games }
-      return utils.sendJSON(res, 200, { ranking });
-    } catch (e) {
-      // default empty return in case of failure
-      console.warn("Warning: getRanking failed, falling back", e);
-      const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
-        nick: n,
-        victories: u.victories || 0,
-        games: u.games || 0,
-      }));
-      ranking.sort((a, b) => b.victories - a.victories);
-      return utils.sendJSON(res, 200, { ranking });
-    }
-  } catch (error) {
     return utils.sendError(res, 400, err.message);
   }
 }
