@@ -25,19 +25,11 @@ async function handleRegister(req, res) {
       const hashed = storage.hashPassword(password);
       storage.setUser(nick, { password: hashed, victories: 0, games: 0 });
 
-      return utils.sendJSON(res, 200, {
-        ok: true,
-        nick,
-        message: "registered",
-      });
+      return utils.sendJSON(res, 200, {});
     }
 
     if (storage.verifyPassword(nick, password)) {
-      return utils.sendJSON(res, 200, {
-        ok: true,
-        nick,
-        message: "already registered, logged in",
-      });
+      return utils.sendJSON(res, 200, {});
     }
 
     return utils.sendError(res, 400, "User registered with a different password");

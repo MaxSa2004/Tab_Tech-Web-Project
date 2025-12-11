@@ -15,21 +15,28 @@ const USERS_FILE = path.join(DATA_DIR, "users.json");
 const TMP_USERS_FILE = path.join(DATA_DIR, "users.json.tmp");
 
 const users = new Map(); // nick -> { password: 'salt:hex', victories:number, games:number }
-const games = new Map(); // gameId -> { size, players, turnIndex, pieces:Map, winner }
-const sseClients = new Map(); // `${nick}:${game}` -> ServerResponse
 
-// waitingClients: per-game long-poll GET clients (array of { nick, res, timer })
+/*
+  games now ONLY stores { gameId -> state } where state is your snapshot object:
+  {
+    pieces: Array(4*size) of piece objects or null,
+    initial: string|null,
+    step: "from",
+    turn: string|null,
+    players: { [nick]: "Blue" | "Red" },
+    size: number                        // kept inside state for convenience
+  }
+*/
+const games = new Map();
+
+const sseClients = new Map(); // `${nick}:${game}` -> ServerResponse
 const waitingClients = new Map(); // gameId -> Array<{nick,res,timer}>
 
-// scrypt params (sync) - scrypt used as it is more secure than MD5
+// scrypt params (sync)
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_SALT_BYTES = 16;
 
 // persistence helpers
-/*
-  reads the users JSON file synchronously at startup
-  populates the in-memory users Map with normalized records
- */
 function loadUsersFromDiskSync() {
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -38,7 +45,6 @@ function loadUsersFromDiskSync() {
     if (!raw) return;
     const obj = JSON.parse(raw);
     for (const [nick, rec] of Object.entries(obj)) {
-      // Support both new and old field names. Prefer new names if present.
       const password = rec.password;
       const victories = Number.isFinite(rec.victories) ? rec.victories : 0;
       const gamesCount = Number.isFinite(rec.games) ? rec.games : 0;
@@ -54,16 +60,10 @@ function loadUsersFromDiskSync() {
   }
 }
 
-/*
-  asynchronously writes the current users Map to disk:
-    - write to a tmp file, then rename to the final filename
-  returns a Promise that resolves on success or rejects on error.
- */
 async function saveUsersToDisk() {
   try {
     if (!fs.existsSync(DATA_DIR))
       await fsp.mkdir(DATA_DIR, { recursive: true });
-    // Convert Map to plain object with updated field names
     const obj = {};
     for (const [nick, rec] of users.entries()) {
       obj[nick] = {
@@ -83,34 +83,21 @@ async function saveUsersToDisk() {
 }
 
 let _saveTimer = null;
-
-/*
-  debounces saves to avoid excessive disk writes
-  cancels previous timer if any and schedules a new one
- */
 function scheduleSaveUsers(delay = 200) {
-  // delay: ms to wait before calling saveUsersToDisk
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
-    saveUsersToDisk().catch(() => {
-      // logged already
-    });
+    saveUsersToDisk().catch(() => {});
   }, delay);
 }
 
 // Crypto helpers (scrypt)
-/*
-  generates a random salt and derives a key using crypto.scryptSync
-  returns a string of format 'salt:derivedHex' suitable for storing
- */
 function hashPassword(plain) {
   const salt = crypto.randomBytes(SCRYPT_SALT_BYTES).toString("hex");
   const derived = crypto.scryptSync(plain, salt, SCRYPT_KEYLEN);
   return `${salt}:${derived.toString("hex")}`;
 }
 
-// crypto.timingSafeEqual for timing-safe comparison
 function verifyPassword(nick, plain) {
   const rec = users.get(nick);
   if (!rec || typeof rec.password !== "string") return false;
@@ -129,15 +116,7 @@ function verifyPassword(nick, plain) {
 }
 
 // Public API
-// returns user from the in-memory Map
-function getUser(nick) {
-  return users.get(nick);
-}
-
-/*
-  sets or replaces a user record in memory and schedules a debounced save
-  normalizes numeric fields and stores them accordingly
- */
+function getUser(nick) { return users.get(nick); }
 function setUser(nick, record) {
   users.set(nick, {
     password: record.password,
@@ -146,8 +125,6 @@ function setUser(nick, record) {
   });
   scheduleSaveUsers();
 }
-
-// increment the games counter for the given nick
 function incrementGames(nick) {
   const u = users.get(nick) || { password: "", victories: 0, games: 0 };
   u.games = (u.games || 0) + 1;
@@ -155,8 +132,6 @@ function incrementGames(nick) {
   scheduleSaveUsers();
   return u.games;
 }
-
-// ncrement the victories counter for the given nick
 function incrementVictories(nick) {
   const u = users.get(nick) || { password: "", victories: 0, games: 0 };
   u.victories = (u.victories || 0) + 1;
@@ -164,8 +139,6 @@ function incrementVictories(nick) {
   scheduleSaveUsers();
   return u.victories;
 }
-
-// single end of game write to update db data
 function finalizeGameResult(participants = [], winner = null) {
   if (!Array.isArray(participants)) participants = [];
   const updated = [];
@@ -176,12 +149,9 @@ function finalizeGameResult(participants = [], winner = null) {
     users.set(nick, u);
     updated.push({ nick, victories: u.victories || 0, games: u.games || 0 });
   }
-  // schedule one save for the whole batch
   scheduleSaveUsers();
   return updated;
 }
-
-// returns an array of user summaries suitable for ranking or display
 function getAllUsers() {
   return Array.from(users.entries()).map(([nick, u]) => ({
     nick,
@@ -189,8 +159,6 @@ function getAllUsers() {
     games: u.games,
   }));
 }
-
-// returns top limit users sorted by victories descending.
 function getRanking(limit = 10) {
   const arr = getAllUsers();
   arr.sort((a, b) => b.victories - a.victories);
@@ -200,16 +168,11 @@ function getRanking(limit = 10) {
 loadUsersFromDiskSync();
 
 module.exports = {
-  // singletons
   users,
-  games,
+  games,           // Map<gameId, state>
   sseClients,
   waitingClients,
-
-  // persistence control
   loadUsersFromDiskSync,
-
-  // user API (new names etc)
   getUser,
   setUser,
   incrementGames,
@@ -217,8 +180,6 @@ module.exports = {
   finalizeGameResult,
   getAllUsers,
   getRanking,
-
-  // crypto helpers
   hashPassword,
   verifyPassword,
 };

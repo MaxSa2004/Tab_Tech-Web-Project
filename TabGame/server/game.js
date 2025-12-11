@@ -1,9 +1,7 @@
 "use strict";
 
 /*
-  Game-related endpoints (join/leave/roll/pass/notify/ranking).
-  Uses storage.js for persistent counters under 'games' and 'victories'.
-  Authentication uses storage.verifyPassword().
+  Game endpoints rewritten to use storage.games as Map<gameId, state>.
 */
 
 const utils = require("./utils");
@@ -11,192 +9,32 @@ const storage = require("./storage");
 const crypto = require("crypto");
 const update = require("./update");
 
-// reuse snapshot helper from update.js if available (avoid duplication)
-let snapshotFromUpdate = null;
-try {
-  // require lazily to avoid circular require problems; update.js exports snapshotForClient
-  snapshotFromUpdate = require("./update").snapshotForClient;
-} catch (e) {
-  snapshotFromUpdate = null;
+/* helpers working on state only */
+
+function createEmptyBoard(size) {
+  return new Array(4 * size).fill(null);
 }
 
-async function handleRanking(req, res) {
-  try {
-    const body = await utils.parseJSONBody(req);
-    const { group, size } = body;
-    const numSize = utils.toInt(size);
-    const numGroup = utils.toInt(group);
-
-    if ((!Number.isInteger(numSize) || numSize < 1) && (!Number.isInteger(numGroup) || numGroup < 1)) {
-      return utils.sendError(res, 400, "size must be integer >= 1");
-    }
-
-    try {
-      const ranking = storage.getRanking(20); // array of { nick, victories, games }
-      return utils.sendJSON(res, 200, { ranking });
-    } catch (e) {
-      // default empty return in case of failure
-      console.warn("Warning: getRanking failed, falling back", e);
-      const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
-        nick: n,
-        victories: u.victories || 0,
-        games: u.games || 0,
-      }));
-      ranking.sort((a, b) => b.victories - a.victories);
-      return utils.sendJSON(res, 200, { ranking });
-    }
-  } catch (error) {
-    return utils.sendError(res, 400, err.message);
-  }
+function colorMapFor(players) {
+  const map = {};
+  if (players[0]) map[players[0]] = "Blue";
+  if (players[1]) map[players[1]] = "Red";
+  return map;
 }
 
-/* normalizePositionsArray
-   - Sanitizes a positions array:
-     * keeps only integers within [0, boardLen-1]
-     * removes duplicates while preserving first occurrence order
-*/
-function normalizePositionsArray(boardLen, arr) {
-  const out = [];
-  const seen = new Set();
-  for (const v of arr || []) {
-    if (!Number.isInteger(v)) continue;
-    if (v < 0 || v >= boardLen) continue;
-    if (seen.has(v)) continue;
-    seen.add(v);
-    out.push(v);
-  }
-  return out;
-}
+function buildInitialState(size, players) {
+  const board = createEmptyBoard(size);
+  const p1 = players[0] || null;
+  const p2 = players[1] || null;
 
-/* ensurePieceMeta
-   - Guarantees g.pieceMeta exists and that for every player the meta array length
-     matches the player's positions array length. Each meta entry has:
-       { moved: boolean, reachedLastRow: boolean }
-   - Call whenever you initialize or change g.pieces significantly.
-*/
-function ensurePieceMeta(g) {
-  if (!g) return;
-  if (!g.pieceMeta) g.pieceMeta = new Map();
-  for (const nick of g.players) {
-    const positions = Array.isArray(g.pieces.get(nick))
-      ? g.pieces.get(nick)
-      : [];
-    if (!g.pieceMeta.has(nick)) {
-      g.pieceMeta.set(
-        nick,
-        positions.map(() => ({ moved: false, reachedLastRow: false }))
-      );
-      continue;
-    }
-    const meta = g.pieceMeta.get(nick);
-    if (meta.length < positions.length) {
-      for (let i = meta.length; i < positions.length; i++)
-        meta.push({ moved: false, reachedLastRow: false });
-    } else if (meta.length > positions.length) {
-      meta.length = positions.length;
-    }
-    g.pieceMeta.set(nick, meta);
-  }
-}
-
-/* ensureGame (patched)
-   - creates g.pieceMeta alongside existing fields so other handlers can rely on it existing.
-*/
-function ensureGame(gameId, size = 6) {
-  if (!storage.games.has(gameId)) {
-    storage.games.set(gameId, {
-      size,
-      players: [],
-      turnIndex: 0,
-      pieces: new Map(),
-      pieceMeta: new Map(),
-      winner: null,
-    });
-  }
-  return storage.games.get(gameId);
-}
-
-/**
- * getTurnNick
- * - Returns the nick of the player whose turn it currently is, or null if no players.
- */
-function getTurnNick(game) {
-  if (!game.players.length) return null;
-  return game.players[game.turnIndex];
-}
-
-/**
- * nextTurn
- * - Advances the game's turnIndex to the next player and returns that player's nick.
- * - Wraps around using modulo arithmetic.
- * - If there are no players returns null.
- */
-function nextTurn(game) {
-  if (!game.players.length) return null;
-  game.turnIndex = (game.turnIndex + 1) % game.players.length;
-  return game.players[game.turnIndex];
-}
-
-/**
- * broadcastGameEvent
- * - Sends an SSE event to every connected SSE client whose key ends with `:${gameId}`.
- * - NOTE: we send plain "data: ..." messages (no "event: ...") so clients using
- *   EventSource.onmessage will receive them.
- * - data: payload object (will be JSON.stringified).
- */
-function broadcastGameEvent(gameId, /*string*/ eventName, data) {
-  const payload = `data: ${JSON.stringify(data)}\n\n`;
-  for (const [key, res] of storage.sseClients.entries()) {
-    if (key.endsWith(`:${gameId}`)) {
-      try {
-        if (!res.writableEnded) res.write(payload);
-      } catch (e) {
-        // ignore write errors for individual clients
-      }
-    }
-  }
-}
-
-/*
-  Build the start snapshot to match the required format:
-  - pieces: array of length 4 * size
-  - initial: first player nick
-  - step: "from"
-  - turn: first player nick
-  - players: { nick1: "Blue", nick2: "Red" }
-*/
-function buildStartSnapshot(game) {
-  // prefer using the snapshot helper from update.js if available
-  if (snapshotFromUpdate) {
-    const s = snapshotFromUpdate(
-      game ? (typeof game === "string" ? game : game.id) : null
-    );
-    // snapshotFromUpdate expects gameId; but if passed object return fallback below
-    // we'll fallback to local builder when necessary
-  }
-
-  const size = game.size;
-  const boardLen = 4 * size;
-  const board = new Array(boardLen).fill(null);
-
-  const players = game.players.slice();
-  const player1 = players[0] || null;
-  const player2 = players[1] || null;
-
-  // colors: player1 = Blue, player2 = Red
-  const colorMap = {};
-  if (player1) colorMap[player1] = "Blue";
-  if (player2) colorMap[player2] = "Red";
-
-  // place player1 pieces at positions 0 .. size-1
-  if (player1) {
+  // place player1 at 0..size-1
+  if (p1) {
     for (let i = 0; i < size; i++) {
       board[i] = { color: "Blue", inMotion: false, reachedLastRow: false };
     }
   }
-
-  // place player2 pieces at positions 3*size .. 4*size-1
-  if (player2) {
+  // place player2 at 3*size .. 4*size-1
+  if (p2) {
     for (let i = 0; i < size; i++) {
       const pos = 3 * size + i;
       board[pos] = { color: "Red", inMotion: false, reachedLastRow: false };
@@ -204,23 +42,59 @@ function buildStartSnapshot(game) {
   }
 
   return {
+    size,
     pieces: board,
-    initial: player1,
+    initial: p1,
     step: "from",
-    turn: player1,
-    players: colorMap,
+    turn: p1,
+    players: colorMapFor(players),
   };
 }
 
-/*
-  POST /join
-  Body: { nick, password, size, group }
-  Behavior:
-  - First player: create game, register them, DO NOT send any 'update' snapshot back.
-  - Second player: when they join, initialize starting positions, respond to any
-    waiting GETs (long-poll) for that game with the snapshot, and also return the
-    game id in the POST response.
-*/
+function ensureState(gameId, size) {
+  let state = storage.games.get(gameId);
+  if (!state) {
+    state = {
+      size,
+      pieces: createEmptyBoard(size),
+      initial: null,
+      step: "from",
+      turn: null,
+      players: {},
+    };
+    storage.games.set(gameId, state);
+  }
+  return state;
+}
+
+function getPlayersFromState(state) {
+  // players are the keys from players color map, in [p1, p2] order
+  const p1 =
+    Object.keys(state.players).find((n) => state.players[n] === "Blue") || null;
+  const p2 =
+    Object.keys(state.players).find((n) => state.players[n] === "Red") || null;
+  const arr = [];
+  if (p1) arr.push(p1);
+  if (p2) arr.push(p2);
+  return arr;
+}
+
+function broadcastGameEvent(gameId, /*string*/ eventName, data) {
+  const payload = `data: ${JSON.stringify(data)}\n\n`;
+  for (const [key, res] of storage.sseClients.entries()) {
+    if (key.endsWith(`:${gameId}`)) {
+      try {
+        if (!res.writableEnded) res.write(payload);
+      } catch (e) {}
+    }
+  }
+}
+
+function toInt(v) {
+  return utils.toInt(v);
+}
+
+/* POST /join */
 async function handleJoin(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -230,16 +104,14 @@ async function handleJoin(req, res) {
       return utils.sendError(res, 400, "nick and password required");
     }
 
-    const numSize = utils.toInt(size);
-    const numGroup = utils.toInt(group);
-
+    const numSize = toInt(size);
+    const numGroup = toInt(group);
     if (
       (!Number.isInteger(numSize) || numSize < 1) &&
       (!Number.isInteger(numGroup) || numGroup < 1)
     ) {
       return utils.sendError(res, 400, "size must be integer >= 1");
     }
-
     const sizeInt =
       Number.isInteger(numSize) && numSize >= 1 ? numSize : numGroup;
 
@@ -247,73 +119,63 @@ async function handleJoin(req, res) {
       return utils.sendError(res, 401, "invalid credentials");
     }
 
+    // find an open game with same size (state-only)
     let gameId = null;
-    for (const [gid, g] of storage.games.entries()) {
-      if (!g.winner && g.players.length < 2 && g.size === sizeInt) {
+    for (const [gid, state] of storage.games.entries()) {
+      const players = getPlayersFromState(state);
+      const hasWinner = false; // no winner concept in pure state; pairing only
+      if (!hasWinner && players.length < 2 && state.size === sizeInt) {
         gameId = gid;
         break;
       }
     }
-    if (!gameId) gameId = crypto.randomBytes(8).toString("hex");
+    if (!gameId) gameId = crypto.randomBytes(16).toString("hex");
 
-    const g = ensureGame(gameId, sizeInt);
+    let state = ensureState(gameId, sizeInt);
 
-    // add player if not already present
-    if (!g.players.includes(nick)) {
-      g.players.push(nick);
-      // Waiting player: set to empty positions until game start
-      g.pieces.set(nick, []);
+    // add player color
+    const playersNow = getPlayersFromState(state);
+    if (!playersNow.includes(nick)) {
+      if (!state.players[nick]) {
+        // assign next available color (Blue first, then Red)
+        const assignedBlue = playersNow.some(
+          (p) => state.players[p] === "Blue"
+        );
+        state.players[nick] = assignedBlue ? "Red" : "Blue";
+      }
     }
 
-    // If second player joined, initialize start positions
-    if (g.players.length === 2) {
-      const p1 = g.players[0];
-      const p2 = g.players[1];
+    // If two players, build the initial pieces and set turn/initial
+    const playersAfter = getPlayersFromState(state);
+    if (playersAfter.length === 2) {
+      state = buildInitialState(state.size, playersAfter);
+      storage.games.set(gameId, state);
 
-      const positionsP1 = [];
-      const positionsP2 = [];
-      for (let i = 0; i < g.size; i++) {
-        positionsP1.push(i); // 0..size-1 (stored orientation)
-        positionsP2.push(3 * g.size + i); // 3*size .. 4*size-1
-      }
-
-      // normalize (sanity) though these are constructed validly
-      g.pieces.set(p1, normalizePositionsArray(4 * g.size, positionsP1));
-      g.pieces.set(p2, normalizePositionsArray(4 * g.size, positionsP2));
-
-      g.turnIndex = 0;
-      g.winner = null;
-
-      // initialize piece metadata to align with pieces arrays
-      ensurePieceMeta(g);
-
-      const snap = buildStartSnapshot(g);
-
-      broadcastGameEvent(gameId, "update", snap);
-
-      const waiters =
-        storage.waitingClients && storage.waitingClients.get
-          ? storage.waitingClients.get(gameId)
-          : null;
+      // wake any long-poll waiters and broadcast start snapshot
+      const waiters = storage.waitingClients.get(gameId) || null;
       if (Array.isArray(waiters)) {
         for (const w of waiters.slice()) {
           try {
             if (w.timer) clearTimeout(w.timer);
-            utils.sendJSON(w.res, 200, snap);
+            utils.sendJSON(w.res, 200, state);
           } catch (e) {}
         }
-        if (storage.waitingClients) storage.waitingClients.delete(gameId);
+        storage.waitingClients.delete(gameId);
       }
 
+      broadcastGameEvent(gameId, "update", state);
       return utils.sendJSON(res, 200, { game: gameId });
     }
 
+    // one player waiting
+    storage.games.set(gameId, state);
     return utils.sendJSON(res, 200, { game: gameId });
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
 }
 
+/* POST /leave */
 async function handleLeave(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -328,270 +190,102 @@ async function handleLeave(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const g = storage.games.get(game);
-    if (!g) return utils.sendError(res, 404, "game not found");
+    const state = storage.games.get(game);
+    if (!state) return utils.sendError(res, 404, "game not found");
 
-    // capture participants before modification so finalizeGameResult can be accurate
-    const participantsBefore = g.players.slice();
+    const players = getPlayersFromState(state);
+    const participantsBefore = players.slice();
 
-    // remove leaving player
-    g.players = g.players.filter((p) => p !== nick);
+    // remove player from color map
+    if (state.players[nick]) {
+      delete state.players[nick];
+    }
 
-    // CASE: nobody left in game (player left while waiting) -> treat as draw and remove game
-    if (g.players.length === 0) {
-      // notify any SSE clients for this game with draw and close their connections
+    const remainingPlayers = getPlayersFromState(state);
+
+    // case: nobody left -> draw and remove game
+    if (remainingPlayers.length === 0) {
       for (const [skey, sres] of Array.from(storage.sseClients.entries())) {
         if (skey.endsWith(`:${game}`)) {
           try {
             sres.write(`data: ${JSON.stringify({ winner: null })}\n\n`);
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
           try {
             sres.end();
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
           storage.sseClients.delete(skey);
         }
       }
-
-      // remove the game from memory
       storage.games.delete(game);
-
       return utils.sendJSON(res, 200, {});
     }
 
-    // CASE: one player remains -> they are the winner
-    if (g.players.length === 1) {
-      const winner = g.players[0];
-      g.winner = winner;
-
-      // finalize game result for both participants (increment games for both, victory for winner)
+    // case: one player remains -> they win, update ranking and close SSE
+    if (remainingPlayers.length === 1) {
+      const winner = remainingPlayers[0];
       try {
         storage.finalizeGameResult(participantsBefore, winner);
       } catch (e) {
-        console.warn("Warning: finalizeGameResult failed for", winner, e);
+        /* ignore */
       }
 
-      // broadcast leave/update and then send final winner to SSE clients and close
       broadcastGameEvent(game, "leave", {
-        players: g.players.slice(),
-        winner: g.winner || null,
+        ...state,
+        turn: winner, // turn points to survivor
       });
 
-      // notify SSE clients with final winner and close connections
       for (const [skey, sres] of Array.from(storage.sseClients.entries())) {
         if (skey.endsWith(`:${game}`)) {
           try {
-            sres.write(`data: ${JSON.stringify({ winner: g.winner })}\n\n`);
-          } catch (e) {
-            /* ignore */
-          }
+            sres.write(`data: ${JSON.stringify({ winner })}\n\n`);
+          } catch (e) {}
           try {
             sres.end();
-          } catch (e) {
-            /* ignore */
-          }
+          } catch (e) {}
           storage.sseClients.delete(skey);
         }
       }
 
-      // remove the game from memory
       storage.games.delete(game);
-
       return utils.sendJSON(res, 200, {});
     }
 
-    // fallback: (shouldn't normally happen) broadcast updated players list
-    broadcastGameEvent(game, "leave", {
-      players: g.players.slice(),
-      winner: g.winner || null,
-    });
+    // two players still; broadcast updated state (board stays as is)
+    broadcastGameEvent(game, "leave", state);
     return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
 }
 
-async function handleRoll(req, res) {
-  try {
-    const body = await utils.parseJSONBody(req);
-    const { nick, password, game } = body;
+// helpers
+function hasMovesAvailableFor(playerNick, game, diceValue) {
+  const state = storage.games.get(game);
+  const boardLen = 4 * state.size;
 
-    if (
-      !utils.isNonEmptyString(nick) ||
-      !utils.isNonEmptyString(password) ||
-      !utils.isNonEmptyString(game)
-    ) {
-      return utils.sendError(res, 400, "nick, password, game required");
+  // compute positions per player from board
+  function ownerAt(idx) {
+    const cell = state.pieces[idx];
+    if (cell && cell.color) {
+      const owner = Object.keys(state.players).find(
+        (n) => state.players[n] === cell.color
+      );
+      return owner || null;
     }
-
-    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
-      return utils.sendError(res, 401, "invalid credentials");
-
-    const g = storage.games.get(game);
-    if (!g) return utils.sendError(res, 404, "game not found");
-    if (g.winner) return utils.sendError(res, 409, "game finished");
-    if (getTurnNick(g) !== nick)
-      return utils.sendError(res, 403, "not your turn");
-
-    // --- simulate stick-dice using weighted distribution ---
-    // distribution over up-counts 0..4: probs [0.06, 0.25, 0.38, 0.25, 0.06]
-    const upProb = [0.06, 0.25, 0.38, 0.25, 0.06];
-    const r = Math.random();
-    let cum = 0;
-    let chosenUp = 2; // default
-    for (let i = 0; i < upProb.length; i++) {
-      cum += upProb[i];
-      if (r <= cum) {
-        chosenUp = i;
-        break;
-      }
-    }
-    // build stickValues: chosenUp positions set to true randomly
-    const indices = [0, 1, 2, 3];
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
-    const stickValues = [false, false, false, false];
-    for (let i = 0; i < chosenUp; i++) stickValues[indices[i]] = true;
-
-    const value = chosenUp === 0 ? 6 : chosenUp;
-    const keepPlaying = value === 1 || value === 4 || value === 6;
-
-    // --- determine whether the player has any legal moves for this roll ---
-    const size = g.size;
-    const boardLen = 4 * size;
-    const myPositions = (g.pieces.get(nick) || []).slice(); // numeric indices of their pieces
-    // build occupancy map: index -> ownerNick
-    const occ = new Map();
-    for (const [playerNick, arr] of g.pieces.entries()) {
-      for (const pos of arr || []) {
-        if (Number.isInteger(pos) && pos >= 0 && pos < boardLen)
-          occ.set(pos, playerNick);
-      }
-    }
-
-    function hasMovesAvailable() {
-      if (!Array.isArray(myPositions) || myPositions.length === 0) return false;
-      for (const pos of myPositions) {
-        if (!Number.isInteger(pos)) continue;
-        const dest = pos + value;
-        if (dest < 0 || dest >= boardLen) continue;
-        const ownerAtDest = occ.get(dest);
-        // legal if destination not occupied by own piece
-        if (ownerAtDest !== nick) return true;
-      }
-      return false;
-    }
-
-    const movesAvailable = hasMovesAvailable();
-
-    // mustPass: if no available moves AND this roll does not grant keepPlaying (i.e., no extra roll)
-    const mustPass = !movesAvailable && !keepPlaying ? nick : null;
-
-    // response payload
-    const dicePayload = {
-      stickValues,
-      value,
-      keepPlaying,
-    };
-
-    const resp = {
-      dice: dicePayload,
-      turn: getTurnNick(g), // current player (still nick, they rolled)
-      mustPass: mustPass,
-    };
-
-    // Broadcast to SSE clients (so both players get the roll result)
-    broadcastGameEvent(game, "roll", resp);
-
-    // Respond to the HTTP POST caller
-    return utils.sendJSON(res, 200, {});
-  } catch (err) {
-    return utils.sendError(res, 400, err.message);
+    return null;
   }
-}
-
-async function handlePass(req, res) {
-  try {
-    const body = await utils.parseJSONBody(req);
-    const { nick, password, game } = body;
-    if (
-      !utils.isNonEmptyString(nick) ||
-      !utils.isNonEmptyString(password) ||
-      !utils.isNonEmptyString(game)
-    )
-      return utils.sendError(res, 400, "nick, password, game required");
-
-    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
-      return utils.sendError(res, 401, "invalid credentials");
-
-    const g = storage.games.get(game);
-    if (!g) return utils.sendError(res, 404, "game not found");
-    if (g.winner) return utils.sendError(res, 409, "game finished");
-    if (getTurnNick(g) !== nick)
-      return utils.sendError(res, 403, "not your turn");
-
-    // Advance turn
-    const next = nextTurn(g);
-
-    // Build a snapshot for broadcast (prefer update.snapshot helper if available)
-    let snap = null;
-    if (typeof snapshotFromUpdate === "function") {
-      snap = snapshotFromUpdate(game);
-    }
-
-    if (!snap) {
-      const size = g.size;
-      const boardLen = 4 * size;
-      const board = new Array(boardLen).fill(null);
-
-      const players = g.players.slice();
-      const p1 = players[0] || null;
-      const p2 = players[1] || null;
-      const playersObj = {};
-      if (p1) playersObj[p1] = "Blue";
-      if (p2) playersObj[p2] = "Red";
-
-      for (const nickKey of players) {
-        const color = playersObj[nickKey];
-        const positions = g.pieces.get(nickKey) || [];
-        for (const pos of positions) {
-          if (Number.isInteger(pos) && pos >= 0 && pos < boardLen) {
-            board[pos] = { color, inMotion: false, reachedLastRow: false };
-          }
-        }
+  // consider moving any of player's pieces forward by 'diceValue' if dest not occupied by own piece
+  for (let pos = 0; pos < boardLen; pos++) {
+    const owner = ownerAt(pos);
+    if (owner === playerNick) {
+      const dest = pos + diceValue;
+      if (dest >= 0 && dest < boardLen) {
+        const destOwner = ownerAt(dest);
+        if (destOwner !== playerNick) return true;
       }
-
-      snap = {
-        pieces: board,
-        initial: g.players[0] || null,
-        step: "from",
-        turn: next || null,
-        players: playersObj,
-        dice: null,
-      };
-    } else {
-      snap.turn = next || null;
-      snap.dice = null;
     }
-
-    // Broadcast the snapshot to SSE clients (both players will receive this)
-    broadcastGameEvent(game, "pass", snap);
-    try {
-      update.resetInactivityTimerFor(next, game);
-    } catch (e) {
-      /* ignore */
-    }
-
-    // Return an empty object to the HTTP caller as requested
-    return utils.sendJSON(res, 200, {});
-  } catch (err) {
-    return utils.sendError(res, 400, err.message);
   }
+  return false;
 }
 
 // game helpers
@@ -622,11 +316,105 @@ function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
   return out;
 }
 
-// TO-DO:
-async function handleNotify(req, res) {
+/* POST /roll */
+async function handleRoll(req, res) {
   try {
-  } catch (error) {}
+    const body = await utils.parseJSONBody(req);
+    const { nick, password, game } = body;
 
+    if (
+      !utils.isNonEmptyString(nick) ||
+      !utils.isNonEmptyString(password) ||
+      !utils.isNonEmptyString(game)
+    ) {
+      return utils.sendError(res, 400, "nick, password, game required");
+    }
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
+      return utils.sendError(res, 401, "invalid credentials");
+
+    const state = storage.games.get(game);
+    if (!state) return utils.sendError(res, 404, "game not found");
+
+    if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
+
+    // dice
+    const upProb = [0.06, 0.25, 0.38, 0.25, 0.06];
+    const r = Math.random();
+    let cum = 0,
+      chosenUp = 2;
+    for (let i = 0; i < upProb.length; i++) {
+      cum += upProb[i];
+      if (r <= cum) {
+        chosenUp = i;
+        break;
+      }
+    }
+    const indices = [0, 1, 2, 3];
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const stickValues = [false, false, false, false];
+    for (let i = 0; i < chosenUp; i++) stickValues[indices[i]] = true;
+    const value = chosenUp === 0 ? 6 : chosenUp;
+    const keepPlaying = value === 1 || value === 4 || value === 6;
+
+    const movesAvailable = hasMovesAvailableFor(nick, game, value);
+    const mustPass = !movesAvailable && !keepPlaying ? nick : null;
+
+    const resp = {
+      dice: { stickValues, value, keepPlaying },
+      mustPass,
+      turn: state.turn,
+    };
+
+    broadcastGameEvent(game, "roll", resp);
+    return utils.sendJSON(res, 200, {});
+  } catch (err) {
+    return utils.sendError(res, 400, err.message);
+  }
+}
+
+/* POST /pass */
+async function handlePass(req, res) {
+  try {
+    const body = await utils.parseJSONBody(req);
+    const { nick, password, game } = body;
+    if (
+      !utils.isNonEmptyString(nick) ||
+      !utils.isNonEmptyString(password) ||
+      !utils.isNonEmptyString(game)
+    )
+      return utils.sendError(res, 400, "nick, password, game required");
+    if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
+      return utils.sendError(res, 401, "invalid credentials");
+
+    const state = storage.games.get(game);
+    if (!state) return utils.sendError(res, 404, "game not found");
+    if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
+
+    const players = getPlayersFromState(state);
+    if (players.length < 2)
+      return utils.sendError(res, 409, "game not started");
+
+    // rotate turn
+    const next = state.turn === players[0] ? players[1] : players[0];
+    state.turn = next;
+
+    const snap = { ...state, dice: null };
+    broadcastGameEvent(game, "pass", snap);
+    try {
+      update.resetInactivityTimerFor(next, game);
+    } catch (e) {}
+
+    return utils.sendJSON(res, 200, {});
+  } catch (err) {
+    return utils.sendError(res, 400, err.message);
+  }
+}
+
+/* POST /notify — demo movement: set the first piece of nick to cell index */
+async function handleNotify(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
     const { nick, password, game, cell } = body;
@@ -639,31 +427,85 @@ async function handleNotify(req, res) {
     const cellInt = utils.toInt(cell);
     if (!Number.isInteger(cellInt) || cellInt < 0)
       return utils.sendError(res, 400, "cell must be integer >= 0");
-
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const g = storage.games.get(game);
-    if (!g) return utils.sendError(res, 404, "game not found");
+    const state = storage.games.get(game);
+    if (!state) return utils.sendError(res, 404, "game not found");
 
-    const pieces = g.pieces.get(nick) || Array(g.size).fill(0);
-    const from = pieces[0];
-    pieces[0] = cellInt;
-    g.pieces.set(nick, pieces);
+    const boardLen = 4 * state.size;
+    if (cellInt >= boardLen)
+      return utils.sendError(res, 400, "cell out of bounds");
+
+    // move: find first piece for nick
+    const myColor = state.players[nick];
+    if (!myColor) return utils.sendError(res, 403, "not a player in this game");
+
+    let from = -1;
+    for (let i = 0; i < boardLen; i++) {
+      const cellObj = state.pieces[i];
+      if (cellObj && cellObj.color === myColor) {
+        from = i;
+        break;
+      }
+    }
+    if (from === -1) return utils.sendError(res, 409, "no piece to move");
+
+    // simple move: if destination has own piece, reject; else place
+    const destCell = state.pieces[cellInt];
+    if (destCell && destCell.color === myColor) {
+      return utils.sendError(res, 409, "destination occupied by own piece");
+    }
+    // move piece
+    state.pieces[from] = null;
+    state.pieces[cellInt] = {
+      color: myColor,
+      inMotion: false,
+      reachedLastRow: false,
+    };
 
     const resp = {
       ok: true,
       cell: cellInt,
       selected: [from, cellInt],
-      pieces: (() => {
-        const o = {};
-        for (const [k, arr] of g.pieces.entries()) o[k] = arr.slice();
-        return o;
-      })(),
-      turn: getTurnNick(g),
+      state,
+      turn: state.turn,
     };
     broadcastGameEvent(game, "notify", resp);
     return utils.sendJSON(res, 200, {});
+  } catch (err) {
+    return utils.sendError(res, 400, err.message);
+  }
+}
+
+/* POST /ranking unchanged */
+async function handleRanking(req, res) {
+  try {
+    const body = await utils.parseJSONBody(req);
+    const { group, size } = body;
+    const numSize = utils.toInt(size);
+    const numGroup = utils.toInt(group);
+
+    if (
+      (!Number.isInteger(numSize) || numSize < 1) &&
+      (!Number.isInteger(numGroup) || numGroup < 1)
+    ) {
+      return utils.sendError(res, 400, "size must be integer >= 1");
+    }
+
+    try {
+      const ranking = storage.getRanking(20);
+      return utils.sendJSON(res, 200, { ranking });
+    } catch (e) {
+      console.warn("Warning: getRanking failed, falling back", e);
+      const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
+        nick: n,
+        victories: u.victories || 0,
+        games: u.games || 0,
+      }));
+      ranking.sort((a, b) => b.victories - a.victories);
+      return utils.sendJSON(res, 200, { ranking });
+    }
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
