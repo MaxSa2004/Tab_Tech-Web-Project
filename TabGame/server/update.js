@@ -138,4 +138,8 @@ function resetInactivityTimerFor(nick, gameId) {
   }
 }
 
-module.exports = { handleUpdate, snapshotForClient, resetInactivityTimerFor };
+module.exports = { 
+  handleUpdate, 
+  snapshotForClient, 
+  resetInactivityTimerFor
+};

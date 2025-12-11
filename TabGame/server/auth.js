@@ -38,4 +38,6 @@ async function handleRegister(req, res) {
   }
 }
 
-module.exports = { handleRegister };
+module.exports = { 
+  handleRegister
+};
