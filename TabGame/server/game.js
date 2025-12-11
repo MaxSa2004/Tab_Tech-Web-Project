@@ -225,14 +225,7 @@ async function handleLeave(req, res) {
       const winner = remainingPlayers[0];
       try {
         storage.finalizeGameResult(participantsBefore, winner);
-      } catch (e) {
-        /* ignore */
-      }
-
-      broadcastGameEvent(game, "leave", {
-        ...state,
-        turn: winner, // turn points to survivor
-      });
+      } catch (e) {}
 
       for (const [skey, sres] of Array.from(storage.sseClients.entries())) {
         if (skey.endsWith(`:${game}`)) {
@@ -375,7 +368,7 @@ async function handleRoll(req, res) {
   }
 }
 
-/* POST /pass */
+// pass move handler
 async function handlePass(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -401,7 +394,7 @@ async function handlePass(req, res) {
     const next = state.turn === players[0] ? players[1] : players[0];
     state.turn = next;
 
-    const snap = { ...state, dice: null };
+    const snap = { state, dice: null };
     broadcastGameEvent(game, "pass", snap);
     try {
       update.resetInactivityTimerFor(next, game);
@@ -413,7 +406,7 @@ async function handlePass(req, res) {
   }
 }
 
-/* POST /notify — demo movement: set the first piece of nick to cell index */
+// TO-DO: NEEDS TO BE IMPLEMENTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 async function handleNotify(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -478,7 +471,7 @@ async function handleNotify(req, res) {
   }
 }
 
-/* POST /ranking unchanged */
+// ranking handler
 async function handleRanking(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -497,14 +490,7 @@ async function handleRanking(req, res) {
       const ranking = storage.getRanking(20);
       return utils.sendJSON(res, 200, { ranking });
     } catch (e) {
-      console.warn("Warning: getRanking failed, falling back", e);
-      const ranking = Array.from(storage.users.entries()).map(([n, u]) => ({
-        nick: n,
-        victories: u.victories || 0,
-        games: u.games || 0,
-      }));
-      ranking.sort((a, b) => b.victories - a.victories);
-      return utils.sendJSON(res, 200, { ranking });
+      return utils.sendError(res, 400, "error fetching rankings");
     }
   } catch (err) {
     return utils.sendError(res, 400, err.message);

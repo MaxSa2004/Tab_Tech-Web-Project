@@ -168,7 +168,6 @@ function getRanking(limit = 10) {
 loadUsersFromDiskSync();
 
 module.exports = {
-  users,
   games,           // Map<gameId, state>
   sseClients,
   waitingClients,
