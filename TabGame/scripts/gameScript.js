@@ -419,27 +419,38 @@ document.addEventListener("DOMContentLoaded", () => {
         TabStats.onMove(currentPlayer);
     }
 
-    // if a piece is captured, send it to the captured pieces container (The player who captured it container)
-    function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
-        if (!pieceEl) return; // safety check
-        const humanMadeCapture = capturedByPlayer === humanPlayerNum; // check if human made the capture
-        const target = humanMadeCapture ? capturedP1 : capturedP2; // determine target container (capturedP1 or capturedP2)
-        if (!target) return; // safety check
-        // determine color
-        const isRed = pieceEl.classList.contains('red');
-        const colorClass = isRed ? 'red' : 'yellow';
+    // In scripts/gameScript.js
 
-        // creates a token representing the captured piece
+function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
+    if (!pieceEl) return;
+    
+    const humanMadeCapture = capturedByPlayer === humanPlayerNum;
+    const targetContainer = humanMadeCapture ? capturedP1 : capturedP2;
+    
+    if (!targetContainer) return;
+
+    const isRed = pieceEl.classList.contains('red');
+    const colorClass = isRed ? 'red' : 'yellow';
+
+    // 1. Remove piece from board immediately (gameplay logic)
+    pieceEl.remove();
+
+    // 2. Define what happens AFTER visual animation (update UI panel)
+    const addToPanel = () => {
         const token = document.createElement('div');
-        token.className = `captured-token ${colorClass}`; // add color class
-        token.setAttribute('aria-label', colorClass === 'red' ? 'Captured red piece' : 'Captured yellow piece'); // add attribute for accessibility
+        token.className = `captured-token ${colorClass}`;
+        token.setAttribute('aria-label', `Captured ${colorClass} piece`);
+        targetContainer.appendChild(token);
+    };
 
-        target.appendChild(token); // append to the correct container
-
-        // removes the original piece from the board
-        pieceEl.remove();
+    // 3. Trigger the Visual Animation
+    if (window.CaptureAnim) {
+        // Use the new script
+        window.CaptureAnim.play(colorClass, targetContainer, addToPanel);
+    } else {
+        addToPanel(); // Fallback
     }
-
+}
     // --- ONLINE HELPERS --- //
 
     // coords logic: snake board representation
@@ -549,6 +560,9 @@ document.addEventListener("DOMContentLoaded", () => {
             showMessage({ who: 'system', key: 'msg_drawn' });
         } else if (winnerNick === myNick) {
             showMessage({ who: 'system', key: 'msg_you_won' });
+            if (window.TabConfetti){
+                window.TabConfetti.start();
+            }
         } else {
             const wName = (winnerNick && winnerNick !== myNick) ? (shownOpponentNick || winnerNick) : "Oponente";
             showMessage({ who: 'system', key: 'msg_you_lost', params: { winner: wName } });
@@ -593,70 +607,101 @@ document.addEventListener("DOMContentLoaded", () => {
     // Helper to render online board based on pieces array from server
     function renderOnlineBoard(pieces) {
         clearHighlights();
-        const cols = parseInt(widthSelect.value, 10);
-        const myServerColor = document.body.dataset.myColor; // 'Blue' or 'Red', from server perspective
+        const myServerColor = document.body.dataset.myColor; // 'Blue' or 'Red'
         let currentMyPieces = 0;
         let currentEnemyPieces = 0;
 
-        // clean up existing pieces
+        // 1. Clean up existing pieces on the board
         gameBoard.querySelectorAll('.piece').forEach(p => p.remove());
 
-        // render pieces based on server data (update their positions and states)
+        // 2. Render new pieces from server data
         pieces.forEach((pieceObj, serverIndex) => {
             if (!pieceObj) return;
 
-            // find its logical and visual coords
-            const logical = getLogicalFromIndex(serverIndex); // since the server index is a number from 0 to N representing the board, the logical coords divide it into rows and columns
-            const visual = getVisualCoords(logical.r, logical.c); // from there we get the visual coords based on whether the board is flipped or not
-            // finding the cell, given the visual coords
+            const logical = getLogicalFromIndex(serverIndex);
+            const visual = getVisualCoords(logical.r, logical.c);
             const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
+            
             if (!cell) return;
 
-            // decide piece color and count pieces (to use later for captured panel updates)
             let cssColor;
             if (pieceObj.color === myServerColor) {
                 cssColor = 'red';
                 currentMyPieces++;
-            } else { // server 'Blue' is enemy, mapped to Yellow
+            } else {
                 cssColor = 'yellow';
                 currentEnemyPieces++;
             }
 
-            // update piece state
-            let moveState = 'moved'; // Default
-            // if the piece reached the 4th row already or reached it now in the first cell of the row (visual.r === 0 for red)
+            let moveState = 'moved';
             if (pieceObj.reachedLastRow || (visual.r === 0 && cssColor === 'red')) {
                 moveState = 'row-four';
             } else if (pieceObj.inMotion === false) {
-                // if the piece has not moved since the start of the game, inMotion is false, and needs a Tab to move
                 moveState = 'not-moved';
-            } else {
-                moveState = 'moved';
             }
-            // create and append piece element, using a new div (like a total deletion and recreation, to avoid state issues)
+
             const newPiece = document.createElement('div');
-            newPiece.classList.add('piece', cssColor); // set color class
-            newPiece.setAttribute('move-state', moveState); // set move state attribute
-            // highlight selected piece if applicable
+            newPiece.classList.add('piece', cssColor);
+            newPiece.setAttribute('move-state', moveState);
+            
             if (onlineSourceCell === serverIndex) {
                 newPiece.classList.add('selected');
             }
 
             cell.appendChild(newPiece);
         });
-        // show messages if pieces were captured, letting players know the quantity of pieces left
-        if (currentMyPieces < redPieces) {
-            const qtd = redPieces - currentMyPieces;
 
+        // 3. CAPTURE DETECTION & ANIMATION
+        // We compare the new counts (currentMyPieces) with the old global counts (redPieces)
+        
+        // A. Check if MY pieces (Red) were captured -> They go to Opponent Panel (capturedP2)
+        const redLost = redPieces - currentMyPieces;
+        if (redLost > 0 && capturedP2) {
             showMessage({ who: 'system', key: 'red_pieces', params: { count: currentMyPieces } });
+            triggerPvPCaptureAnim('red', capturedP2, redLost);
         }
-        if (currentEnemyPieces < yellowPieces) {
-            const qtd = yellowPieces - currentEnemyPieces;
 
+        // B. Check if ENEMY pieces (Yellow) were captured -> They go to My Panel (capturedP1)
+        const yellowLost = yellowPieces - currentEnemyPieces;
+        if (yellowLost > 0 && capturedP1) {
             showMessage({ who: 'system', key: 'yellow_pieces', params: { count: currentEnemyPieces } });
+            triggerPvPCaptureAnim('yellow', capturedP1, yellowLost);
         }
-        // update captured panels
+
+        // 4. Update the side panels (This function also updates the global redPieces/yellowPieces variables)
         updateOnlineCapturedPanels(currentMyPieces, currentEnemyPieces);
+    }
+
+    // Helper function to manage the specific PvP visual sequence
+    function triggerPvPCaptureAnim(color, targetContainer, count) {
+        // We schedule this slightly after the panels update so we can hide the real token
+        setTimeout(() => {
+            if (!window.CaptureAnim) return;
+
+            // The panels have just been rebuilt by updateOnlineCapturedPanels.
+            // The newest tokens are at the end of the list.
+            const tokens = targetContainer.children;
+            const startIndex = tokens.length - count;
+
+            for (let i = 0; i < count; i++) {
+                const tokenIndex = startIndex + i;
+                const tokenElement = tokens[tokenIndex];
+
+                if (tokenElement) {
+                    // 1. Hide the real token immediately so it doesn't duplicate
+                    tokenElement.style.opacity = '0';
+
+                    // 2. Play the animation flying to the container
+                    setTimeout(() => {
+                        window.CaptureAnim.play(color, targetContainer, () => {
+                            // 3. When animation lands, reveal the real token
+                            tokenElement.style.opacity = '1';
+                            tokenElement.style.transition = 'opacity 0.3s';
+                        });
+                    }, i * 300); // Stagger animations if multiple pieces captured
+                }
+            }
+        }, 50); // Small delay to ensure DOM is ready
     }
 
     // helper to highlight a cell based on server index and type of highlight
