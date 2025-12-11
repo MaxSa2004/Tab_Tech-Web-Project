@@ -1,7 +1,7 @@
 "use strict";
 
 /*
-  Game endpoints rewritten to use storage.games as Map<gameId, state>.
+  Game endpoints rewritten to use storage.games as Map<gameId, { size, state }>.
 */
 
 const utils = require("./utils");
@@ -42,7 +42,7 @@ function buildInitialState(size, players) {
   }
 
   return {
-    size,
+    // size is not part of state; it lives alongside in storage.games entry
     pieces: board,
     initial: p1,
     step: "from",
@@ -51,20 +51,22 @@ function buildInitialState(size, players) {
   };
 }
 
-function ensureState(gameId, size) {
-  let state = storage.games.get(gameId);
-  if (!state) {
-    state = {
+function ensureGameRecord(gameId, size) {
+  let rec = storage.games.get(gameId);
+  if (!rec) {
+    rec = {
       size,
-      pieces: createEmptyBoard(size),
-      initial: null,
-      step: "from",
-      turn: null,
-      players: {},
+      state: {
+        pieces: createEmptyBoard(size),
+        initial: null,
+        step: "from",
+        turn: null,
+        players: {},
+      },
     };
-    storage.games.set(gameId, state);
+    storage.games.set(gameId, rec);
   }
-  return state;
+  return rec;
 }
 
 function getPlayersFromState(state) {
@@ -119,19 +121,19 @@ async function handleJoin(req, res) {
       return utils.sendError(res, 401, "invalid credentials");
     }
 
-    // find an open game with same size (state-only)
+    // find an open game with same size (record-only)
     let gameId = null;
-    for (const [gid, state] of storage.games.entries()) {
-      const players = getPlayersFromState(state);
-      const hasWinner = false; // no winner concept in pure state; pairing only
-      if (!hasWinner && players.length < 2 && state.size === sizeInt) {
+    for (const [gid, rec] of storage.games.entries()) {
+      const players = getPlayersFromState(rec.state);
+      if (players.length < 2 && rec.size === sizeInt) {
         gameId = gid;
         break;
       }
     }
     if (!gameId) gameId = crypto.randomBytes(16).toString("hex");
 
-    let state = ensureState(gameId, sizeInt);
+    let rec = ensureGameRecord(gameId, sizeInt);
+    const { state } = rec;
 
     // add player color
     const playersNow = getPlayersFromState(state);
@@ -148,8 +150,8 @@ async function handleJoin(req, res) {
     // If two players, build the initial pieces and set turn/initial
     const playersAfter = getPlayersFromState(state);
     if (playersAfter.length === 2) {
-      state = buildInitialState(state.size, playersAfter);
-      storage.games.set(gameId, state);
+      const newState = buildInitialState(rec.size, playersAfter);
+      storage.games.set(gameId, { size: rec.size, state: newState });
 
       // wake any long-poll waiters and broadcast start snapshot
       const waiters = storage.waitingClients.get(gameId) || null;
@@ -157,18 +159,18 @@ async function handleJoin(req, res) {
         for (const w of waiters.slice()) {
           try {
             if (w.timer) clearTimeout(w.timer);
-            utils.sendJSON(w.res, 200, state);
+            utils.sendJSON(w.res, 200, newState);
           } catch (e) {}
         }
         storage.waitingClients.delete(gameId);
       }
 
-      broadcastGameEvent(gameId, "update", state);
+      broadcastGameEvent(gameId, "update", newState);
       return utils.sendJSON(res, 200, { game: gameId });
     }
 
     // one player waiting
-    storage.games.set(gameId, state);
+    storage.games.set(gameId, rec);
     return utils.sendJSON(res, 200, { game: gameId });
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -190,8 +192,9 @@ async function handleLeave(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const state = storage.games.get(game);
-    if (!state) return utils.sendError(res, 404, "game not found");
+    const rec = storage.games.get(game);
+    if (!rec) return utils.sendError(res, 404, "game not found");
+    const state = rec.state;
 
     const players = getPlayersFromState(state);
     const participantsBefore = players.slice();
@@ -243,8 +246,8 @@ async function handleLeave(req, res) {
       return utils.sendJSON(res, 200, {});
     }
 
-    // two players still; broadcast updated state (board stays as is)
-    broadcastGameEvent(game, "leave", state);
+    /*// two players still; broadcast updated state (board stays as is)
+    broadcastGameEvent(game, "leave", state);*/
     return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -253,8 +256,9 @@ async function handleLeave(req, res) {
 
 // helpers
 function hasMovesAvailableFor(playerNick, game, diceValue) {
-  const state = storage.games.get(game);
-  const boardLen = 4 * state.size;
+  const rec = storage.games.get(game);
+  const state = rec.state;
+  const boardLen = 4 * rec.size;
 
   // compute positions per player from board
   function ownerAt(idx) {
@@ -325,8 +329,9 @@ async function handleRoll(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const state = storage.games.get(game);
-    if (!state) return utils.sendError(res, 404, "game not found");
+    const rec = storage.games.get(game);
+    if (!rec) return utils.sendError(res, 404, "game not found");
+    const state = rec.state;
 
     if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
 
@@ -382,8 +387,10 @@ async function handlePass(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const state = storage.games.get(game);
-    if (!state) return utils.sendError(res, 404, "game not found");
+    const rec = storage.games.get(game);
+    if (!rec) return utils.sendError(res, 404, "game not found");
+    const state = rec.state;
+
     if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
 
     const players = getPlayersFromState(state);
@@ -394,8 +401,17 @@ async function handlePass(req, res) {
     const next = state.turn === players[0] ? players[1] : players[0];
     state.turn = next;
 
-    const snap = { state, dice: null };
-    broadcastGameEvent(game, "pass", snap);
+    // Broadcast the exact state plus dice: null
+    const payload = {
+      pieces: state.pieces,
+      initial: state.initial,
+      step: state.step,
+      turn: state.turn,
+      players: state.players,
+      dice: null,
+    };
+    broadcastGameEvent(game, "pass", payload);
+
     try {
       update.resetInactivityTimerFor(next, game);
     } catch (e) {}
@@ -406,7 +422,7 @@ async function handlePass(req, res) {
   }
 }
 
-// TO-DO: NEEDS TO BE IMPLEMENTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/* POST /notify */
 async function handleNotify(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -423,10 +439,11 @@ async function handleNotify(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const state = storage.games.get(game);
-    if (!state) return utils.sendError(res, 404, "game not found");
+    const rec = storage.games.get(game);
+    if (!rec) return utils.sendError(res, 404, "game not found");
+    const state = rec.state;
 
-    const boardLen = 4 * state.size;
+    const boardLen = 4 * rec.size;
     if (cellInt >= boardLen)
       return utils.sendError(res, 400, "cell out of bounds");
 
@@ -471,7 +488,7 @@ async function handleNotify(req, res) {
   }
 }
 
-// ranking handler
+/* POST /ranking */
 async function handleRanking(req, res) {
   try {
     const body = await utils.parseJSONBody(req);

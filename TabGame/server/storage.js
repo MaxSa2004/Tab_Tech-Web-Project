@@ -17,15 +17,16 @@ const TMP_USERS_FILE = path.join(DATA_DIR, "users.json.tmp");
 const users = new Map(); // nick -> { password: 'salt:hex', victories:number, games:number }
 
 /*
-  games now ONLY stores { gameId -> state } where state is your snapshot object:
-  {
-    pieces: Array(4*size) of piece objects or null,
-    initial: string|null,
-    step: "from",
-    turn: string|null,
-    players: { [nick]: "Blue" | "Red" },
-    size: number                        // kept inside state for convenience
-  }
+  games now stores { gameId -> { size, state } } where:
+  - size: number (board columns)
+  - state: snapshot object:
+    {
+      pieces: Array(4*size) of piece objects or null,
+      initial: string|null,
+      step: "from",
+      turn: string|null,
+      players: { [nick]: "Blue" | "Red" }
+    }
 */
 const games = new Map();
 
@@ -168,7 +169,7 @@ function getRanking(limit = 10) {
 loadUsersFromDiskSync();
 
 module.exports = {
-  games,           // Map<gameId, state>
+  games,           // Map<gameId, { size, state }>
   sseClients,
   waitingClients,
   loadUsersFromDiskSync,
