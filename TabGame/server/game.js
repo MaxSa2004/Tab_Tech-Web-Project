@@ -9,6 +9,7 @@
 const utils = require("./utils");
 const storage = require("./storage");
 const crypto = require("crypto");
+const update = require('./update');
 
 // reuse snapshot helper from update.js if available (avoid duplication)
 let snapshotFromUpdate = null;
@@ -351,16 +352,15 @@ async function handleLeave(req, res) {
 async function handleRoll(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
-    const { nick, password, game, cell } = body;
+    const { nick, password, game } = body;
+
     if (
       !utils.isNonEmptyString(nick) ||
       !utils.isNonEmptyString(password) ||
       !utils.isNonEmptyString(game)
-    )
+    ) {
       return utils.sendError(res, 400, "nick, password, game required");
-    const cellInt = utils.toInt(cell);
-    if (!Number.isInteger(cellInt) || cellInt < 0)
-      return utils.sendError(res, 400, "cell must be integer >= 0");
+    }
 
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
@@ -368,46 +368,77 @@ async function handleRoll(req, res) {
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
     if (g.winner) return utils.sendError(res, 409, "game finished");
-    if (getTurnNick(g) !== nick)
-      return utils.sendError(res, 403, "not your turn");
+    if (getTurnNick(g) !== nick) return utils.sendError(res, 403, "not your turn");
 
-    const dice = Math.floor(Math.random() * 6) + 1;
-    const pieces = g.pieces.get(nick) || Array(g.size).fill(0);
-    const pieceIndex = Math.min(cellInt, pieces.length - 1);
-    const from = pieces[pieceIndex];
-    const to = from + dice;
-    pieces[pieceIndex] = to;
-    g.pieces.set(nick, pieces);
+    // --- simulate stick-dice using weighted distribution ---
+    // distribution over up-counts 0..4: probs [0.06, 0.25, 0.38, 0.25, 0.06]
+    const upProb = [0.06, 0.25, 0.38, 0.25, 0.06];
+    const r = Math.random();
+    let cum = 0;
+    let chosenUp = 2; // default
+    for (let i = 0; i < upProb.length; i++) {
+      cum += upProb[i];
+      if (r <= cum) { chosenUp = i; break; }
+    }
+    // build stickValues: chosenUp positions set to true randomly
+    const indices = [0,1,2,3];
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const stickValues = [false, false, false, false];
+    for (let i = 0; i < chosenUp; i++) stickValues[indices[i]] = true;
 
-    const finishLine = g.size * 10;
-    let winner = null;
-    if (to >= finishLine) {
-      winner = nick;
-      g.winner = nick;
-      try {
-        storage.incrementVictories(nick);
-      } catch (e) {
-        console.warn("Warning: failed to persist victory for", nick, e);
+    const value = (chosenUp === 0) ? 6 : chosenUp;
+    const keepPlaying = (value === 1 || value === 4 || value === 6);
+
+    // --- determine whether the player has any legal moves for this roll ---
+    const size = g.size;
+    const boardLen = 4 * size;
+    const myPositions = (g.pieces.get(nick) || []).slice(); // numeric indices of their pieces
+    // build occupancy map: index -> ownerNick
+    const occ = new Map();
+    for (const [playerNick, arr] of g.pieces.entries()) {
+      for (const pos of (arr || [])) {
+        if (Number.isInteger(pos) && pos >= 0 && pos < boardLen) occ.set(pos, playerNick);
       }
     }
-    const next = winner ? null : nextTurn(g);
 
-    const resp = {
-      ok: true,
-      dice,
-      cell: to,
-      selected: [from, to],
-      step: 1,
-      pieces: (() => {
-        const o = {};
-        for (const [k, arr] of g.pieces.entries()) o[k] = arr.slice();
-        return o;
-      })(),
-      turn: next,
-      winner: winner || null,
+    function hasMovesAvailable() {
+      if (!Array.isArray(myPositions) || myPositions.length === 0) return false;
+      for (const pos of myPositions) {
+        if (!Number.isInteger(pos)) continue;
+        const dest = pos + value;
+        if (dest < 0 || dest >= boardLen) continue;
+        const ownerAtDest = occ.get(dest);
+        // legal if destination not occupied by own piece
+        if (ownerAtDest !== nick) return true;
+      }
+      return false;
+    }
+
+    const movesAvailable = hasMovesAvailable();
+
+    // mustPass: if no available moves AND this roll does not grant keepPlaying (i.e., no extra roll)
+    const mustPass = (!movesAvailable && !keepPlaying) ? nick : null;
+
+    // Build response payload
+    const dicePayload = {
+      stickValues,
+      value,
+      keepPlaying,
     };
 
+    const resp = {
+      dice: dicePayload,
+      turn: getTurnNick(g), // current player (still nick, they rolled)
+      mustPass: mustPass,
+    };
+
+    // Broadcast to SSE clients (so both players get the roll result)
     broadcastGameEvent(game, "roll", resp);
+
+    // Respond to the HTTP POST caller
     return utils.sendJSON(res, 200, resp);
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -431,13 +462,58 @@ async function handlePass(req, res) {
     const g = storage.games.get(game);
     if (!g) return utils.sendError(res, 404, "game not found");
     if (g.winner) return utils.sendError(res, 409, "game finished");
-    if (getTurnNick(g) !== nick)
-      return utils.sendError(res, 403, "not your turn");
+    if (getTurnNick(g) !== nick) return utils.sendError(res, 403, "not your turn");
 
+    // Advance turn
     const next = nextTurn(g);
-    const resp = { ok: true, game, turn: next, mustPass: true };
-    broadcastGameEvent(game, "pass", resp);
-    return utils.sendJSON(res, 200, resp);
+
+    // Build a snapshot for broadcast (prefer update.snapshot helper if available)
+    let snap = null;
+    if (typeof snapshotFromUpdate === "function") {
+      snap = snapshotFromUpdate(game);
+    }
+
+    if (!snap) {
+      const size = g.size;
+      const boardLen = 4 * size;
+      const board = new Array(boardLen).fill(null);
+
+      const players = g.players.slice();
+      const p1 = players[0] || null;
+      const p2 = players[1] || null;
+      const playersObj = {};
+      if (p1) playersObj[p1] = "Blue";
+      if (p2) playersObj[p2] = "Red";
+
+      for (const nickKey of players) {
+        const color = playersObj[nickKey];
+        const positions = g.pieces.get(nickKey) || [];
+        for (const pos of positions) {
+          if (Number.isInteger(pos) && pos >= 0 && pos < boardLen) {
+            board[pos] = { color, inMotion: false, reachedLastRow: false };
+          }
+        }
+      }
+
+      snap = {
+        pieces: board,
+        initial: g.players[0] || null,
+        step: "from",
+        turn: next || null,
+        players: playersObj,
+        dice: null,
+      };
+    } else {
+      snap.turn = next || null;
+      snap.dice = null;
+    }
+
+    // Broadcast the snapshot to SSE clients (both players will receive this)
+    broadcastGameEvent(game, "pass", snap);
+    try { update.resetInactivityTimerFor(next, game); } catch (e) { /* ignore */ }
+
+    // Return an empty object to the HTTP caller as requested
+    return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }

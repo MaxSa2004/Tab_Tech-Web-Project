@@ -174,4 +174,17 @@ function handleUpdate(req, res) {
   });
 }
 
-module.exports = { handleUpdate, snapshotForClient };
+function resetInactivityTimerFor(nick, gameId) {
+  const key = `${nick}:${gameId}`;
+  const res = storage.sseClients.get(key);
+  if (!res) return false;
+  try {
+    if (res._inactivityTimer) clearTimeout(res._inactivityTimer);
+    res._inactivityTimer = setTimeout(() => handleInactivityExpired(nick, gameId), WAIT_TIMEOUT_MS);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+module.exports = { handleUpdate, snapshotForClient, resetInactivityTimerFor };
