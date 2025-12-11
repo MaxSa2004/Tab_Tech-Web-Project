@@ -15,7 +15,7 @@ const utils = require("./utils");
 const storage = require("./storage");
 
 // inactivity / wait timeout in ms
-const WAIT_TIMEOUT_MS = (1 * 60 * 1000)/2; // 2 minutes
+const WAIT_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
 
 function snapshotForClient(gameId) {
   const game = storage.games.get(gameId);
