@@ -43,6 +43,7 @@ function buildInitialState(size, players) {
     step: "from",
     turn: p1,
     players: colorMapFor(players),
+    lastDiceValue: null,
   };
 }
 
@@ -57,6 +58,7 @@ function ensureGameRecord(gameId, size) {
         step: "from",
         turn: null,
         players: {},
+        lastDiceValue: null,
       },
     };
     storage.games.set(gameId, rec);
@@ -618,6 +620,9 @@ async function handleRoll(req, res) {
     for (let i = 0; i < chosenUp; i++) stickValues[indices[i]] = true;
     const value = chosenUp === 0 ? 6 : chosenUp;
     const keepPlaying = value === 1 || value === 4 || value === 6;
+
+    // store dice value
+    state.lastDiceValue = value;
 
     const movesAvailable = hasMovesAvailableFor(nick, game, value);
     //console.log("moves available? " + movesAvailable);
