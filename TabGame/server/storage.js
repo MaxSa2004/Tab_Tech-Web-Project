@@ -57,9 +57,9 @@ function loadUsersFromDiskSync() {
         games: gamesCount || 0,
       });
     }
-    console.log(`storage: loaded ${users.size} users from ${USERS_FILE}`);
+    //console.log(`storage: loaded ${users.size} users from ${USERS_FILE}`);
   } catch (err) {
-    console.error("storage: error loading users from disk:", err);
+    //console.error("storage: error loading users from disk:", err);
   }
 }
 
@@ -80,7 +80,6 @@ async function saveUsersToDisk() {
     await fsp.rename(TMP_USERS_FILE, USERS_FILE);
     return true;
   } catch (err) {
-    console.error("storage: saveUsersToDisk error:", err);
     throw err;
   }
 }

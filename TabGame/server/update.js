@@ -18,7 +18,7 @@ function snapshotForClient(gameId) {
 
 function handleInactivityExpired(nick, gameId) {
   try {
-    console.log(`[update] inactivity timeout for ${nick}@${gameId}`);
+    //console.log(`[update] inactivity timeout for ${nick}@${gameId}`);
     const rec = storage.games.get(gameId);
     const state = rec ? rec.state : null;
 
@@ -33,7 +33,7 @@ function handleInactivityExpired(nick, gameId) {
         }
       }
       storage.games.delete(gameId);
-      console.log(`[update] game ${gameId} removed due to timeout (draw)`);
+      //console.log(`[update] game ${gameId} removed due to timeout (draw)`);
       return;
     }
 
@@ -52,9 +52,9 @@ function handleInactivityExpired(nick, gameId) {
     }
 
     storage.games.delete(gameId);
-    console.log(`[update] game ${gameId} ended due to inactivity; winner=${winnerNick}`);
+    //console.log(`[update] game ${gameId} ended due to inactivity; winner=${winnerNick}`);
   } catch (err) {
-    console.error("[update] error handling inactivity timeout:", err);
+    //console.error("[update] error handling inactivity timeout:", err);
   }
 }
 
@@ -87,7 +87,7 @@ function handleUpdate(req, res) {
   }
 
   const key = `${nick}:${game}`;
-  console.log("[update] SSE register:", key);
+  //console.log("[update] SSE register:", key);
   storage.sseClients.set(key, res);
 
   if (res._inactivityTimer) clearTimeout(res._inactivityTimer);
@@ -100,7 +100,7 @@ function handleUpdate(req, res) {
   if (state && players.length == 2) {
     try {
       res.write(`data: ${JSON.stringify(state)}\n\n`);
-      console.log("[update] immediate snapshot sent to", key);
+      //console.log("[update] immediate snapshot sent to", key);
     } catch (e) {}
   }
 
@@ -111,7 +111,7 @@ function handleUpdate(req, res) {
   }, 20000);
 
   req.on("close", () => {
-    console.log("[update] SSE closed by client:", key);
+    //console.log("[update] SSE closed by client:", key);
     clearInterval(keep);
     if (res._inactivityTimer) {
       clearTimeout(res._inactivityTimer);

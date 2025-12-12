@@ -80,6 +80,7 @@ function getPlayersFromState(state) {
   return arr;
 }
 
+// helper to broadcast over SSE game events for a given game
 function broadcastGameEvent(gameId, eventName, data) {
   const payload = `data: ${JSON.stringify(data)}\n\n`;
   for (const [key, res] of storage.sseClients.entries()) {
@@ -407,9 +408,11 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
   // flags and helpers
   const moveLastRowState = startPiece.reachedLastRow === true;
 
+  // only consider YOUR OWN color pieces in the base row (row index rows-1 in PLAYER POV)
   let hasBasePieces = false;
   for (let i = 0; i < cols; i++) {
-    if (matrix[rows - 1][i] !== null) {
+    const cell = matrix[rows - 1][i];
+    if (cell !== null && cell.color === colour) {
       hasBasePieces = true;
       break;
     }
@@ -442,12 +445,10 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
 
     // branch: up (to row 0) and down (to row 2)
     const targets = [];
-    if (!hasBasePieces && !moveLastRowState && !isOwnPiece(0, currentC)) {
+    if (!hasBasePieces && !moveLastRowState) {
       targets.push({ r: 0, c: currentC });
     }
-    if (!isOwnPiece(2, currentC)) {
-      targets.push({ r: 2, c: currentC });
-    }
+    targets.push({ r: 2, c: currentC }); // always allow branching down
 
     if (targets.length === 0) return [];
 
@@ -477,8 +478,10 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
       return furtherTargets.map(({ r, c }) => indexMatrix[r][c]); // player POV
     }
 
-    // remaining === 1: immediate up/down filtered above
-    return targets.map(({ r, c }) => indexMatrix[r][c]); // player POV
+    // remaining === 1: final landing must not be your own piece
+    const oneStepTargets = targets.filter(({ r, c }) => !isOwnPiece(r, c));
+    if (oneStepTargets.length === 0) return [];
+    return oneStepTargets.map(({ r, c }) => indexMatrix[r][c]); // player POV
   }
 
   // normal movement: follow arrows for diceValue steps from current cell
@@ -518,7 +521,7 @@ function hasMovesAvailableFor(playerNick, game, diceValue) {
     if (piece !== null && piece.color === colour) {
       const moves = movesAvailableFor(playerNick, game, diceValue, i);
       if (Array.isArray(moves) && moves.length > 0) {
-        console.log(moves);
+        //console.log(moves);
         return true;
       }
     }
@@ -608,9 +611,9 @@ async function handleRoll(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const rec = storage.games.get(game);
-    if (!rec) return utils.sendError(res, 404, "game not found");
-    const state = rec.state;
+    const gameState = storage.games.get(game);
+    if (!gameState) return utils.sendError(res, 404, "game not found");
+    const state = gameState.state;
 
     if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
 
@@ -670,9 +673,9 @@ async function handlePass(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const rec = storage.games.get(game);
-    if (!rec) return utils.sendError(res, 404, "game not found");
-    const state = rec.state;
+    const gameState = storage.games.get(game);
+    if (!gameState) return utils.sendError(res, 404, "game not found");
+    const state = gameState.state;
 
     if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
 
@@ -707,8 +710,58 @@ async function handlePass(req, res) {
   }
 }
 
-// notify handler
-// TO-DO!!!!!!!
+// check winner helper
+function checkWinner(game) {
+  const gameState = storage.games.get(game);
+  if (!gameState) return { winner: null };
+  const { state } = gameState;
+
+  const players = getPlayersFromState(state);
+  if (players.length < 2) return { winner: null };
+
+  let blueLeft = 0,
+    redLeft = 0;
+  for (const p of state.pieces) {
+    if (p && p.color === "Blue") blueLeft++;
+    else if (p && p.color === "Red") redLeft++;
+  }
+
+  if (blueLeft === 0 && redLeft > 0) {
+    return { winner: players.find((n) => state.players[n] === "Red") || null };
+  }
+  if (redLeft === 0 && blueLeft > 0) {
+    return { winner: players.find((n) => state.players[n] === "Blue") || null };
+  }
+  return { winner: null };
+}
+
+// Side effects: broadcast { winner }, finalize ranking, close SSE, remove game
+function sendWinner(gameId, winnerNick) {
+  const gameState = storage.games.get(gameId);
+  if (!gameState) return false;
+
+  const participants = getPlayersFromState(gameState.state);
+  try {
+    storage.finalizeGameResult(participants, winnerNick);
+  } catch (e) {}
+
+  const payload = { winner: winnerNick };
+  for (const [skey, sres] of Array.from(storage.sseClients.entries())) {
+    if (skey.endsWith(`:${gameId}`)) {
+      try {
+        if (!sres.writableEnded)
+          sres.write(`data: ${JSON.stringify(payload)}\n\n`);
+      } catch (e) {}
+      try {
+        sres.end();
+      } catch (e) {}
+      storage.sseClients.delete(skey);
+    }
+  }
+  storage.games.delete(gameId);
+  return true;
+}
+
 // notify handler
 async function handleNotify(req, res) {
   try {
@@ -730,9 +783,9 @@ async function handleNotify(req, res) {
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
-    const rec = storage.games.get(game);
-    if (!rec) return utils.sendError(res, 404, "game not found");
-    const state = rec.state;
+    const gameState = storage.games.get(game);
+    if (!gameState) return utils.sendError(res, 404, "game not found");
+    const state = gameState.state;
 
     // bounds check against pieces array
     if (cellInt >= state.pieces.length)
@@ -755,19 +808,26 @@ async function handleNotify(req, res) {
     if (state.lastSelectedIndex !== null && state.step === "to") {
       const fromIndex = state.lastSelectedIndex;
 
-      // Validate destination against legal moves for the selected piece
+      // validate destination against legal moves for the selected piece
       const legalMoves = movesAvailableFor(nick, game, diceValue, fromIndex);
       if (!Array.isArray(legalMoves) || !legalMoves.includes(cellInt)) {
         return utils.sendError(res, 400, "destination not allowed by dice");
       }
 
-      // Apply the move
+      // apply move
       const move = movePiece(game, nick, fromIndex, cellInt, diceValue);
       if (!move || move.ok === false) {
         return utils.sendError(res, 400, "move failed");
       }
 
-      // Clear dice (always) and advance step back to "from"
+      // win check right after applying the move
+      const { winner } = checkWinner(game);
+      if (winner) {
+        sendWinner(game, winner);
+        return utils.sendJSON(res, 200, {}); // POST response {}
+      }
+
+      // clear dice and step, rotate only if not keepPlaying
       state.lastDiceValue = null;
       state.lastSelectedIndex = null;
       state.step = "from";
@@ -793,7 +853,7 @@ async function handleNotify(req, res) {
       return utils.sendJSON(res, 200, {});
     }
 
-    // Selecting a piece to move (first click)
+    // selecting a piece to move (first click)
     const fromPiece = state.pieces[cellInt];
     if (fromPiece === null) {
       return utils.sendError(res, 400, "no piece in that cell");
@@ -802,7 +862,7 @@ async function handleNotify(req, res) {
       return utils.sendError(res, 400, "not your piece");
     }
     if (fromPiece.inMotion === false && diceValue !== 1) {
-      return utils.sendError(res, 400, "must roll 1 to start moving this piece");
+      return utils.sendError(res, 400, "must be a tab (1) to start moving");
     }
 
     // Get possible destinations for this piece with the current dice
@@ -834,17 +894,22 @@ async function handleNotify(req, res) {
     const toIndex = possibleDests[0];
     const move = movePiece(game, nick, cellInt, toIndex, diceValue);
     if (!move || move.ok === false) {
-      return utils.sendError(res, 409, "move failed");
+      return utils.sendError(res, 400, "move failed");
     }
 
-    // Clear dice (always) and rotate only if not keepPlaying
+    // win check right after applying the move
+    const { winner } = checkWinner(game);
+    if (winner) {
+      sendWinner(game, winner);
+      return utils.sendJSON(res, 200, {}); // POST response
+    }
+
     state.lastDiceValue = null;
     if (!keepPlaying) {
       const players = getPlayersFromState(state);
       const next = state.turn === players[0] ? players[1] : players[0];
       state.turn = next;
     }
-
     state.step = "from";
     state.lastSelectedIndex = null;
 
