@@ -257,9 +257,9 @@ async function handleLeave(req, res) {
 }
 
 // game helpers
-// [0,1..]
+// perspective helpers
 function remapToPlayer2Perspective(arr, rows = 4, cols) {
-  // original row-major bottom->top to top->bottom
+  // Flip vertically: row-major bottom->top to top->bottom
   const out = new Array(rows * cols);
   for (let i = 0; i < arr.length; i++) {
     const v = arr[i];
@@ -271,8 +271,8 @@ function remapToPlayer2Perspective(arr, rows = 4, cols) {
   return out;
 }
 
+// inverse of the above mapping
 function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
-  // inverse of the above mapping
   const out = new Array(rows * cols);
   for (let j = 0; j < arr.length; j++) {
     const v = arr[j];
@@ -284,125 +284,239 @@ function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
   return out;
 }
 
-// check if there are any legal moves for given player in the 'game' for the 'diceValue'.. return true/false
-function hasMovesAvailableFor(playerNick, game, diceValue) {
-  const gameState = storage.games.get(game);
-  const cols = gameState.size;
-  const dim1PieceArr = gameState.state.pieces;
-  const colour = gameState.state.players[playerNick]; // colour of playerNick
+// matrices from 1D board using zig-zag traversal bottom -> top
+function buildBoardMatrices(dim1PieceArr, indexes, rows, cols) {
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(null));
+  const indexMatrix = Array.from({ length: rows }, () => Array(cols).fill(-1));
 
-  for (let i = 0; i < dim1PieceArr.length; i++) {
-    const piece = dim1PieceArr[i];
-    if (piece !== null && colour === piece.color) {
-      // if not null and has piece of colour
-      const moves = movesAvailableFor(playerNick, game, diceValue, i); // list of moves possible
-      if (moves.length !== 0) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-// check if there are any legal moves for given player piece at 1D array index 'index1D' in the 'game' for the 'diceValue'
-// return array of 1D indexes of valid moves.
-// TO-DO!!!!!!!!!!!    ----- NEEDS TO BE COMPLETED!
-function movesAvailableFor(playerNick, game, diceValue, index1D) {
-  const gameState = storage.games.get(game);
-  const cols = gameState.size;
-  let dim1PieceArr = gameState.state.pieces;
-  // note: player 1 is "Blue" and player 2 is "Red"
-  // pieces array stored in POV of player 1 "Blue" so 180deg rotate it if playerNick is "Red"
-  const colour = gameState.state.players[playerNick];
-  if (colour === "Red") {
-    dim1PieceArr = remapToPlayer2Perspective(gameState.state.pieces, 4, cols);
-  }
-
-  // initial null game board matrix
-  const matrix = Array.from({ length: 4 }, () => Array(cols).fill(null));
-  const indexes = Array.from({ length: cols * 4 }, (_, i) => i);
-
-  let index = 0; // index to traverse throuhh 1D pieces array
-  // map 1D pieces array to a matrix
-  for (let i = 3; i >= 0; i--) {
-    // row index 0 (top) and 2
+  let index = 0;
+  for (let i = rows - 1; i >= 0; i--) {
     if (i % 2 === 0) {
+      // even row: right -> left
       for (let j = cols - 1; j >= 0; j--) {
-        if (dim1PieceArr[index]) {
-          // if not null add to matrix
-          matrix[i][j] = dim1PieceArr[index];
-        }
+        const cell = dim1PieceArr[index];
+        if (cell !== null) matrix[i][j] = cell;
+        indexMatrix[i][j] = indexes[index];
         index++;
       }
     } else {
-      // bottom row index 3 or 1
+      // odd row: left -> right
       for (let j = 0; j < cols; j++) {
-        if (dim1PieceArr[index]) {
-          matrix[i][j] = dim1PieceArr[index];
-        }
+        const cell = dim1PieceArr[index];
+        if (cell !== null) matrix[i][j] = cell;
+        indexMatrix[i][j] = indexes[index];
         index++;
       }
     }
   }
 
-  // array of board directions.. same logic as client game script
-  const directionMatrix = Array.from({ length: 4 }, () => Array(cols).fill("")); // initial null array
+  return { matrix, indexMatrix };
+}
 
-  // fill direction array
-  for (let r = 0; r < 4; r++) {
+// find matrix coords for 1D index in zig-zag traversal
+function coordsForIndex(index1D, rows, cols) {
+  // simulate zig-zag to locate the (r,c) for index1D
+  let index = 0;
+  for (let i = rows - 1; i >= 0; i--) {
+    if (i % 2 === 0) {
+      for (let j = cols - 1; j >= 0; j--) {
+        if (index === index1D) return { r: i, c: j };
+        index++;
+      }
+    } else {
+      for (let j = 0; j < cols; j++) {
+        if (index === index1D) return { r: i, c: j };
+        index++;
+      }
+    }
+  }
+  return { r: 0, c: 0 }; // fallback, should not happen if index1D is valid
+}
+
+// build the per-cell arrow directions according to client logic
+function buildDirectionMatrix(rows, cols) {
+  const directionMatrix = Array.from({ length: rows }, () =>
+    Array(cols).fill("")
+  );
+  for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (r === 0) directionMatrix[r][c] = c === 0 ? "down" : "left";
       else if (r === 1)
         directionMatrix[r][c] = c === cols - 1 ? "up down" : "right";
       else if (r === 2) directionMatrix[r][c] = c === 0 ? "up" : "left";
-      else if (r === 3) directionMatrix[r][c] = 0 === cols - 1 ? "up" : "right";
+      else if (r === 3) directionMatrix[r][c] = c === cols - 1 ? "up" : "right";
     }
   }
+  return directionMatrix;
+}
 
-  // if has base pieces no piece can go into top row (index 0)
+// helper to move one step according to directionMatrix
+function stepFrom(directionMatrix, r, c) {
+  const dir = directionMatrix[r][c];
+  let newR = r;
+  let newC = c;
+  if (dir.includes("up")) newR--;
+  if (dir.includes("down")) newR++;
+  if (dir.includes("left")) newC--;
+  if (dir.includes("right")) newC++;
+  return { r: newR, c: newC };
+}
+
+// check if cell is inside board bounds
+function inBounds(r, c, rows, cols) {
+  return r >= 0 && r < rows && c >= 0 && c < cols;
+}
+
+// Main: return array of 1D destination indexes for legal moves
+function movesAvailableFor(playerNick, game, diceValue, index1D) {
+  const gameState = storage.games.get(game);
+  const rows = 4;
+  const cols = gameState.size;
+
+  let dim1PieceArr = gameState.state.pieces;
+  let indexes = Array.from({ length: rows * cols }, (_, i) => i);
+
+  // playerNick color and perspective
+  const colour = gameState.state.players[playerNick];
+  if (colour === "Red") {
+    dim1PieceArr = remapToPlayer2Perspective(dim1PieceArr, rows, cols);
+    indexes = remapToPlayer2Perspective(indexes, rows, cols);
+  }
+
+  // build matrices
+  const { matrix, indexMatrix } = buildBoardMatrices(
+    dim1PieceArr,
+    indexes,
+    rows,
+    cols
+  );
+
+  // starting coords (perspective-aware)
+  const { r: currR, c: currC } = coordsForIndex(index1D, rows, cols);
+
+  // rule: if piece is not inMotion, it can only move with diceValue === 1
+  const startPiece = matrix[currR][currC];
+  if (!startPiece) return [];
+  if (startPiece.inMotion === false && diceValue !== 1) return []; // piece cannot be moved
+
+  // flags and helpers
+  const moveLastRowState = startPiece.reachedLastRow === true;
+
   let hasBasePieces = false;
   for (let i = 0; i < cols; i++) {
-    if (matrix[3][i]) {
-      // if not null there is a piece
+    if (matrix[rows - 1][i] !== null) {
       hasBasePieces = true;
       break;
     }
   }
 
-  /*for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < array.length; j++) {
-      if (gameState.state.pieces[]) {
-        
-      }
-    }
-  }*/
+  const isOwnPiece = (r, c) => {
+    const cell = matrix[r][c];
+    return cell !== null && cell.color === colour;
+  };
 
-  /*const rec = storage.games.get(game);
-  const state = rec.state;
-  const boardLen = 4 * rec.size;
-  // compute positions per player from board
-  function ownerAt(idx) {
-    const cell = state.pieces[idx];
-    if (cell && cell.color) {
-      const owner = Object.keys(state.players).find(
-        (n) => state.players[n] === cell.color
-      );
-      return owner || null;
+  // direction matrix used to follow arrow logic of game board
+  const directionMatrix = buildDirectionMatrix(rows, cols);
+
+  // special case: second row (r === 1) (third row from bottom)
+  if (currR === 1) {
+    let remaining = diceValue;
+    let currentC = currC;
+
+    // move horizontally to the right end of row index 1
+    const stepsToRightEnd = cols - 1 - currentC;
+    const horizontalMove = Math.min(remaining, stepsToRightEnd);
+    currentC += horizontalMove;
+    remaining -= horizontalMove;
+
+    if (remaining === 0) {
+      // single destination on row index 1
+      if (isOwnPiece(1, currentC)) return [];
+      return [indexMatrix[1][currentC]];
     }
-    return null;
+
+    // branch: up (to row 0) and down (to row 2)
+    const targets = [];
+    if (!hasBasePieces && !moveLastRowState && !isOwnPiece(0, currentC)) {
+      targets.push({ r: 0, c: currentC });
+    }
+    if (!isOwnPiece(2, currentC)) {
+      targets.push({ r: 2, c: currentC });
+    }
+
+    if (targets.length === 0) return [];
+
+    if (remaining > 1) {
+      const furtherTargets = [];
+      targets.forEach(({ r, c }) => {
+        let rem = remaining - 1;
+        let curR = r,
+          curC = c;
+        let progressed = false;
+
+        for (let step = 0; step < rem; step++) {
+          const { r: newR, c: newC } = stepFrom(directionMatrix, curR, curC);
+          if (!inBounds(newR, newC, rows, cols)) break;
+          if (moveLastRowState && currR !== 0 && newR === 0) break;
+          curR = newR;
+          curC = newC;
+          progressed = true;
+        }
+
+        if (progressed && !isOwnPiece(curR, curC)) {
+          furtherTargets.push({ r: curR, c: curC });
+        }
+      });
+
+      if (furtherTargets.length === 0) return [];
+      return furtherTargets.map(({ r, c }) => indexMatrix[r][c]);
+    }
+
+    // remaining === 1: immediate up/down filtered above
+    return targets.map(({ r, c }) => indexMatrix[r][c]);
   }
-  // consider moving any of player's pieces forward by 'diceValue' if dest not occupied by own piece
-  for (let pos = 0; pos < boardLen; pos++) {
-    const owner = ownerAt(pos);
-    if (owner === playerNick) {
-      const dest = pos + diceValue;
-      if (dest >= 0 && dest < boardLen) {
-        const destOwner = ownerAt(dest);
-        if (destOwner !== playerNick) return true;
+
+  // normal movement: follow arrows for diceValue steps from current cell
+  let remaining = diceValue;
+  let curR = currR,
+    curC = currC;
+  let progressed = false;
+
+  for (let step = 0; step < remaining; step++) {
+    const { r: newR, c: newC } = stepFrom(directionMatrix, curR, curC);
+    if (!inBounds(newR, newC, rows, cols)) break;
+    if (
+      (hasBasePieces && newR === 0) ||
+      (moveLastRowState && currR !== 0 && newR === 0)
+    )
+      break;
+    curR = newR;
+    curC = newC;
+    progressed = true;
+  }
+
+  if (!progressed) return [];
+  if (isOwnPiece(curR, curC)) return [];
+
+  return [indexMatrix[curR][curC]];
+}
+
+// any moves available check for a given player and dice value
+// checks all positions in pieces array and checks movesAvailableFor() iff piece belongs to given player
+function hasMovesAvailableFor(playerNick, game, diceValue) {
+  const gameState = storage.games.get(game);
+  const dim1PieceArr = gameState.state.pieces;
+  const colour = gameState.state.players[playerNick];
+
+  for (let i = 0; i < dim1PieceArr.length; i++) {
+    const piece = dim1PieceArr[i];
+    if (piece !== null && piece.color === colour) {
+      const moves = movesAvailableFor(playerNick, game, diceValue, i);
+      if (Array.isArray(moves) && moves.length > 0) {
+        return true;
       }
     }
-  }*/
+  }
   return false;
 }
 
@@ -451,6 +565,7 @@ async function handleRoll(req, res) {
     const keepPlaying = value === 1 || value === 4 || value === 6;
 
     const movesAvailable = hasMovesAvailableFor(nick, game, value);
+    //console.log("moves available? " + movesAvailable);
     const mustPass = !movesAvailable && !keepPlaying ? nick : null;
 
     const resp = {
