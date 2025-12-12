@@ -25,7 +25,9 @@ const users = new Map(); // nick -> { password: 'salt:hex', victories:number, ga
       initial: string|null,
       step: "from",
       turn: string|null,
-      players: { [nick]: "Blue" | "Red" }
+      players: { [nick]: "Blue" | "Red" },
+      lastDiceValue: int|null,
+      lastSelectedIndex: int|null,
     }
 */
 const games = new Map();

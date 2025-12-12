@@ -44,6 +44,7 @@ function buildInitialState(size, players) {
     turn: p1,
     players: colorMapFor(players),
     lastDiceValue: null,
+    lastSelectedIndex: null,
   };
 }
 
@@ -59,6 +60,7 @@ function ensureGameRecord(gameId, size) {
         turn: null,
         players: {},
         lastDiceValue: null,
+        lastSelectedIndex: null,
       },
     };
     storage.games.set(gameId, rec);
@@ -546,8 +548,11 @@ function movePiece(game, playerNick, fromIndex, toIndex, diceValue) {
   }
 
   const srcPiece = state.pieces[fromIndex];
-  if (!src) {
+  if (!srcPiece) {
     return { ok: false, reason: "no piece found" };
+  }
+  if (srcPiece.color !== colour) {
+    return { ok: false, reason: "not-players-piece" };
   }
 
   if (srcPiece.inMotion === false && diceValue !== 1) {
@@ -559,13 +564,21 @@ function movePiece(game, playerNick, fromIndex, toIndex, diceValue) {
     return { ok: false, reason: "cannot move onto own piece" };
   }
 
+  // Compute destination row in the PLAYER'S POV:
+  // - For Blue, use toIndex directly with coordsForIndex
+  // - For Red, convert Blue->Red POV index, then use coordsForIndex
   let reachedLastRow = srcPiece.reachedLastRow === true;
-  const boardLen = rows * cols;
-  if (toIndex >= 0 && toIndex < boardLen) {
-    const { r: destR } = coordsForIndex(toIndex, rows, cols);
-    if (destR === rows - 1) {
-      reachedLastRow = true; // set reachedLastRow to true if needed
-    }
+
+  // Build identity index map and POV conversion
+  const identity = Array.from({ length: rows * cols }, (_, i) => i);
+  const blueToRedIndex = remapToPlayer2Perspective(identity, rows, cols);
+
+  const toIndexPlayerPOV = colour === "Red" ? blueToRedIndex[toIndex] : toIndex;
+  const { r: destRPlayerPOV } = coordsForIndex(toIndexPlayerPOV, rows, cols);
+
+  // In player's perspective, "top row" is row 0
+  if (destRPlayerPOV === 0) {
+    reachedLastRow = true;
   }
 
   // apply move to state array of pieces
@@ -575,6 +588,8 @@ function movePiece(game, playerNick, fromIndex, toIndex, diceValue) {
     inMotion: true,
     reachedLastRow,
   };
+
+  return { ok: true, fromIndex, toIndex, state };
 }
 
 // dice roll handler
@@ -669,6 +684,8 @@ async function handlePass(req, res) {
     const next = state.turn === players[0] ? players[1] : players[0];
     state.turn = next;
 
+    state.lastDiceValue = null;
+
     // Broadcast the exact state plus dice: null
     const payload = {
       pieces: state.pieces,
@@ -676,7 +693,7 @@ async function handlePass(req, res) {
       step: state.step,
       turn: state.turn,
       players: state.players,
-      dice: null,
+      dice: state.lastDiceValue,
     };
     broadcastGameEvent(game, "pass", payload);
 
@@ -692,6 +709,7 @@ async function handlePass(req, res) {
 
 // notify handler
 // TO-DO!!!!!!!
+// notify handler
 async function handleNotify(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -700,11 +718,15 @@ async function handleNotify(req, res) {
       !utils.isNonEmptyString(nick) ||
       !utils.isNonEmptyString(password) ||
       !utils.isNonEmptyString(game)
-    )
+    ) {
       return utils.sendError(res, 400, "nick, password, game required");
+    }
+
+    // type checks
     const cellInt = utils.toInt(cell);
     if (!Number.isInteger(cellInt) || cellInt < 0)
       return utils.sendError(res, 400, "cell must be integer >= 0");
+    // password and username pair must be valid
     if (!storage.getUser(nick) || !storage.verifyPassword(nick, password))
       return utils.sendError(res, 401, "invalid credentials");
 
@@ -712,43 +734,129 @@ async function handleNotify(req, res) {
     if (!rec) return utils.sendError(res, 404, "game not found");
     const state = rec.state;
 
-    const boardLen = 4 * rec.size;
-    if (cellInt >= boardLen)
+    // bounds check against pieces array
+    if (cellInt >= state.pieces.length)
       return utils.sendError(res, 400, "cell out of bounds");
 
-    // move: find first piece for nick
+    // must be player's turn
+    if (state.turn !== nick) return utils.sendError(res, 403, "not your turn");
+
+    // need a dice value from last roll
+    const diceValue = utils.toInt(state.lastDiceValue);
+    if (!Number.isInteger(diceValue))
+      return utils.sendError(res, 409, "no dice value available");
+
     const myColor = state.players[nick];
     if (!myColor) return utils.sendError(res, 403, "not a player in this game");
 
-    let from = -1;
-    for (let i = 0; i < boardLen; i++) {
-      const cellObj = state.pieces[i];
-      if (cellObj && cellObj.color === myColor) {
-        from = i;
-        break;
-      }
-    }
-    if (from === -1) return utils.sendError(res, 409, "no piece to move");
+    const keepPlaying = diceValue === 1 || diceValue === 4 || diceValue === 6;
 
-    // simple move: if destination has own piece, reject; else place
-    const destCell = state.pieces[cellInt];
-    if (destCell && destCell.color === myColor) {
-      return utils.sendError(res, 409, "destination occupied by own piece");
+    // CASE A: Completing a two-step move (destination selection)
+    if (state.lastSelectedIndex !== null && state.step === "to") {
+      const fromIndex = state.lastSelectedIndex;
+
+      // Validate destination against legal moves for the selected piece
+      const legalMoves = movesAvailableFor(nick, game, diceValue, fromIndex);
+      if (!Array.isArray(legalMoves) || !legalMoves.includes(cellInt)) {
+        return utils.sendError(res, 400, "destination not allowed by dice");
+      }
+
+      // Apply the move
+      const move = movePiece(game, nick, fromIndex, cellInt, diceValue);
+      if (!move || move.ok === false) {
+        return utils.sendError(res, 400, "move failed");
+      }
+
+      // Clear dice (always) and advance step back to "from"
+      state.lastDiceValue = null;
+      state.lastSelectedIndex = null;
+      state.step = "from";
+
+      // Rotate turn only if not keepPlaying
+      if (!keepPlaying) {
+        const players = getPlayersFromState(state);
+        const next = state.turn === players[0] ? players[1] : players[0];
+        state.turn = next;
+      }
+
+      const resp = {
+        cell: cellInt,
+        selected: [fromIndex, cellInt],
+        dice: null,
+        pieces: state.pieces,
+        initial: state.initial,
+        step: state.step,
+        turn: state.turn,
+        players: state.players,
+      };
+      broadcastGameEvent(game, "notify", resp);
+      return utils.sendJSON(res, 200, {});
     }
-    // move piece
-    state.pieces[from] = null;
-    state.pieces[cellInt] = {
-      color: myColor,
-      inMotion: false,
-      reachedLastRow: false,
-    };
+
+    // Selecting a piece to move (first click)
+    const fromPiece = state.pieces[cellInt];
+    if (fromPiece === null) {
+      return utils.sendError(res, 400, "no piece in that cell");
+    }
+    if (fromPiece.color !== myColor) {
+      return utils.sendError(res, 400, "not your piece");
+    }
+    if (fromPiece.inMotion === false && diceValue !== 1) {
+      return utils.sendError(res, 400, "must roll 1 to start moving this piece");
+    }
+
+    // Get possible destinations for this piece with the current dice
+    const possibleDests = movesAvailableFor(nick, game, diceValue, cellInt);
+    if (!Array.isArray(possibleDests) || possibleDests.length === 0) {
+      return utils.sendError(res, 400, "no valid moves for that piece");
+    }
+
+    // CASE B: More than one possible destination -> prompt selection
+    if (possibleDests.length > 1) {
+      state.step = "to";
+      state.lastSelectedIndex = cellInt;
+
+      const resp = {
+        cell: cellInt,
+        selected: possibleDests,
+        dice: diceValue, // keep dice visible; still needed to validate final move
+        pieces: state.pieces,
+        initial: state.initial,
+        step: state.step,
+        turn: state.turn,
+        players: state.players,
+      };
+      broadcastGameEvent(game, "notify", resp);
+      return utils.sendJSON(res, 200, {});
+    }
+
+    // CASE C: Only one possible destination -> execute immediately
+    const toIndex = possibleDests[0];
+    const move = movePiece(game, nick, cellInt, toIndex, diceValue);
+    if (!move || move.ok === false) {
+      return utils.sendError(res, 409, "move failed");
+    }
+
+    // Clear dice (always) and rotate only if not keepPlaying
+    state.lastDiceValue = null;
+    if (!keepPlaying) {
+      const players = getPlayersFromState(state);
+      const next = state.turn === players[0] ? players[1] : players[0];
+      state.turn = next;
+    }
+
+    state.step = "from";
+    state.lastSelectedIndex = null;
 
     const resp = {
-      ok: true,
       cell: cellInt,
-      selected: [from, cellInt],
-      state,
+      selected: [cellInt, toIndex],
+      dice: null,
+      pieces: state.pieces,
+      initial: state.initial,
+      step: state.step,
       turn: state.turn,
+      players: state.players,
     };
     broadcastGameEvent(game, "notify", resp);
     return utils.sendJSON(res, 200, {});
