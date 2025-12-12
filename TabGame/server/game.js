@@ -1,16 +1,11 @@
 "use strict";
 
-/*
-  Game endpoints rewritten to use storage.games as Map<gameId, { size, state }>.
-*/
-
 const utils = require("./utils");
 const storage = require("./storage");
 const crypto = require("crypto");
 const update = require("./update");
 
-/* helpers working on state only */
-
+// helpers for state
 function createEmptyBoard(size) {
   return new Array(4 * size).fill(null);
 }
@@ -98,7 +93,7 @@ function toInt(v) {
   return utils.toInt(v);
 }
 
-/* POST /join */
+// join handler
 async function handleJoin(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -149,7 +144,7 @@ async function handleJoin(req, res) {
       }
     }
 
-    // If two players, build the initial pieces and set turn/initial
+    // if two players, build the initial pieces and set turn/initial
     const playersAfter = getPlayersFromState(state);
     if (playersAfter.length === 2) {
       const newState = buildInitialState(rec.size, playersAfter);
@@ -179,7 +174,7 @@ async function handleJoin(req, res) {
   }
 }
 
-/* POST /leave */
+// leave handler
 async function handleLeave(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -248,8 +243,6 @@ async function handleLeave(req, res) {
       return utils.sendJSON(res, 200, {});
     }
 
-    /*// two players still; broadcast updated state (board stays as is)
-    broadcastGameEvent(game, "leave", state);*/
     return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -626,7 +619,8 @@ async function handlePass(req, res) {
   }
 }
 
-/* POST /notify */
+// notify handler
+// TO-DO!!!!!!!
 async function handleNotify(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
@@ -692,7 +686,7 @@ async function handleNotify(req, res) {
   }
 }
 
-/* POST /ranking */
+// ranking handler
 async function handleRanking(req, res) {
   try {
     const body = await utils.parseJSONBody(req);
