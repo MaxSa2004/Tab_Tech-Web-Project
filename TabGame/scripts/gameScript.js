@@ -713,7 +713,7 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         const cell = gameBoard.querySelector(`.cell[data-r="${visual.r}"][data-c="${visual.c}"]`);
 
         if (!cell) {
-            console.warn("⚠️ Célula não encontrada no DOM!", visual);
+            console.warn("Célula não encontrada no DOM!", visual);
             return;
         }
         // apply highlight based on type
@@ -1348,7 +1348,7 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
                 chosenMove = captureMoves[0] || domMoves[0]; // choose first capture or first legal move
                 // note: chosenMove contains { piece, from, destCell, to }
                 if (!chosenMove) { // if still no move (found, should not happen) -> fallback
-                    console.warn('Sem fallback de jogada, embora domMoves > 0 — a passar a vez.');
+                    console.warn('Sem fallback de jogada, embora domMoves > 0 - a passar a vez.');
                     if (result === 1 || result === 4 || result === 6) { // check for extra roll
                         showMessage({ who: 'system', key: 'msg_ai_no_moves_extra' });
                         lastDiceValue = null;
@@ -1687,12 +1687,12 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
             const logical = getLogicalCoords(visualR, visualC);
             const cellIndex = getIndexFromLogical(logical.r, logical.c);
 
-            console.log(`🖱️ CLIQUE Server[${cellIndex}] | Step: ${serverStep}`);
+            console.log(`CLIQUE Server[${cellIndex}] | Step: ${serverStep}`);
 
             // if we are at step from, we must validate the piece clicked
             if (serverStep !== 'to' && serverStep !== 'take') {
 
-                // Verificação do dado
+                // dice check
                 if (throwBtn && !throwBtn.disabled) {
                     showMessage({ who: 'system', key: 'msg_roll_first' });
                     return;
@@ -1715,7 +1715,7 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
 
                     // if there are no valid moves BLOCK
                     if (realMoves.length === 0) {
-                        console.warn("🚫 Bloqueio Cliente: Peça sem movimentos válidos (Base ou Bloqueio).");
+                        console.warn("Bloqueio Cliente: Peça sem movimentos válidos (Base ou Bloqueio).");
                         showMessage({ who: 'system', key: 'msg_no_valid_moves' });
 
                         // error visual effect (optional)
@@ -1726,53 +1726,46 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
                 }
             }
 
-            // SE O SERVIDOR ESTIVER À ESPERA DE UM DESTINO ('TO')
+            // if the server step is 'to', we must validate the destination clicked
             if (serverStep === 'to') {
                 
-                // 1. Identificar se cliquei numa peça MINHA (Red)
-                // Se sim, isto é uma TROCA DE SELEÇÃO, não é um movimento.
+                // First, check if I clicked on one of MY pieces to SWITCH selection (doesn't work)
                 const clickedMyPiece = cell.querySelector('.piece.red');
                 
                 if (clickedMyPiece) {
-                    // --- LÓGICA DE TROCA (SWITCH) ---
-                    // Calcular o índice da nova peça que eu quero
+
                     const visualR = parseInt(cell.dataset.r, 10);
                     const visualC = parseInt(cell.dataset.c, 10);
                     const logical = getLogicalCoords(visualR, visualC);
                     const newIndex = getIndexFromLogical(logical.r, logical.c);
 
-                    console.log("🔄 A trocar seleção para a peça:", newIndex);
+                    console.log("A trocar seleção para a peça:", newIndex);
 
-                    // Enviar ao servidor. 
-                    // O servidor vai perceber que é uma peça tua e vai responder com:
-                    // step: 'to', cell: newIndex, selected: [novos_destinos]
+
                     try {
                         await Network.notify({ cell: newIndex });
                     } catch (err) {
                         console.warn(err);
                     }
-                    return; // IMPORTANTE: Sair aqui para não validar mais nada.
+                    return;
                 }
 
-                // 2. Se NÃO cliquei numa peça minha, então estou a tentar MOVER para um destino
-                // Aqui aplicamos as regras de validação visual (para não enviar jogadas impossíveis)
+                // not my cell, so validate move destination
                 
                 const myPieces = Array.from(document.querySelectorAll('.piece.red'));
                 const visualBaseRow = 3;
                 const hasBasePieces = myPieces.some(p => parseInt(p.parentElement.dataset.r, 10) === visualBaseRow);
                 const visualR = parseInt(cell.dataset.r, 10);
 
-                // Regra: Não posso mover para a linha 0 se tiver peças na base
+                // rules for destination validation
                 if (visualR === 0 && hasBasePieces) {
                     showMessage({ who: 'system', key: 'msg_base_pieces' });
                     return;
                 }
 
-                // Se passou a validação, deixa o código seguir para o Network.notify lá em baixo
-                // que vai enviar o índice do DESTINO (casa vazia ou inimigo).
+                // passed, so notify server
             }
 
-            // if everything passed the checks, send to server
             Network.notify({ cell: cellIndex })
                 .then(() => {
                     console.log("Pedido enviado com sucesso. À espera do servidor...");

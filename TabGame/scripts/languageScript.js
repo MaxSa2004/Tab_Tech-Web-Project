@@ -8,7 +8,7 @@ const i18n = { // internationalization
     modalContentInstructions: `<h3>Como jogar Tâb</h3>
         <h4>Introdução</h4>
         <p>O Tâb é um jogo de tabuleiro para dois jogadores, de luta em corrida, jogado no Médio Oriente e Norte de África.</p>
-        <p>Joga-se num tabuleiro rectangular de 4 linhas e um número ímpar de colunas (normalmente 7–15).</p>
+        <p>Joga-se num tabuleiro rectangular de 4 linhas e um número ímpar de colunas (normalmente 7-15).</p>
         <p>Os dois jogadores sentam-se frente a frente; cada um começa com uma fila externa completa de peças.</p>
         <hr>
         <h4>Preparação</h4>
@@ -16,7 +16,7 @@ const i18n = { // internationalization
         <p>As peças de cada jogador serão inicialmente exibidas na primeira linha (linha inferior do ponto de vista do jogador).</p>
         <hr>
         <h4>Dados</h4>
-        <p>O «dado» do jogo é uma combinação de 4 paus de madeira. Cada pau tem um lado mais claro (plano) e um lado mais escuro (arredondado).</p>
+        <p>O "dado" do jogo é uma combinação de 4 paus de madeira. Cada pau tem um lado mais claro (plano) e um lado mais escuro (arredondado).</p>
         <p>Num lançamento conta-se o número de lados claros virados para cima. A correspondência entre esse número e o valor do movimento é a seguinte:</p>
         <ul>
           <li>0 lados claros -> 6 (Sitteh). Probabilidade: 6%</li>
@@ -31,8 +31,8 @@ const i18n = { // internationalization
         <p>No início da partida nenhum jogador pode mover-se até que alguém obtenha um tâb (1).</p>
         <hr>
         <h4>Movimento</h4>
-        <p>Para mover uma peça — não apenas a primeira —, se ela ainda não tiver sido movida antes, o jogador tem de obter um tâb. A partir daí essa peça fica «convertida» e pode mover-se em qualquer lançamento.</p>
-        <p>Uma peça avança exactamente o número de casas indicado pelo lançamento. O traçado do tabuleiro indica as direcções permitidas.</p>
+        <p>Para mover uma peça - não apenas a primeira —, se ela ainda não tiver sido movida antes, o jogador tem de obter um tâb. A partir daí essa peça fica "convertida" e pode mover-se em qualquer lançamento.</p>
+        <p>Uma peça avança exactamente o número de casas indicado pelo lançamento. O traçado do tabuleiro indica as direções permitidas.</p>
         <p>Uma peça só pode mover-se para a última linha uma vez, e só o pode fazer se não houver peças da mesma cor na primeira linha. Se isso acontecer, deves usar o botão "Skip turn" para passar a vez.</p>
         <hr>
         <h4>Captura</h4>
@@ -73,7 +73,7 @@ const i18n = { // internationalization
         <p>O Tab era especialmente popular entre as classes mais pobres do Egipto, onde continuou a ser jogado até ao século XIX. O viajante inglês Edward William Lane registou descrições detalhadas das suas regras e do jogo na década de 1820, fazendo da sua obra um dos relatos mais completos do jogo que chegaram até nós.</p>
         <p>Após os escritos de Lane, estudiosos como Murray, Bell e Parlett ajudaram a reavivar o interesse pelo Tab durante o século XX. As evidências arqueológicas do Mediterrâneo Oriental também confirmaram o uso generalizado do jogo entre pessoas de todas as classes sociais, desde plebeus a comerciantes e viajantes.</p>
         <h4>Jogabilidade e Simbolismo</h4>
-        <p>Tâb é um jogo de guerra, tipicamente jogado num tabuleiro de três ou quatro filas. Pertence a uma família mais vasta de jogos de "luta em curso" — semelhantes ao Tablan indiano e ao Daldøs escandinavo — em que as peças de cada jogador correm pelo tabuleiro em direções opostas, capturando peças inimigas quando os caminhos se cruzam.</p>
+        <p>Tâb é um jogo de guerra, tipicamente jogado num tabuleiro de três ou quatro filas. Pertence a uma família mais vasta de jogos de "luta em curso" - semelhantes ao Tablan indiano e ao Daldøs escandinavo — em que as peças de cada jogador correm pelo tabuleiro em direções opostas, capturando peças inimigas quando os caminhos se cruzam.</p>
         <p>Uma característica distintiva do Tâb é a sua mecânica de conversão. Quando um jogador lança um resultado especial conhecido como tâb (frequentemente equivalente a "1" nos dados modernos), uma das suas peças é convertida de cristã (não convertida) para muçulmana (convertida). Apenas as peças convertidas podem mover-se livremente e participar nas capturas.
         Esta regra reflete provavelmente o simbolismo cultural e religioso do jogo, fundindo uma jogabilidade estratégica com metáforas retiradas do mundo islâmico medieval.</p>
         <hr>
@@ -266,19 +266,19 @@ const i18n = { // internationalization
         <p>Tâb was especially popular among the poorer classes of Egypt, where it continued to be played well into the
           19th century. The English traveler Edward William Lane recorded detailed descriptions of its rules and play
           in the 1820s, making his work one of the most complete surviving accounts of the game.</p>
-        <p>Following Lane’s writings, scholars such as Murray, Bell, and Parlett helped to revive interest in Tâb
-          during the 20th century. Archaeological evidence from the eastern Mediterranean also confirmed the game’s
+        <p>Following Lane's writings, scholars such as Murray, Bell, and Parlett helped to revive interest in Tâb
+          during the 20th century. Archaeological evidence from the eastern Mediterranean also confirmed the game's
           widespread use among people of all social classes, from commoners to merchants and travelers.</p>
         <hr>
         <h4>Gameplay and Symbolism</h4>
         <p>Tâb is a war game, typically played on a board of three or four rows. It belongs to a broader family of
-          “running fight” games—similar to the Indian Tablan and Scandinavian Daldøs—in which each player’s pieces
+          "running fight" games-similar to the Indian Tablan and Scandinavian Daldøs-in which each player's pieces
           race around the board in opposite directions, capturing enemy pieces when paths intersect.</p>
         <p>A distinctive feature of Tâb is its conversion mechanic. When a player throws a special result known as a
-          tâb (often equivalent to a “1” in modern dice), one of their pieces is converted from a Christian
+          tâb (often equivalent to a "1" in modern dice), one of their pieces is converted from a Christian
           (unconverted) to a Muslim (converted). Only the converted pieces can move freely and participate in
           captures.
-          This rule likely reflects the game’s cultural and religious symbolism, merging strategic gameplay with
+          This rule likely reflects the game's cultural and religious symbolism, merging strategic gameplay with
           metaphors drawn from the medieval Islamic world.</p>
         <hr>
         <h4>Decline and Rediscovery</h4>

@@ -192,7 +192,7 @@
       
       const closeBtn = document.createElement('button');
       closeBtn.className = 'close';
-      closeBtn.textContent = '×';
+      closeBtn.textContent = 'x';
       closeBtn.addEventListener('click', () => modal.remove());
       
       const title = document.createElement('h3');
@@ -232,7 +232,7 @@
       modal.appendChild(content);
       document.body.appendChild(modal);
       
-      console.log("📊 Stats Modal Aberto!"); // Log para confirmares
+      console.log("Stats Modal Aberto!"); // Log para confirmares
     }
 
   };
