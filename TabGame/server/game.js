@@ -367,32 +367,35 @@ function inBounds(r, c, rows, cols) {
   return r >= 0 && r < rows && c >= 0 && c < cols;
 }
 
-// Main: return array of 1D destination indexes for legal moves
+// Main: return array of 1D destination indexes (in Blue POV) for legal moves
 function movesAvailableFor(playerNick, game, diceValue, index1D) {
   const gameState = storage.games.get(game);
   const rows = 4;
   const cols = gameState.size;
 
-  let dim1PieceArr = gameState.state.pieces;
-  let indexes = Array.from({ length: rows * cols }, (_, i) => i);
+  // identity index map and POV maps
+  const identity = Array.from({ length: rows * cols }, (_, i) => i);
+  const blueToRedIndex = remapToPlayer2Perspective(identity, rows, cols);
 
-  // playerNick color and perspective
+  let dim1PieceArr = gameState.state.pieces;
+  let indexes = identity.slice();
+
+  // player color and perspective
   const colour = gameState.state.players[playerNick];
+  // Normalize the input index to the player's POV
+  const workingIndex1D = colour === "Red" ? blueToRedIndex[index1D] : index1D;
+
+  // Work in player's POV for pathing
   if (colour === "Red") {
     dim1PieceArr = remapToPlayer2Perspective(dim1PieceArr, rows, cols);
     indexes = remapToPlayer2Perspective(indexes, rows, cols);
   }
 
   // build matrices
-  const { matrix, indexMatrix } = buildBoardMatrices(
-    dim1PieceArr,
-    indexes,
-    rows,
-    cols
-  );
+  const { matrix, indexMatrix } = buildBoardMatrices(dim1PieceArr, indexes, rows, cols);
 
   // starting coords (perspective-aware)
-  const { r: currR, c: currC } = coordsForIndex(index1D, rows, cols);
+  const { r: currR, c: currC } = coordsForIndex(workingIndex1D, rows, cols);
 
   // rule: if piece is not inMotion, it can only move with diceValue === 1
   const startPiece = matrix[currR][currC];
@@ -432,7 +435,7 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
     if (remaining === 0) {
       // single destination on row index 1
       if (isOwnPiece(1, currentC)) return [];
-      return [indexMatrix[1][currentC]];
+      return [indexMatrix[1][currentC]]; // player POV
     }
 
     // branch: up (to row 0) and down (to row 2)
@@ -450,16 +453,14 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
       const furtherTargets = [];
       targets.forEach(({ r, c }) => {
         let rem = remaining - 1;
-        let curR = r,
-          curC = c;
+        let curR = r, curC = c;
         let progressed = false;
 
         for (let step = 0; step < rem; step++) {
           const { r: newR, c: newC } = stepFrom(directionMatrix, curR, curC);
           if (!inBounds(newR, newC, rows, cols)) break;
           if (moveLastRowState && currR !== 0 && newR === 0) break;
-          curR = newR;
-          curC = newC;
+          curR = newR; curC = newC;
           progressed = true;
         }
 
@@ -469,36 +470,30 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
       });
 
       if (furtherTargets.length === 0) return [];
-      return furtherTargets.map(({ r, c }) => indexMatrix[r][c]);
+      return furtherTargets.map(({ r, c }) => indexMatrix[r][c]); // player POV
     }
 
     // remaining === 1: immediate up/down filtered above
-    return targets.map(({ r, c }) => indexMatrix[r][c]);
+    return targets.map(({ r, c }) => indexMatrix[r][c]); // player POV
   }
 
   // normal movement: follow arrows for diceValue steps from current cell
   let remaining = diceValue;
-  let curR = currR,
-    curC = currC;
+  let curR = currR, curC = currC;
   let progressed = false;
 
   for (let step = 0; step < remaining; step++) {
     const { r: newR, c: newC } = stepFrom(directionMatrix, curR, curC);
     if (!inBounds(newR, newC, rows, cols)) break;
-    if (
-      (hasBasePieces && newR === 0) ||
-      (moveLastRowState && currR !== 0 && newR === 0)
-    )
-      break;
-    curR = newR;
-    curC = newC;
+    if ((hasBasePieces && newR === 0) || (moveLastRowState && currR !== 0 && newR === 0)) break;
+    curR = newR; curC = newC;
     progressed = true;
   }
 
   if (!progressed) return [];
   if (isOwnPiece(curR, curC)) return [];
 
-  return [indexMatrix[curR][curC]];
+  return [indexMatrix[curR][curC]]; // player POV
 }
 
 // any moves available check for a given player and dice value
@@ -513,6 +508,7 @@ function hasMovesAvailableFor(playerNick, game, diceValue) {
     if (piece !== null && piece.color === colour) {
       const moves = movesAvailableFor(playerNick, game, diceValue, i);
       if (Array.isArray(moves) && moves.length > 0) {
+        console.log(moves);
         return true;
       }
     }
