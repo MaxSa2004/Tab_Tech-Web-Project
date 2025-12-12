@@ -1,8 +1,8 @@
 "use strict";
 
 /*
-  Utility helpers used by handlers and router.
-  Keeps small, testable functions (JSON parsing, SSE helpers, static serving).
+  - Utility helpers used by handlers and router.
+  - Keeps small, testable functions (JSON parsing, SSE helpers, static serving).
 */
 
 const fs = require("fs");

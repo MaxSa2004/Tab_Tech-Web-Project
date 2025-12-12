@@ -1,9 +1,6 @@
 "use strict";
 
-/*
-  Authentication endpoints:
-  - POST /register
-*/
+// POST /register
 
 const utils = require("./utils");
 const storage = require("./storage");
@@ -32,12 +29,16 @@ async function handleRegister(req, res) {
       return utils.sendJSON(res, 200, {});
     }
 
-    return utils.sendError(res, 400, "User registered with a different password");
+    return utils.sendError(
+      res,
+      400,
+      "User registered with a different password"
+    );
   } catch (err) {
     return utils.sendError(res, 400, err.message);
   }
 }
 
-module.exports = { 
-  handleRegister
+module.exports = {
+  handleRegister,
 };

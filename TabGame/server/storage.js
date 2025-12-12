@@ -17,7 +17,7 @@ const TMP_USERS_FILE = path.join(DATA_DIR, "users.json.tmp");
 const users = new Map(); // nick -> { password: 'salt:hex', victories:number, games:number }
 
 /*
-  games now stores { gameId -> { size, state } } where:
+  games stored as { gameId -> { size, state } } where:
   - size: number (board columns)
   - state: snapshot object:
     {
@@ -118,7 +118,9 @@ function verifyPassword(nick, plain) {
 }
 
 // Public API
-function getUser(nick) { return users.get(nick); }
+function getUser(nick) {
+  return users.get(nick);
+}
 function setUser(nick, record) {
   users.set(nick, {
     password: record.password,
@@ -170,7 +172,7 @@ function getRanking(limit = 10) {
 loadUsersFromDiskSync();
 
 module.exports = {
-  games,           // Map<gameId, { size, state }>
+  games, // Map<gameId, { size, state }>
   sseClients,
   waitingClients,
   loadUsersFromDiskSync,

@@ -1,9 +1,5 @@
 "use strict";
 
-/*
-  SSE now reads state directly from storage.games (Map<gameId, { size, state }>).
-*/
-
 const utils = require("./utils");
 const storage = require("./storage");
 
@@ -27,8 +23,12 @@ function handleInactivityExpired(nick, gameId) {
     if (!state || players.length < 2) {
       for (const [k, cres] of Array.from(storage.sseClients.entries())) {
         if (k.endsWith(`:${gameId}`)) {
-          try { cres.write(`data: ${JSON.stringify({ winner: null })}\n\n`); } catch (e) {}
-          try { cres.end(); } catch (e) {}
+          try {
+            cres.write(`data: ${JSON.stringify({ winner: null })}\n\n`);
+          } catch (e) {}
+          try {
+            cres.end();
+          } catch (e) {}
           storage.sseClients.delete(k);
         }
       }
@@ -40,13 +40,19 @@ function handleInactivityExpired(nick, gameId) {
     // opponent wins
     const winnerNick = players.find((p) => p !== nick) || null;
     if (winnerNick) {
-      try { storage.finalizeGameResult(players, winnerNick); } catch (e) {}
+      try {
+        storage.finalizeGameResult(players, winnerNick);
+      } catch (e) {}
     }
 
     for (const [k, cres] of Array.from(storage.sseClients.entries())) {
       if (k.endsWith(`:${gameId}`)) {
-        try { cres.write(`data: ${JSON.stringify({ winner: winnerNick })}\n\n`); } catch (e) {}
-        try { cres.end(); } catch (e) {}
+        try {
+          cres.write(`data: ${JSON.stringify({ winner: winnerNick })}\n\n`);
+        } catch (e) {}
+        try {
+          cres.end();
+        } catch (e) {}
         storage.sseClients.delete(k);
       }
     }
@@ -76,10 +82,15 @@ function handleUpdate(req, res) {
   if (!res._patchedWrite) {
     res._patchedWrite = function (...args) {
       let ok = false;
-      try { ok = res._originalWrite(...args); } catch (e) {}
+      try {
+        ok = res._originalWrite(...args);
+      } catch (e) {}
       try {
         if (res._inactivityTimer) clearTimeout(res._inactivityTimer);
-        res._inactivityTimer = setTimeout(() => handleInactivityExpired(nick, game), WAIT_TIMEOUT_MS);
+        res._inactivityTimer = setTimeout(
+          () => handleInactivityExpired(nick, game),
+          WAIT_TIMEOUT_MS
+        );
       } catch (e) {}
       return ok;
     };
@@ -91,7 +102,10 @@ function handleUpdate(req, res) {
   storage.sseClients.set(key, res);
 
   if (res._inactivityTimer) clearTimeout(res._inactivityTimer);
-  res._inactivityTimer = setTimeout(() => handleInactivityExpired(nick, game), WAIT_TIMEOUT_MS);
+  res._inactivityTimer = setTimeout(
+    () => handleInactivityExpired(nick, game),
+    WAIT_TIMEOUT_MS
+  );
 
   // If game already has 2 players, send snapshot immediately
   const rec = storage.games.get(game);
@@ -106,7 +120,8 @@ function handleUpdate(req, res) {
 
   const keep = setInterval(() => {
     try {
-      if (!res.writableEnded && res._originalWrite) res._originalWrite(": keepalive\n\n");
+      if (!res.writableEnded && res._originalWrite)
+        res._originalWrite(": keepalive\n\n");
     } catch (e) {}
   }, 20000);
 
@@ -118,7 +133,9 @@ function handleUpdate(req, res) {
       delete res._inactivityTimer;
     }
     if (res._originalWrite) {
-      try { res.write = res._originalWrite; } catch (e) {}
+      try {
+        res.write = res._originalWrite;
+      } catch (e) {}
       delete res._patchedWrite;
     }
     storage.sseClients.delete(key);
@@ -131,15 +148,18 @@ function resetInactivityTimerFor(nick, gameId) {
   if (!res) return false;
   try {
     if (res._inactivityTimer) clearTimeout(res._inactivityTimer);
-    res._inactivityTimer = setTimeout(() => handleInactivityExpired(nick, gameId), WAIT_TIMEOUT_MS);
+    res._inactivityTimer = setTimeout(
+      () => handleInactivityExpired(nick, gameId),
+      WAIT_TIMEOUT_MS
+    );
     return true;
   } catch (e) {
     return false;
   }
 }
 
-module.exports = { 
-  handleUpdate, 
-  snapshotForClient, 
-  resetInactivityTimerFor
+module.exports = {
+  handleUpdate,
+  snapshotForClient,
+  resetInactivityTimerFor,
 };

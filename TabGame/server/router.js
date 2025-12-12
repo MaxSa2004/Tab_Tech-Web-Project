@@ -1,9 +1,6 @@
 "use strict";
 
-/*
-  router: maps paths and methods to handlers.
-  exports init({ publicDir }) and handleRequest(req, res).
-*/
+// router: maps paths and methods to handlers.
 
 const handlersAuth = require("./auth");
 const handlersGame = require("./game");

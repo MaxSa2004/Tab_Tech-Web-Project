@@ -269,19 +269,6 @@ function remapToPlayer2Perspective(arr, rows = 4, cols) {
   return out;
 }
 
-// inverse of the above mapping
-/*function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
-  const out = new Array(rows * cols);
-  for (let j = 0; j < arr.length; j++) {
-    const v = arr[j];
-    const r2 = Math.floor(j / cols);
-    const c2 = j % cols;
-    const i = (rows - 1 - r2) * cols + c2;
-    out[i] = v;
-  }
-  return out;
-}*/
-
 // matrices from 1D board using zig-zag traversal bottom -> top
 function buildBoardMatrices(dim1PieceArr, indexes, rows, cols) {
   const matrix = Array.from({ length: rows }, () => Array(cols).fill(null));
@@ -383,7 +370,7 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
   // Normalize the input index to the player's POV
   const workingIndex1D = colour === "Red" ? blueToRedIndex[index1D] : index1D;
 
-  // Work in player's POV for pathing
+  // work in player's POV for pathing
   if (colour === "Red") {
     dim1PieceArr = remapToPlayer2Perspective(dim1PieceArr, rows, cols);
     indexes = remapToPlayer2Perspective(indexes, rows, cols);
@@ -569,7 +556,7 @@ function movePiece(game, playerNick, fromIndex, toIndex, diceValue) {
 
   // Compute destination row in the PLAYER'S POV:
   // - For Blue, use toIndex directly with coordsForIndex
-  // - For Red, convert Blue->Red POV index, then use coordsForIndex
+  // - For Red, convert Blue -> Red POV index, then use coordsForIndex
   let reachedLastRow = srcPiece.reachedLastRow === true;
 
   // Build identity index map and POV conversion
@@ -579,7 +566,7 @@ function movePiece(game, playerNick, fromIndex, toIndex, diceValue) {
   const toIndexPlayerPOV = colour === "Red" ? blueToRedIndex[toIndex] : toIndex;
   const { r: destRPlayerPOV } = coordsForIndex(toIndexPlayerPOV, rows, cols);
 
-  // In player's perspective, "top row" is row 0
+  // in player's perspective, "top row" is row 0
   if (destRPlayerPOV === 0) {
     reachedLastRow = true;
   }
@@ -689,7 +676,7 @@ async function handlePass(req, res) {
 
     state.lastDiceValue = null;
 
-    // Broadcast the exact state plus dice: null
+    // broadcast the exact state plus dice: null
     const payload = {
       pieces: state.pieces,
       initial: state.initial,
@@ -735,7 +722,7 @@ function checkWinner(game) {
   return { winner: null };
 }
 
-// Side effects: broadcast { winner }, finalize ranking, close SSE, remove game
+// broadcast { winner }, finalize ranking, close SSE, remove game
 function sendWinner(gameId, winnerNick) {
   const gameState = storage.games.get(gameId);
   if (!gameState) return false;
