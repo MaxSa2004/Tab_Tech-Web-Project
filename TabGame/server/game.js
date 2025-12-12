@@ -265,7 +265,7 @@ function remapToPlayer2Perspective(arr, rows = 4, cols) {
 }
 
 // inverse of the above mapping
-function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
+/*function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
   const out = new Array(rows * cols);
   for (let j = 0; j < arr.length; j++) {
     const v = arr[j];
@@ -275,7 +275,7 @@ function remapFromPlayer2PerspectiveToNormal(arr, rows = 4, cols) {
     out[i] = v;
   }
   return out;
-}
+}*/
 
 // matrices from 1D board using zig-zag traversal bottom -> top
 function buildBoardMatrices(dim1PieceArr, indexes, rows, cols) {
@@ -385,7 +385,12 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
   }
 
   // build matrices
-  const { matrix, indexMatrix } = buildBoardMatrices(dim1PieceArr, indexes, rows, cols);
+  const { matrix, indexMatrix } = buildBoardMatrices(
+    dim1PieceArr,
+    indexes,
+    rows,
+    cols
+  );
 
   // starting coords (perspective-aware)
   const { r: currR, c: currC } = coordsForIndex(workingIndex1D, rows, cols);
@@ -446,14 +451,16 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
       const furtherTargets = [];
       targets.forEach(({ r, c }) => {
         let rem = remaining - 1;
-        let curR = r, curC = c;
+        let curR = r,
+          curC = c;
         let progressed = false;
 
         for (let step = 0; step < rem; step++) {
           const { r: newR, c: newC } = stepFrom(directionMatrix, curR, curC);
           if (!inBounds(newR, newC, rows, cols)) break;
           if (moveLastRowState && currR !== 0 && newR === 0) break;
-          curR = newR; curC = newC;
+          curR = newR;
+          curC = newC;
           progressed = true;
         }
 
@@ -472,14 +479,20 @@ function movesAvailableFor(playerNick, game, diceValue, index1D) {
 
   // normal movement: follow arrows for diceValue steps from current cell
   let remaining = diceValue;
-  let curR = currR, curC = currC;
+  let curR = currR,
+    curC = currC;
   let progressed = false;
 
   for (let step = 0; step < remaining; step++) {
     const { r: newR, c: newC } = stepFrom(directionMatrix, curR, curC);
     if (!inBounds(newR, newC, rows, cols)) break;
-    if ((hasBasePieces && newR === 0) || (moveLastRowState && currR !== 0 && newR === 0)) break;
-    curR = newR; curC = newC;
+    if (
+      (hasBasePieces && newR === 0) ||
+      (moveLastRowState && currR !== 0 && newR === 0)
+    )
+      break;
+    curR = newR;
+    curC = newC;
     progressed = true;
   }
 
@@ -507,6 +520,59 @@ function hasMovesAvailableFor(playerNick, game, diceValue) {
     }
   }
   return false;
+}
+
+// move piece helper
+function movePiece(game, playerNick, fromIndex, toIndex, diceValue) {
+  const gameState = storage.games.get(game);
+
+  const rows = 4;
+  const cols = gameState.size;
+  const state = gameState.state;
+  const colour = state.players[playerNick];
+
+  const arrLen = state.pieces.length;
+  if (
+    !Number.isInteger(fromIndex) ||
+    !Number.isInteger(toIndex) ||
+    fromIndex < 0 ||
+    fromIndex >= arrLen ||
+    toIndex < 0 ||
+    toIndex >= arrLen
+  ) {
+    return { ok: false, reason: "out of bound index" };
+  }
+
+  const srcPiece = state.pieces[fromIndex];
+  if (!src) {
+    return { ok: false, reason: "no piece found" };
+  }
+
+  if (srcPiece.inMotion === false && diceValue !== 1) {
+    return { ok: false, reason: "first move of piece must be diceValue 1" };
+  }
+
+  const dest = state.pieces[toIndex];
+  if (dest && dest.color === colour) {
+    return { ok: false, reason: "cannot move onto own piece" };
+  }
+
+  let reachedLastRow = srcPiece.reachedLastRow === true;
+  const boardLen = rows * cols;
+  if (toIndex >= 0 && toIndex < boardLen) {
+    const { r: destR } = coordsForIndex(toIndex, rows, cols);
+    if (destR === rows - 1) {
+      reachedLastRow = true; // set reachedLastRow to true if needed
+    }
+  }
+
+  // apply move to state array of pieces
+  state.pieces[fromIndex] = null;
+  state.pieces[toIndex] = {
+    color: colour,
+    inMotion: true,
+    reachedLastRow,
+  };
 }
 
 // dice roll handler
