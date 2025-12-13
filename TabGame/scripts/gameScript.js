@@ -634,7 +634,7 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
             }
 
             let moveState = 'moved';
-            if (pieceObj.reachedLastRow || (visual.r === 0 && cssColor === 'red')) {
+            if (pieceObj.reachedLastRow || (visual.r === 0 && cssColor === 'red') || (visual.r === 3 && cssColor === 'yellow')) {
                 moveState = 'row-four';
             } else if (pieceObj.inMotion === false) {
                 moveState = 'not-moved';
@@ -2089,8 +2089,10 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
 
     // leave button click handler
     leaveButton.addEventListener('click', async () => {
-        if (!gameActive && !waitingForPair) return; // if game is not active, do nothing (safety check, because it's disabled in that case)
-
+        if (!gameActive && !waitingForPair) {
+            showMessage({ who: 'system', key: 'msg_game_not_found' });
+            return; // if game is not active, do nothing (safety check, because it's disabled in that case)
+        }
 
         // PVP
         if (!vsAI) {

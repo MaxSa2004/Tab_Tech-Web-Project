@@ -172,7 +172,8 @@ const i18n = { // internationalization
     legend_p1: "Jogador 1",
     legend_p2: "Jogador 2",
     legend_move: "Mover",
-    legend_capture: "Capturar"
+    legend_capture: "Capturar",
+    msg_game_not_found: "Oponente não encontrado. Jogo cancelado."
   },
   en: { // list of id:text pairs for English
     title: 'Tâb Game',
@@ -383,7 +384,8 @@ const i18n = { // internationalization
     legend_p1: "Player 1",
     legend_p2: "Player 2",
     legend_move: "Move",
-    legend_capture: "Capture"
+    legend_capture: "Capture",
+    msg_game_not_found: "Opponent not found. Game canceled."
   }
 };
 
