@@ -556,11 +556,19 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         console.log("Processar Vencedor:", winnerNick);
 
         // show msg based on winner
+
         if (winnerNick === null) {
-            showMessage({ who: 'system', key: 'msg_drawn' });
+            if(myNick){
+                showMessage({ who: 'system', key: 'msg_drawn' });
+            }
+            
         } else if (winnerNick === myNick) {
+            if(yellowPieces>0){
+                const leaverName = shownOpponentNick || 'Oponente';
+                showMessage({ who: 'system', key: 'msg_leave_game', params: { player: leaverName } });
+            }
             showMessage({ who: 'system', key: 'msg_you_won' });
-            if (window.TabConfetti){
+            if (window.TabConfetti){ // activate confetti animation
                 window.TabConfetti.start();
             }
         } else {
@@ -611,10 +619,10 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         let currentMyPieces = 0;
         let currentEnemyPieces = 0;
 
-        // 1. Clean up existing pieces on the board
+        // Clean up existing pieces on the board
         gameBoard.querySelectorAll('.piece').forEach(p => p.remove());
 
-        // 2. Render new pieces from server data
+        // Render new pieces from server data
         pieces.forEach((pieceObj, serverIndex) => {
             if (!pieceObj) return;
 
@@ -651,24 +659,24 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
             cell.appendChild(newPiece);
         });
 
-        // 3. CAPTURE DETECTION & ANIMATION
+        // CAPTURE DETECTION & ANIMATION
         // We compare the new counts (currentMyPieces) with the old global counts (redPieces)
         
-        // A. Check if MY pieces (Red) were captured -> They go to Opponent Panel (capturedP2)
+        // Check if MY pieces (Red) were captured -> They go to Opponent Panel (capturedP2)
         const redLost = redPieces - currentMyPieces;
         if (redLost > 0 && capturedP2) {
             showMessage({ who: 'system', key: 'red_pieces', params: { count: currentMyPieces } });
             triggerPvPCaptureAnim('red', capturedP2, redLost);
         }
 
-        // B. Check if ENEMY pieces (Yellow) were captured -> They go to My Panel (capturedP1)
+        // Check if ENEMY pieces (Yellow) were captured -> They go to My Panel (capturedP1)
         const yellowLost = yellowPieces - currentEnemyPieces;
         if (yellowLost > 0 && capturedP1) {
             showMessage({ who: 'system', key: 'yellow_pieces', params: { count: currentEnemyPieces } });
             triggerPvPCaptureAnim('yellow', capturedP1, yellowLost);
         }
 
-        // 4. Update the side panels (This function also updates the global redPieces/yellowPieces variables)
+        // Update the side panels (This function also updates the global redPieces/yellowPieces variables)
         updateOnlineCapturedPanels(currentMyPieces, currentEnemyPieces);
     }
 
@@ -688,13 +696,13 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
                 const tokenElement = tokens[tokenIndex];
 
                 if (tokenElement) {
-                    // 1. Hide the real token immediately so it doesn't duplicate
+                    // Hide the real token immediately so it doesn't duplicate
                     tokenElement.style.opacity = '0';
 
-                    // 2. Play the animation flying to the container
+                    // Play the animation flying to the container
                     setTimeout(() => {
                         window.CaptureAnim.play(color, targetContainer, () => {
-                            // 3. When animation lands, reveal the real token
+                            // When animation lands, reveal the real token
                             tokenElement.style.opacity = '1';
                             tokenElement.style.transition = 'opacity 0.3s';
                         });
@@ -813,7 +821,10 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         console.log("[SERVER UPDATE]:", data);
 
         if (!data) return;
-        if (!gameActive && (data.turn || data.pieces)) gameActive = true; // if game wasn't active but now there's a turn or pieces, set it active
+        if(data.turn || data.pieces  || data.players){
+            if(!gameActive) gameActive = true; // if game wasn't active but now there's a turn or pieces, set it active
+            if(waitingForPair) waitingForPair = false; // if we were waiting for pair, but now there's a turn or pieces, we are paired
+        }
 
         const myNick = sessionStorage.getItem('tt_nick') || localStorage.getItem('tt_nick'); // my nickname from storage
         const currentTurnNick = data.turn || document.body.dataset.lastTurn; // current turn from server or last known turn
@@ -823,9 +834,13 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
         if (data.error) {
             console.warn('Server error:', data.error);
             showMessage({ who: 'system', text: data.error });
+            if(waitingForPair){
+                handleOnlineWinner(null, null);
+            }
             if (data.error.includes("already rolled") && throwBtn) {
                 throwBtn.disabled = true;
             }
+            
             return;
         }
         // ranking handling (connects to leaderBoard.js)
@@ -2090,8 +2105,18 @@ function sendCapturedPieceToContainer(pieceEl, capturedByPlayer) {
     // leave button click handler
     leaveButton.addEventListener('click', async () => {
         if (!gameActive && !waitingForPair) {
-            showMessage({ who: 'system', key: 'msg_game_not_found' });
             return; // if game is not active, do nothing (safety check, because it's disabled in that case)
+        }
+        if(waitingForPair){
+            try{
+                await Network.leave();
+            } 
+            catch(err){
+                console.warn("Aviso de saída falhou:", err);
+            }
+            showMessage({ who: 'system', key: 'msg_game_not_found' });
+            handleOnlineWinner(null, null);
+            return;
         }
 
         // PVP

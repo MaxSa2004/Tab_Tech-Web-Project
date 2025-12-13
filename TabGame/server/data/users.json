@@ -28,5 +28,15 @@
     "password": "a16b2ae9636f7d65a3a1f4b3aed48fa6:0e877d22d6df498cc2c36b8864c494e0738afb3c892d89b25d8dd234584c1b8ee3e0c4277722ed044480a0c3c9259477f37bfbeacf7cb19b4c1c1c2e92711765",
     "victories": 0,
     "games": 0
+  },
+  "rita": {
+    "password": "dd119a56dece61b87ba83562c3e4871f:33f01d546b83bfc1234d4459cc2cd494947888e8494248a77ba35438510466e94bbef30a1b2982cd607a03a4823287b0027c5d1997cc11a029ce85bb6d9cc7b0",
+    "victories": 0,
+    "games": 5
+  },
+  "atir": {
+    "password": "5d81a4b222bf3baf7aa7d5b05fcad583:8ec8d1bcf19d20944322ba2399ae5e066cbe843a685b8d760053f4acce4e37e19371b0a457b2c3f6ed584ddb136d639310f73e1f55f87358d5e22c64b3cfa06e",
+    "victories": 5,
+    "games": 5
   }
 }
