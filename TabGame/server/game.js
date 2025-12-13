@@ -640,6 +640,9 @@ async function handleRoll(req, res) {
     };
 
     broadcastGameEvent(game, "roll", resp);
+    try {
+      update.resetInactivityTimerFor(nick, game);
+    } catch (e) {}
     return utils.sendJSON(res, 200, {});
   } catch (err) {
     return utils.sendError(res, 400, err.message);
@@ -674,6 +677,12 @@ async function handlePass(req, res) {
     const next = state.turn === players[0] ? players[1] : players[0];
     state.turn = next;
 
+    // clear previous player's timer, start next player's timer
+    try {
+      update.clearInactivityTimerFor(nick, game);
+      update.resetInactivityTimerFor(next, game);
+    } catch (e) {}
+
     state.lastDiceValue = null;
 
     // broadcast the exact state plus dice: null
@@ -686,10 +695,6 @@ async function handlePass(req, res) {
       dice: state.lastDiceValue,
     };
     broadcastGameEvent(game, "pass", payload);
-
-    try {
-      update.resetInactivityTimerFor(next, game);
-    } catch (e) {}
 
     return utils.sendJSON(res, 200, {});
   } catch (err) {
@@ -824,6 +829,17 @@ async function handleNotify(req, res) {
         const players = getPlayersFromState(state);
         const next = state.turn === players[0] ? players[1] : players[0];
         state.turn = next;
+
+        // clear previous player's timer, start next
+        try {
+          update.clearInactivityTimerFor(nick, game);
+          update.resetInactivityTimerFor(next, game);
+        } catch (e) {}
+      } else {
+        // same player's turn: refresh their timer
+        try {
+          update.resetInactivityTimerFor(nick, game);
+        } catch (e) {}
       }
 
       const resp = {
@@ -874,6 +890,12 @@ async function handleNotify(req, res) {
         players: state.players,
       };
       broadcastGameEvent(game, "notify", resp);
+
+      // inactivity timer
+      try {
+        update.resetInactivityTimerFor(nick, game);
+      } catch (e) {}
+
       return utils.sendJSON(res, 200, {});
     }
 
@@ -896,6 +918,17 @@ async function handleNotify(req, res) {
       const players = getPlayersFromState(state);
       const next = state.turn === players[0] ? players[1] : players[0];
       state.turn = next;
+
+      // clear previous player's timer, start next
+      try {
+        update.clearInactivityTimerFor(nick, game);
+        update.resetInactivityTimerFor(next, game);
+      } catch (e) {}
+    } else {
+      // same player's turn: refresh timer
+      try {
+        update.resetInactivityTimerFor(nick, game);
+      } catch (e) {}
     }
     state.step = "from";
     state.lastSelectedIndex = null;
