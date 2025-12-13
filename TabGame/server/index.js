@@ -35,5 +35,5 @@ const server = http.createServer((req, res) => {
 
 // start listening on configured port and all interfaces
 server.listen(PORT, "0.0.0.0", () => {
-  console.log("Server running at http://twserver.alunos.dcc.fc.up.pt:8136/");
+  console.log("Server running at http://twserver.alunos.dcc.fc.up.pt:8136/ \n*** If started locally on your machine: server is running at http://localhost:8136/");
 });

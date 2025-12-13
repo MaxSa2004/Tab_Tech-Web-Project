@@ -3,6 +3,7 @@
   let BASE_URL = "http://twserver.alunos.dcc.fc.up.pt:8008";
   const TEACHER_URL = "http://twserver.alunos.dcc.fc.up.pt:8008";
   const PERSONAL_URL = "http://twserver.alunos.dcc.fc.up.pt:8136/";
+  const LOCALHOST_URL = "http://localhost:8136/";
 
   const GROUP = 36;
 
@@ -35,6 +36,8 @@
     } else if (server === "personal") {
       // ensure no trailing slash to keep `${BASE_URL}/${path}` consistent
       BASE_URL = PERSONAL_URL.replace(/\/+$/, "");
+    } else if (server === "localhost") {
+      BASE_URL = LOCALHOST_URL.replace(/\/+$/, "");
     } else if (typeof server === "string") {
       // accept a custom full url
       BASE_URL = server.replace(/\/+$/, "");
@@ -46,6 +49,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     const optTeacher = document.getElementById("optTeacher");
     const optPersonal = document.getElementById("optPersonal");
+    const optLocalhost = document.getElementById("optLocalhost");
 
     if (optTeacher) {
       optTeacher.addEventListener("click", (ev) => {
@@ -58,6 +62,13 @@
       optPersonal.addEventListener("click", (ev) => {
         ev.preventDefault();
         setServer("personal");
+      });
+    }
+
+    if (optLocalhost) {
+      optLocalhost.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        setServer("localhost");
       });
     }
   });
