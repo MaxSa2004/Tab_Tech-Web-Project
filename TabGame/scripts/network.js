@@ -1,4 +1,4 @@
-/* Network module for TWServer API (group 36) */
+// Network module for TWServer API (group 36)
 (() => {
   let BASE_URL = "http://twserver.alunos.dcc.fc.up.pt:8008";
   const TEACHER_URL = "http://twserver.alunos.dcc.fc.up.pt:8008";
