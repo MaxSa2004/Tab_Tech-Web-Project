@@ -10,7 +10,7 @@
 const http = require("http");
 const path = require("path");
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8136;
+const PORT = 8136; // set default to your 8136
 const PUBLIC_DIR = path.join(__dirname, "public");
 
 const router = require("./router");
@@ -24,7 +24,6 @@ const server = http.createServer((req, res) => {
   // CORS for all endpoints
   if (req.method === "OPTIONS") {
     utils.setCorsHeaders(res); // CORS = Cross-Origin Resource Sharing
-    // 204 No Content(no response body)
     res.writeHead(204);
     res.end();
     return;
@@ -34,7 +33,7 @@ const server = http.createServer((req, res) => {
   router.handleRequest(req, res);
 });
 
-// start listening on configured port and localhost
-server.listen(PORT, "localhost", () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
+// start listening on configured port and all interfaces
+server.listen(PORT, "0.0.0.0", () => {
+  console.log("Server running at http://twserver.alunos.dcc.fc.up.pt:8136/");
 });

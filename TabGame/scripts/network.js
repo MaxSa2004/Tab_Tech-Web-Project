@@ -2,7 +2,7 @@
 (() => {
   let BASE_URL = "http://twserver.alunos.dcc.fc.up.pt:8008";
   const TEACHER_URL = "http://twserver.alunos.dcc.fc.up.pt:8008";
-  const PERSONAL_URL = "http://localhost:8136";
+  const PERSONAL_URL = "http://twserver.alunos.dcc.fc.up.pt:8136/";
 
   const GROUP = 36;
 
